@@ -1,0 +1,24 @@
+from xprc.Server import Server
+ 
+class PythonInterface:
+    def __init__(self):
+        self.Name = "Remote Control"
+        self.Sig = "de.energiequant.xprc"
+        self.Desc = "remotely control X-Plane via TCP"
+
+    def XPluginStart(self):
+        return self.Name, self.Sig, self.Desc
+
+    def XPluginStop(self):
+        pass
+
+    def XPluginEnable(self):
+        self.server_thread = Server('localhost')
+        self.server_thread.start()
+        return 1
+
+    def XPluginDisable(self):
+        self.server_thread.stop()
+
+    def XPluginReceiveMessage(self, inFromWho, inMessage, inParam):
+        pass

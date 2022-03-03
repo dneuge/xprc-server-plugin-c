@@ -1,0 +1,59 @@
+from random import choice
+import socket
+from threading import Thread
+
+from .ClientSession import ClientSession
+
+class Server(Thread):
+    def __init__(self, host_address='', host_port=8962, enable_ipv6=True, password=None):
+        super().__init__()
+        self.address = (host_address, host_port)
+        self.network_family = socket.AF_INET6 if enable_ipv6 else socket.AF_INET
+        self.password = password
+        
+        self.dualstack_ipv6 = socket.has_dualstack_ipv6()
+        self.shutdown = False
+        
+        if not self.is_password_acceptable(self.password):
+            self.password = ''.join(choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_./#$!') for i in range(16))
+            print('XPRC auto-generated password: %s' % self.password)
+    
+    def set_password(self, password):
+        if not is_password_accepted(password):
+            return False
+        
+        self.password = password
+        return True
+    
+    def is_password_acceptable(self, password):
+        return password is not None and len(password) >= 16
+    
+    def run(self):
+        print('XPRC server thread starting')
+        
+        # TODO: limit number of clients with unfinished handshakes
+        
+        self.server_socket = socket.create_server(self.address, family=self.network_family, dualstack_ipv6=self.dualstack_ipv6, reuse_port=True)
+        try:
+            while not self.shutdown:
+                client_socket, client_address = self.server_socket.accept()
+                print('XPRC connected from %s' % client_address[0])
+                client_session = ClientSession(client_socket, self)
+                client_session.start()
+        except Exception as e:
+            if not self.shutdown:
+                print('XPRC error in server thread: %s' % e)
+            self.shutdown = True
+        
+        print('XPRC closing server socket')
+        self.server_socket.close()
+        
+        print('XPRC server thread stopped')
+
+    def stop(self):
+        # TODO: stop all clients
+        self.shutdown = True
+        self.server_socket.close()
+
+    def check_password(self, password):
+        return (password == self.password)
