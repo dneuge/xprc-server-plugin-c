@@ -62,6 +62,8 @@ class ClientSession(Thread):
                 self.shutdown = True
         
         self.stop()
+        
+        self.server.remove_client_session(self)
 
     def send_line(self, line):
         self.send_lock.acquire()
@@ -134,5 +136,10 @@ class ClientSession(Thread):
         print(self.commands_by_channel)
     
     def stop(self):
+        if self.shutdown:
+            print('XPRC client thread stop has already been requested, ignoring repeated call')
+            return
+        
         self.shutdown = True
+        self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
