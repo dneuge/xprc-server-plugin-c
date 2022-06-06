@@ -10,7 +10,7 @@ class PythonInterface:
         return self.Name, self.Sig, self.Desc
 
     def XPluginStop(self):
-        pass
+        self.XPluginDisable()
 
     def XPluginEnable(self):
         self.server_thread = Server('localhost')

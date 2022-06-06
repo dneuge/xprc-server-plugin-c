@@ -52,8 +52,15 @@ class Server(Thread):
 
     def stop(self):
         # TODO: stop all clients
+        if self.shutdown:
+            print('XPRC server thread stop has already been requested, ignoring repeated call')
+            return
+        
+        print('XPRC server thread stop requested')
         self.shutdown = True
+        self.server_socket.shutdown(socket.SHUT_RDWR)
         self.server_socket.close()
+        print('XPRC server thread stop request posted')
 
     def check_password(self, password):
         return (password == self.password)
