@@ -5,6 +5,9 @@ import socket
 from threading import Lock, Thread
 from time import sleep
 
+from .CommandCallback import CommandCallback
+from .CommandDataRefQueryType import CommandDataRefQueryType
+
 re_command = re.compile('^([A-Za-z0-9]{4}) ([A-Z]{4})((?:;[a-z0-9]+=[^;]+)*)(| (.+))$')
 def parse_command(line):
     m = re_command.match(line)
@@ -19,8 +22,9 @@ def parse_command(line):
     return (channel_id, command_name, command_options, command_params)
 
 class ClientSession(Thread):
-    def __init__(self, socket, server):
+    def __init__(self, socket, server, shared_resources):
         super().__init__()
+        self.shared_resources = shared_resources
         self.socket = socket
         self.server = server
         self.shutdown = False
@@ -29,6 +33,7 @@ class ClientSession(Thread):
         self.session_start_time = None
         self.commands_by_channel = {}
         self.send_lock = Lock()
+        self.channels_lock = Lock()
     
     def run(self):
         # TODO: set timeout for handshake
@@ -116,29 +121,68 @@ class ClientSession(Thread):
         
         (channel_id, command_name, command_options, command_params) = parsed
         
-        if channel_id in self.commands_by_channel:
-            if command_name == 'TERM':
-                del self.commands_by_channel[channel_id]
-                self.send_line('-ACK %s %d' % (channel_id, timestamp))
-            else:
-                self.send_line('+ERR %s %d channel already in use' % (channel_id, timestamp))
-        else:
-            if command_name == 'TERM':
-                self.send_line('-ERR %s %d channel does not exist' % (channel_id, timestamp))
-            else:
-                self.commands_by_channel[channel_id] = {
-                    'command': command_name,
-                    'options': command_options,
-                    'params': command_params
-                }
-                self.send_line('+ACK %s %d' % (channel_id, timestamp))
+        command_controller = None
+        should_complete_initialization = False
         
+        with self.channels_lock:
+            if channel_id in self.commands_by_channel:
+                if command_name == 'TERM':
+                    # TODO: depending on how commands will be implemented this could lead to a dead-lock on channel deregistration
+                    self.commands_by_channel[channel_id]['controller'].terminate()
+                else:
+                    self.send_line('+ERR %s %d channel already in use' % (channel_id, timestamp))
+            else:
+                if command_name == 'TERM':
+                    self.send_line('-ERR %s %d channel does not exist' % (channel_id, timestamp))
+                else:
+                    command_controller = self.create_command_controller(channel_id, command_name, command_options, command_params)
+                    if command_controller is None:
+                        self.send_line('-ERR %s %d unknown command: %s' % (channel_id, timestamp, command_name))
+                        return
+                    
+                    self.commands_by_channel[channel_id] = {
+                        'command': command_name,
+                        'options': command_options,
+                        'params': command_params,
+                        'controller': command_controller
+                    }
+                    
+                    should_complete_initialization = True
+
+        if should_complete_initialization:
+            # has to be done outside the channels lock as some commands want to terminate during this call
+            command_controller.registered()
+        
+        # DEBUG
         print(self.commands_by_channel)
+    
+    def remove_channel(self, channel_id):
+        with self.channels_lock:
+            if channel_id not in self.commands_by_channel:
+                raise RuntimeError('Channel %s does not exist' % (channel_id))
+            
+            del self.commands_by_channel[channel_id]
+    
+    def create_command_controller(self, channel_id, command_name, command_options, command_params):
+        controller = None
+        callback = CommandCallback(self, channel_id, self.shared_resources)
+        try:
+            if command_name == 'DRQT':
+                controller = CommandDataRefQueryType(command_params, callback)
+            else:
+                return None
+        except e:
+            print('XPRC error initializing command controller for %s:', e)
+            return None
+        
+        return controller
     
     def stop(self):
         if self.shutdown:
             print('XPRC client thread stop has already been requested, ignoring repeated call')
             return
+        
+        # TODO: terminate session's command controllers
         
         self.shutdown = True
         self.socket.shutdown(socket.SHUT_RDWR)

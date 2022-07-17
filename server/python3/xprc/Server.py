@@ -5,8 +5,10 @@ from threading import Thread, Lock
 from .ClientSession import ClientSession
 
 class Server(Thread):
-    def __init__(self, host_address='', host_port=8962, enable_ipv6=True, password=None):
+    def __init__(self, shared_resources, host_address='', host_port=8962, enable_ipv6=True, password=None):
         super().__init__()
+        self.shared_resources = shared_resources
+        
         self.address = (host_address, host_port)
         self.network_family = socket.AF_INET6 if enable_ipv6 else socket.AF_INET
         self.password = password
@@ -42,7 +44,7 @@ class Server(Thread):
             while not self.shutdown:
                 client_socket, client_address = self.server_socket.accept()
                 print('XPRC connected from %s' % client_address[0])
-                client_session = ClientSession(client_socket, self)
+                client_session = ClientSession(client_socket, self, self.shared_resources)
                 client_session.start()
                 self.add_client_session(client_session)
         except Exception as e:
