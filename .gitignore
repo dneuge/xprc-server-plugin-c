@@ -1,6 +1,10 @@
 __pycache__
+
+*~
 *.nocommit
 
+server/native-c/build/
+
 manualtest*
-!server/native-c/manualtest-network.c
-!server/native-c/manualtest-parser.c
+!server/native-c/src/manualtest-network.c
+!server/native-c/src/manualtest-parser.c
