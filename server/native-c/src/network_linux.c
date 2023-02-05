@@ -518,6 +518,7 @@ int create_network_server(network_server_t **server, network_server_config_t *co
     }
 
     res = bind((*server)->ssd, (struct sockaddr*) address, address_size);
+    free(address);
     if (res) {
         printf("failed to bind on requested address: %d, errno %d\n", res, errno); // TODO: log
         close((*server)->ssd);
