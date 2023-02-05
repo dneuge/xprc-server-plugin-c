@@ -6,6 +6,9 @@ class CommandCallback:
         self.channel_open = True
         self.first_message = True
 
+    def get_session_timestamp(self):
+        return self.client_session.get_timestamp()
+
     def fatal_error(self, msg='', timestamp=-1):
         if timestamp < 0:
             timestamp = self.client_session.get_timestamp()
@@ -21,7 +24,7 @@ class CommandCallback:
         else:
             self.client_session.send_line('-ERR %s %d' % (self.channel_id, timestamp))
         
-    def send(self, msg, timestamp=-1, close_channel=False):
+    def send(self, msg='', timestamp=-1, close_channel=False):
         if timestamp < 0:
             timestamp = self.client_session.get_timestamp()
         
@@ -55,3 +58,15 @@ class CommandCallback:
             self.fatal_error('bug: command left channel open when it signalled termination')
             
         self.client_session.remove_channel(self.channel_id)
+
+    def schedule_milliseconds(self, interval_millis, callback):
+        # FIXME: implement
+        return None
+    
+    def schedule_frametick(self, callback):
+        # FIXME: implement
+        return None
+
+    def unschedule(self, handle):
+        # FIXME: implement
+        pass

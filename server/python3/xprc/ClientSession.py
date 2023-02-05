@@ -7,8 +7,9 @@ from time import sleep
 
 from .CommandCallback import CommandCallback
 from .CommandDataRefQueryType import CommandDataRefQueryType
+from .CommandDataRefQueryValues import CommandDataRefQueryValues
 
-re_command = re.compile('^([A-Za-z0-9]{4}) ([A-Z]{4})((?:;[a-z0-9]+=[^;]+)*)(| (.+))$')
+re_command = re.compile('^([A-Za-z0-9]{4}) ([A-Z]{4})((?:;[a-z0-9]+=[^; ]+)*)(| (.+))$')
 def parse_command(line):
     m = re_command.match(line)
     if m is None:
@@ -169,6 +170,8 @@ class ClientSession(Thread):
         try:
             if command_name == 'DRQT':
                 controller = CommandDataRefQueryType(command_params, callback)
+            elif command_name == 'DRQV':
+                controller = CommandDataRefQueryValues(command_options, command_params, callback)
             else:
                 return None
         except e:
@@ -183,6 +186,15 @@ class ClientSession(Thread):
             return
         
         # TODO: terminate session's command controllers
+        open_channels = {}
+        with self.channels_lock:
+            open_channels = self.commands_by_channel.copy()
+        
+        for channel_id, command in open_channels.items():
+            print('XPRC stopping command %s on channel %s' % (command['command'], channel_id))
+            command['controller'].terminate()
+        
+        # FIXME: unschedule all timers
         
         self.shutdown = True
         self.socket.shutdown(socket.SHUT_RDWR)
