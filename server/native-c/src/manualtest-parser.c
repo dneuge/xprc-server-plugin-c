@@ -66,6 +66,8 @@ int main(int argc, char **argv) {
 
     printf("\n");
     printf("Done\n");
+
+    destroy_request(request);
     
     return 0;
 }
