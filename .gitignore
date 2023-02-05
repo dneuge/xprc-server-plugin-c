@@ -1,2 +1,6 @@
 __pycache__
 *.nocommit
+
+manualtest*
+!server/native-c/manualtest-network.c
+!server/native-c/manualtest-parser.c
