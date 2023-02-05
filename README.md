@@ -6,13 +6,14 @@ XPRC provides an easy way to interact with X-Plane datarefs and commands from ot
 
 This project currently contains:
 
-- [server/python3](server/python3/): a server (X-Plane plugin) implementation using [XPPython3](https://xppython3.readthedocs.io/)
+- server implementations: (X-Plane plugins)
+  - [server/python3](server/python3/): implementation using [XPPython3](https://xppython3.readthedocs.io/) (incomplete)
+  - [server/native-c](server/native-c/): native plugin written in C (incomplete)
 
 It will also contain at some point:
 
 - the protocol specification
 - a Java client library
-- maybe a native X-Plane plugin
 
 ## License
 
