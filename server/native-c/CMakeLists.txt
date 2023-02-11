@@ -8,12 +8,16 @@ SET(XPRC_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/requests.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/channels.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/network.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hashmap.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils.c
 )
 
 ADD_DEFINITIONS(-DTARGET_LINUX)
 
 ADD_LIBRARY(xprc SHARED ${XPRC_SOURCES})
+TARGET_LINK_LIBRARIES(xprc PUBLIC m)
 
 ADD_EXECUTABLE(manualtest-parser ${CMAKE_CURRENT_SOURCE_DIR}/src/manualtest-parser.c ${XPRC_SOURCES})
 ADD_EXECUTABLE(manualtest-network ${CMAKE_CURRENT_SOURCE_DIR}/src/manualtest-network.c ${XPRC_SOURCES})
+ADD_EXECUTABLE(test-hashmap ${CMAKE_CURRENT_SOURCE_DIR}/src/test-hashmap.c ${XPRC_SOURCES})
+TARGET_LINK_LIBRARIES(test-hashmap PUBLIC m)
