@@ -31,6 +31,13 @@ elif [[ "${BUILD_TARGET}" != "linux" ]]; then
 fi
 export BUILD_TARGET_DYNLIB_EXT
 
+if [[ "${BUILD_TARGET}" == "linux" ]]; then
+	XPLANE_PLATFORM_ID="lin_x64"
+else
+	die "X-Plane platform ID not set up for ${BUILD_TARGET}"
+fi
+export XPLANE_PLATFORM_ID
+
 # normalize paths
 if [[ "${CMAKE_TOOLCHAIN_FILE}" != "" ]]; then
 	CMAKE_TOOLCHAIN_FILE=$(realpath "${CMAKE_TOOLCHAIN_FILE}")

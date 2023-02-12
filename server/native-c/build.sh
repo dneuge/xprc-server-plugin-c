@@ -34,7 +34,7 @@ cmake .. || die "CMake failed"
 make -j$num_jobs || die "make failed"
 
 ## COPY
-#mkdir -p "${script_dir}/release/psxvc/lin_x64" || die "Failed to create release directory lin_64"
-#cp -a lin.xpl "${script_dir}/release/psxvc/lin_x64/psxvc.xpl" || die "Failed to copy Linux plugin to release directory"
+mkdir -p "${script_dir}/release/xprc/${XPLANE_PLATFORM_ID}" || die "Failed to create release directory ${XPLANE_PLATFORM_ID}"
+cp -a xprc.xpl "${script_dir}/release/xprc/${XPLANE_PLATFORM_ID}/xprc.xpl" || die "Failed to copy plugin to release directory ${XPLANE_PLATFORM_ID}"
 
 echo Build complete.

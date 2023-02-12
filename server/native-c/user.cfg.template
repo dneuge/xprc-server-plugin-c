@@ -1,0 +1,2 @@
+# copy this file to user.cfg and set the path to your X-Plane plugin directory, dedicated to XPRC
+DEPLOYDIR="/tmp/whereever/X-Plane/was/installed/to/Resources/plugins/XPRC"

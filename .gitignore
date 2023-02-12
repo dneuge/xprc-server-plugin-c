@@ -5,6 +5,8 @@ __pycache__
 
 server/native-c/build/
 server/native-c/lib/
+server/native-c/release/
+server/native-c/user.cfg
 
 manualtest*
 !server/native-c/src/manualtest-network.c
