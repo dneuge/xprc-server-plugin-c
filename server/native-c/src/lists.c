@@ -113,7 +113,8 @@ bool prealloc_list_delete_item(prealloc_list_t *list, prealloc_list_item_t *item
     if (item->status != PREALLOC_ITEM_STATUS_IN_USE) {
         return false;
     }
-    
+
+    list->dirty = true;
     list->size--;
     item->status = PREALLOC_ITEM_STATUS_DELETED;
 
@@ -147,6 +148,11 @@ bool prealloc_list_delete_item(prealloc_list_t *list, prealloc_list_item_t *item
 }
 
 bool prealloc_list_compact(prealloc_list_t *list, list_value_destructor_f value_destructor, bool override_deferred_destructors) {
+    if (!list->dirty) {
+        // there is nothing to compact, avoid useless copy operations
+        return true;
+    }
+    
     prealloc_list_block_t *new_head_block = create_preallocated_list_block();
     if (!new_head_block) {
         return false;

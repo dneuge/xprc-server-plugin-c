@@ -38,6 +38,7 @@ typedef struct _prealloc_list_block_t {
 
 typedef struct {
     int size;
+    bool dirty;
     prealloc_list_item_t *first_in_use_item;
     prealloc_list_item_t *last_in_use_item;
     
