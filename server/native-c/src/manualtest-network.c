@@ -19,7 +19,7 @@ typedef struct {
     network_connection_t *connection;
 } myref_t;
 
-static int new_connection(network_connection_t *connection, void **handler_reference) {
+static int new_connection(network_connection_t *connection, void **handler_reference, void *constructor_reference) {
     myref_t *myref = malloc(sizeof(myref_t));
     if (!myref) {
         printf("failed to allocate handler reference\n");

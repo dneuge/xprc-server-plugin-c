@@ -25,8 +25,9 @@ typedef struct _network_connection_t network_connection_t;
  * Network can already be sent to but lines can only be received after this call succeeds.
  * handler_reference should be set to something that can be used to identify the connection;
  * the connection reference should be saved.
+ * constructor_reference is provided as configured in network_handler_t.
  */
-typedef error_t (*new_connection_f)(network_connection_t *connection, void **handler_reference);
+typedef error_t (*new_connection_f)(network_connection_t *connection, void **handler_reference, void *constructor_reference);
 
 /**
  * Called for each line received from the network.
@@ -42,6 +43,7 @@ typedef void (*on_connection_closing_f)(void *handler_reference);
 
 typedef struct {
     new_connection_f new_connection;
+    void *new_connection_constructor_reference;
     on_line_received_f on_line_received;
     on_connection_closing_f on_connection_closing;
 } network_handler_t;

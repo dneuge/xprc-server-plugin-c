@@ -402,7 +402,7 @@ static int run_server_thread(void *arg) {
             continue;
         }
 
-        int res = server->handler.new_connection(connection, &connection->handler_reference);
+        int res = server->handler.new_connection(connection, &connection->handler_reference, server->handler.new_connection_constructor_reference);
         if (res != ERROR_NONE) {
             printf("handler failed to create connection: %d\n", res); // TODO: log
             consecutive_errors++;
