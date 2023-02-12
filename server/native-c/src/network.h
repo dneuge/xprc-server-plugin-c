@@ -52,10 +52,10 @@ typedef struct {
     uint16_t port;
 } network_server_config_t;
 
-int create_network_server(network_server_t **server, network_server_config_t *config, network_handler_t handler);
+error_t create_network_server(network_server_t **server, network_server_config_t *config, network_handler_t handler);
 void destroy_network_server(network_server_t *server);
 
-int send_to_network(network_connection_t *connection, char *content, int length);
+error_t send_to_network(network_connection_t *connection, char *content, int length);
 void close_network_connection(network_connection_t *connection);
 
 #endif

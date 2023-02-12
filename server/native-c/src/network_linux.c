@@ -479,7 +479,7 @@ static struct sockaddr* create_address(network_server_config_t *config) {
     }
 }
 
-int create_network_server(network_server_t **server, network_server_config_t *config, network_handler_t handler) {
+error_t create_network_server(network_server_t **server, network_server_config_t *config, network_handler_t handler) {
     int res;
     
     struct sockaddr *address = create_address(config);
@@ -593,7 +593,7 @@ void destroy_network_server(network_server_t *server) {
     free(server);
 }
 
-int send_to_network(network_connection_t *connection, char *content, int length) {
+error_t send_to_network(network_connection_t *connection, char *content, int length) {
     if (connection->shutdown || !connection->has_send_mutex) {
         return NETWORK_ERROR_SHUTDOWN;
     }

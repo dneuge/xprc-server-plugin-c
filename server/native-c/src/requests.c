@@ -17,7 +17,7 @@
 #define OPTION_END_OF_KEY '='
 #define REQUEST_PART_SEPARATOR ' '
 
-static int add_option(request_t *request, char *name, int name_length, char *value, int value_length) {
+static error_t add_option(request_t *request, char *name, int name_length, char *value, int value_length) {
     // where should we link the option in the end?
     // if this will be the first option, then it needs to be linked on the request itself
     command_option_t **options_ref = &(request->options);
@@ -58,7 +58,7 @@ static int add_option(request_t *request, char *name, int name_length, char *val
     return ERROR_NONE;
 }
 
-static int add_parameter(request_t *request, char *parameter, int parameter_length) {
+static error_t add_parameter(request_t *request, char *parameter, int parameter_length) {
     // where should we link the parameter in the end?
     // if this will be the first parameter, then it needs to be linked on the request itself
     command_parameter_t **parameters_ref = &(request->parameters);
@@ -90,7 +90,7 @@ static int add_parameter(request_t *request, char *parameter, int parameter_leng
     return ERROR_NONE;
 }
 
-int parse_request(request_t **request, char *line, int length) {
+error_t parse_request(request_t **request, char *line, int length) {
     int res;
     
     *request = NULL;

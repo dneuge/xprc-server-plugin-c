@@ -8,4 +8,6 @@
 #define REQUEST_ERROR_BASE 10
 #define NETWORK_ERROR_BASE 20
 
+typedef int error_t;
+
 #endif

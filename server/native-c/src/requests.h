@@ -27,7 +27,7 @@ typedef struct {
     command_parameter_t *parameters;
 } request_t;
 
-int parse_request(request_t **request, char *line, int length);
+error_t parse_request(request_t **request, char *line, int length);
 void destroy_request(request_t *request);
 
 #endif
