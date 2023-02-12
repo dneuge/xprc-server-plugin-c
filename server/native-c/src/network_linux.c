@@ -602,6 +602,10 @@ error_t send_to_network(network_connection_t *connection, char *content, int len
         return ERROR_UNSPECIFIC;
     }
 
+    if (length == NETWORK_SEND_COMPLETE_STRING) {
+        length = strlen(content);
+    }
+
     // check that the new content actually fits into the available capacity
     // without a buffer overrun
     // same position indicates "all has been read", so we the maximum possible capacity

@@ -14,6 +14,8 @@
 #define NETWORK_ERROR_SHUTDOWN      (NETWORK_ERROR_BASE + 5)
 #define NETWORK_ERROR_CAPACITY      (NETWORK_ERROR_BASE + 6)
 
+#define NETWORK_SEND_COMPLETE_STRING -34768
+
 // structures defined by implementation
 typedef struct _network_server_t network_server_t;
 typedef struct _network_connection_t network_connection_t;
