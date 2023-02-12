@@ -208,6 +208,8 @@ bool prealloc_list_compact(prealloc_list_t *list, list_value_destructor_f value_
         list->last_in_use_item = &(new_block->items[new_block->first_pristine_item_index - 1]);
     }
 
+    list->dirty = false;
+
     // free old blocks
     while (old_block) {
         // destroy item values that have not been taken over
