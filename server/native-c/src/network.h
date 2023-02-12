@@ -26,7 +26,7 @@ typedef struct _network_connection_t network_connection_t;
  * handler_reference should be set to something that can be used to identify the connection;
  * the connection reference should be saved.
  */
-typedef int (*new_connection_f)(network_connection_t *connection, void **handler_reference);
+typedef error_t (*new_connection_f)(network_connection_t *connection, void **handler_reference);
 
 /**
  * Called for each line received from the network.
