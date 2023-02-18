@@ -222,16 +222,20 @@ error_t unschedule_task(task_schedule_t *task_schedule, task_t *task, task_sched
 }
 
 error_t clean_schedule(task_schedule_t *task_schedule) {
+    bool success = true;
+    
     if (task_schedule->destruction_pending) {
         return TASK_SCHEDULE_ERROR_DESTRUCTION_PENDING;
     }
 
     for (int i=0; i<TASK_SCHEDULE_NUM_TASK_QUEUES; i++) {
         // TODO: report memleak
-        prealloc_list_compact(task_schedule->queues[i], destroy_via_task_callback, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS);
+        if (!prealloc_list_compact(task_schedule->queues[i], destroy_via_task_callback, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS)) {
+            success = false;
+        }
     }
     
-    return ERROR_UNSPECIFIC;
+    return success ? ERROR_NONE : ERROR_UNSPECIFIC;
 }
 
 error_t unschedule_session_tasks(task_schedule_t *task_schedule, session_t *session) {
