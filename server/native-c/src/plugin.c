@@ -27,6 +27,7 @@ task_schedule_t *task_schedule = NULL;
 bool flight_loop_locked_task_schedule = false;
 
 bool fatal_error = false;
+bool plugin_initialized = false;
 
 static float process_flight_loop_before_flight_model(float inElapsedSinceLastCall, float inElapsedTimeSinceLastFlightLoop, int inCounter, void *inRefcon) {
     if (lock_schedule(task_schedule)) {
@@ -74,6 +75,12 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
     strcpy(sig, "de.energiequant.xprc");
     strcpy(desc, "XP Remote Control");
 
+    if (plugin_initialized) {
+        printf("[XPRC] plugin has already been initialized without shutdown (did you install it twice?) - simulator restart required\n");
+        fatal_error = 1;
+        return 1;
+    }
+    
     if (fatal_error) {
         printf("[XPRC] a fatal error has occurred, XPRC is stuck - simulator restart required\n");
         return 1;
@@ -86,6 +93,8 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
     server_config.network.enable_ipv6 = true;
     server_config.network.interface = INTERFACE_LOCAL;
     server_config.network.port = 23042;
+
+    plugin_initialized = true;
     
     return 1;
 }
@@ -186,6 +195,8 @@ PLUGIN_API void XPluginStop() {
         printf("[XPRC] a fatal error has occurred, XPRC is stuck - simulator restart required\n");
         return;
     }
+
+    plugin_initialized = false;
 }
 
 PLUGIN_API void XPluginReceiveMessage(XPLMPluginID from, long msg, void *p) {
