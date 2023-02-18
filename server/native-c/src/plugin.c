@@ -14,6 +14,7 @@
 #include "task_schedule.h"
 
 #define CALL_ON_NEXT_FRAME -1.0f
+#define SCHEDULE_CLEANING_INTERVAL 500
 
 XPLMFlightLoopID flight_loop_before_flight_model_id = {0};
 XPLMFlightLoopID flight_loop_after_flight_model_id = {0};
@@ -26,8 +27,53 @@ bool server_started = false;
 task_schedule_t *task_schedule = NULL;
 bool flight_loop_locked_task_schedule = false;
 
+cnd_t post_processing_wait;
+thrd_t post_processing_thread;
+bool has_post_processing_thread = false;
+bool shutdown_post_processing = false;
+
 bool fatal_error = false;
 bool plugin_initialized = false;
+
+int run_post_processing_thread(void *arg) {
+    error_t err = ERROR_NONE;
+    
+    int cycles_until_cleaning = SCHEDULE_CLEANING_INTERVAL;
+    
+    err = lock_schedule(task_schedule);
+    if (err != ERROR_NONE) {
+        printf("[XPRC] post-processing thread failed to lock schedule: %d\n", err);
+        return 0;
+    }
+    
+    while (!shutdown_post_processing) {
+        if (cnd_wait(&post_processing_wait, &task_schedule->mutex) != thrd_success) {
+            printf("[XPRC] post-processing thread failed to wait\n");
+            break;
+        }
+
+        if (shutdown_post_processing) {
+            break;
+        }
+
+        run_tasks(task_schedule, TASK_SCHEDULE_POST_PROCESSING);
+        
+        cycles_until_cleaning--;
+        if (cycles_until_cleaning <= 0) {
+            cycles_until_cleaning = SCHEDULE_CLEANING_INTERVAL;
+            err = clean_schedule(task_schedule);
+            if (err != ERROR_NONE) {
+                printf("[XPRC] clean_schedule reported error %d\n", err);
+            }
+        }
+    }
+
+    unlock_schedule(task_schedule);
+
+    printf("[XPRC] post-processing thread terminates\n");
+    
+    return 0;
+}
 
 static float process_flight_loop_before_flight_model(float inElapsedSinceLastCall, float inElapsedTimeSinceLastFlightLoop, int inCounter, void *inRefcon) {
     if (lock_schedule(task_schedule)) {
@@ -48,11 +94,11 @@ static float process_flight_loop_after_flight_model(float inElapsedSinceLastCall
     }
 
     run_tasks(task_schedule, TASK_SCHEDULE_AFTER_FLIGHT_MODEL);
+
+    cnd_broadcast(&post_processing_wait);
     
     flight_loop_locked_task_schedule = false;
     unlock_schedule(task_schedule);
-
-    // FIXME: notify post-processing thread
     
     return CALL_ON_NEXT_FRAME;
 }
@@ -83,6 +129,12 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
     
     if (fatal_error) {
         printf("[XPRC] a fatal error has occurred, XPRC is stuck - simulator restart required\n");
+        return 1;
+    }
+
+    if (cnd_init(&post_processing_wait) != thrd_success) {
+        printf("[XPRC] failed to create condition for post-processing thread - simulator restart required\n");
+        fatal_error = 1;
         return 1;
     }
     
@@ -126,6 +178,19 @@ PLUGIN_API int XPluginEnable() {
     }
     server_config.task_schedule = task_schedule;
 
+    if (has_post_processing_thread) {
+        printf("[XPRC] post-processing thread still exists; simulator restart required\n");
+        fatal_error = true;
+        return 1;
+    }
+    
+    shutdown_post_processing = false;
+    if (thrd_create(&post_processing_thread, run_post_processing_thread, NULL) != thrd_success) {
+        printf("[XPRC] failed to spawn post-processing thread\n");
+        return 1;
+    }
+    has_post_processing_thread = true;
+    
     err = start_server(&server, &server_config);
     if (err != ERROR_NONE) {
         printf("[XPRC] failed to start server: %d\n", err);
@@ -135,8 +200,6 @@ PLUGIN_API int XPluginEnable() {
     }
     server_started = true;
 
-    // TODO: start post-processing thread
-    
     register_flight_loop(xplm_FlightLoop_Phase_BeforeFlightModel, process_flight_loop_before_flight_model, &flight_loop_before_flight_model_id);
     register_flight_loop(xplm_FlightLoop_Phase_AfterFlightModel,  process_flight_loop_after_flight_model,  &flight_loop_after_flight_model_id);
     flight_loop_registered = true;
@@ -150,7 +213,27 @@ PLUGIN_API void XPluginDisable() {
         return;
     }
 
-    // TODO: stop post-processing thread
+    bool can_join_post_processing_thread = true;
+    if (has_post_processing_thread) {
+        bool schedule_locked = false;
+        if (task_schedule && lock_schedule(task_schedule) == ERROR_NONE) {
+            schedule_locked = true;
+        } else {
+            printf("[XPRC] failed to lock task schedule to signal shutdown to post-processing thread\n");
+            can_join_post_processing_thread = false;
+        }
+    
+        shutdown_post_processing = true;
+        if (cnd_broadcast(&post_processing_wait) != thrd_success) {
+            printf("[XPRC] post processing thread cannot be notified\n");
+            can_join_post_processing_thread = false;
+        }
+
+        if (schedule_locked) {
+            unlock_schedule(task_schedule);
+            schedule_locked = false;
+        }
+    }
     
     if (flight_loop_registered) {
         XPLMDestroyFlightLoop(flight_loop_before_flight_model_id);
@@ -179,6 +262,22 @@ PLUGIN_API void XPluginDisable() {
         server = NULL;
     }
 
+    if (has_post_processing_thread) {
+        if (!can_join_post_processing_thread) {
+            printf("[XPRC] post processing thread cannot be joined safely - simulator restart required\n");
+            fatal_error = true;
+            return;
+        } else {
+            if (thrd_join(post_processing_thread, NULL) != thrd_success) {
+                printf("[XPRC] post processing thread cannot be joined; plugin shutdown is not possible\n");
+                fatal_error = true;
+                return;
+            }
+            
+            has_post_processing_thread = false;
+        }
+    }
+
     if (task_schedule) {
         error_t err = destroy_task_schedule(task_schedule);
         if (err != ERROR_NONE) {
@@ -195,6 +294,8 @@ PLUGIN_API void XPluginStop() {
         printf("[XPRC] a fatal error has occurred, XPRC is stuck - simulator restart required\n");
         return;
     }
+    
+    cnd_destroy(&post_processing_wait);
 
     plugin_initialized = false;
 }

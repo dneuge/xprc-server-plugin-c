@@ -126,12 +126,38 @@ void unlock_schedule(task_schedule_t *task_schedule) {
     mtx_unlock(&task_schedule->mutex);
 }
 
+static void run_tasks_post_processing(task_schedule_t *task_schedule) {
+    for (int i=0; i<TASK_SCHEDULE_NUM_TASK_QUEUES; i++) {
+        prealloc_list_t *queue = task_schedule->queues[i];
+        if (!queue) {
+            continue;
+        }
+
+        prealloc_list_item_t *item = queue->first_in_use_item;
+        while (item) {
+            prealloc_list_item_t *next = item->next_in_use;
+            task_t *task = item->value;
+
+            if (task->on_processing) {
+                task->on_processing(task, TASK_SCHEDULE_POST_PROCESSING);
+            }
+            
+            item = next;
+        }
+    }
+}
+
 void run_tasks(task_schedule_t *task_schedule, task_schedule_phase_t phase) {
-    if ((phase < 0 || phase >= TASK_SCHEDULE_NUM_TASK_QUEUES) && (phase != TASK_SCHEDULE_POST_PROCESSING)) {
+    if (task_schedule->destruction_pending) {
         return;
     }
-
-    if (task_schedule->destruction_pending) {
+    
+    if (phase == TASK_SCHEDULE_POST_PROCESSING) {
+        run_tasks_post_processing(task_schedule);
+        return;
+    }
+    
+    if (phase < 0 || phase >= TASK_SCHEDULE_NUM_TASK_QUEUES) {
         return;
     }
 
