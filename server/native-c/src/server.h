@@ -7,16 +7,18 @@
 #include "lists.h"
 #include "network.h"
 
+// break circular dependency in definitions
+typedef struct _server_t server_t;
+
+#include "task_schedule.h"
+
 typedef struct {
     char *password;
     network_server_config_t network;
-    
-    mtx_t *task_queue_mutex;
-    prealloc_list_t *task_queue_before_flight_model;
-    prealloc_list_t *task_queue_after_flight_model;
+    task_schedule_t *task_schedule;
 } server_config_t;
 
-typedef struct {
+typedef struct _server_t {
     server_config_t config;
     network_server_t *network;
 } server_t;

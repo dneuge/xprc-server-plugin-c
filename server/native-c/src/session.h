@@ -6,6 +6,10 @@
 
 #include "channels.h"
 #include "network.h"
+
+// break circular dependency in definitions
+typedef struct _session_t session_t;
+
 #include "server.h"
 
 #define SESSION_PHASE_AWAIT_VERSION 0
@@ -15,7 +19,7 @@
 
 typedef uint8_t session_phase_t;
 
-typedef struct {
+typedef struct _session_t {
     struct timespec reference_time;
     int64_t reference_millis;
     session_phase_t phase;
