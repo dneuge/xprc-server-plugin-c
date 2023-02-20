@@ -42,7 +42,4 @@ error_t schedule_task(task_schedule_t *task_schedule, task_t *task, task_schedul
 error_t unschedule_task(task_schedule_t *task_schedule, task_t *task, task_schedule_phase_t phase);
 error_t clean_schedule(task_schedule_t *task_schedule);
 
-error_t unschedule_session_tasks(task_schedule_t *task_schedule, session_t *session);
-error_t unschedule_channel_tasks(task_schedule_t *task_schedule, session_t *session, channel_id_t channel_id);
-
 #endif

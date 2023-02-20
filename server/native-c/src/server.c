@@ -15,13 +15,60 @@
 #define REFERENCE_COARSE_TIMESTAMP_BUFFER_SIZE 30
 #define HANDSHAKE_COMPLETION_BUFFER_SIZE 50
 #define INVALID_SYNTAX_ERROR_BUFFER_SIZE 50
+#define CHANNEL_IN_USE_ERROR_BUFFER_SIZE 50
+#define CHANNEL_FAILED_ERROR_BUFFER_SIZE 50
+#define CHANNEL_REGISTRATION_ERROR_BUFFER_SIZE 50
+#define COMMAND_FAILED_ERROR_BUFFER_SIZE 50
 
 static void handle_request(session_t *session, request_t *request) {
-    char channel_id_s[5] = {0};
-    channel_id_to_string(request->channel_id, channel_id_s);
-    printf("[XPRC] would handle request for command %s on channel %s\n", request->command_name, channel_id_s);
+    char channel_name[5] = {0};
+    channel_id_to_string(request->channel_id, channel_name);
 
-    // TODO: implement
+    // TODO: support TERM
+    
+    if (has_channel(session->channels, request->channel_id)) {
+        char buffer[CHANNEL_IN_USE_ERROR_BUFFER_SIZE] = {0};
+        int res = snprintf(buffer, CHANNEL_IN_USE_ERROR_BUFFER_SIZE, "-ERR %s %ld channel busy\n", channel_name, millis_since_reference(session));
+        if (res < 0 || res >= CHANNEL_IN_USE_ERROR_BUFFER_SIZE) {
+            printf("[XPRC] terminating connection because formatting channel busy error message failed\n");
+            close_network_connection(session->connection);
+        }
+        return;
+    }
+
+    channel_t *channel = zalloc(sizeof(channel_t));
+    if (!channel) {
+        char buffer[CHANNEL_FAILED_ERROR_BUFFER_SIZE] = {0};
+        int res = snprintf(buffer, CHANNEL_FAILED_ERROR_BUFFER_SIZE, "-ERR %s %ld channel creation failed\n", channel_name, millis_since_reference(session));
+        if (res < 0 || res >= CHANNEL_FAILED_ERROR_BUFFER_SIZE) {
+            printf("[XPRC] terminating connection because formatting channel creation error message failed\n");
+            close_network_connection(session->connection);
+        }
+        return;
+    }
+
+    channel->id = request->channel_id;
+    channel->state = CHANNEL_STATE_INITIAL;
+    if (!put_channel(session->channels, channel)) {
+        char buffer[CHANNEL_REGISTRATION_ERROR_BUFFER_SIZE] = {0};
+        int res = snprintf(buffer, CHANNEL_REGISTRATION_ERROR_BUFFER_SIZE, "-ERR %s %ld channel registration failed\n", channel_name, millis_since_reference(session));
+        if (res < 0 || res >= CHANNEL_REGISTRATION_ERROR_BUFFER_SIZE) {
+            printf("[XPRC] terminating connection because formatting channel registration error message failed\n");
+            close_network_connection(session->connection);
+        }
+        return;
+    }
+    
+    error_t err = create_command(session->server->config.command_factory, channel, session, request);
+    if (err != ERROR_NONE) {
+        char buffer[COMMAND_FAILED_ERROR_BUFFER_SIZE] = {0};
+        int res = snprintf(buffer, COMMAND_FAILED_ERROR_BUFFER_SIZE, "-ERR %s %ld command creation failed\n", channel_name, millis_since_reference(session));
+        if (res < 0 || res >= COMMAND_FAILED_ERROR_BUFFER_SIZE) {
+            printf("[XPRC] terminating connection because formatting command creation error message failed\n");
+            close_network_connection(session->connection);
+        }
+        return;
+    }
 }
 
 static error_t new_connection(network_connection_t *connection, void **handler_reference, void *constructor_reference) {

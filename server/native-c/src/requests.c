@@ -17,6 +17,34 @@
 #define OPTION_END_OF_KEY '='
 #define REQUEST_PART_SEPARATOR ' '
 
+bool request_has_option(request_t *request, char *name) {
+    command_option_t *option = request->options;
+    while (option) {
+        if (!strcmp(option->name, name)) {
+            return true;
+        }
+        option = option->next;
+    }
+
+    return false;
+}
+
+char* request_get_option(request_t *request, char *name, char *default_value) {
+    command_option_t *option = request->options;
+    while (option) {
+        if (!strcmp(option->name, name)) {
+            break;
+        }
+        option = option->next;
+    }
+
+    if (option) {
+        return option->value;
+    }
+
+    return default_value;
+}
+
 static error_t add_option(request_t *request, char *name, int name_length, char *value, int value_length) {
     // where should we link the option in the end?
     // if this will be the first option, then it needs to be linked on the request itself

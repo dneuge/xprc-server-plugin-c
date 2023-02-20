@@ -4,18 +4,18 @@
 #include <stdbool.h>
 #include <threads.h>
 
-#include "lists.h"
-#include "network.h"
-
-// break circular dependency in definitions
 typedef struct _server_t server_t;
 
+#include "commands.h"
+#include "lists.h"
+#include "network.h"
 #include "task_schedule.h"
 
 typedef struct {
     char *password;
     network_server_config_t network;
     task_schedule_t *task_schedule;
+    command_factory_t *command_factory;
 } server_config_t;
 
 typedef struct _server_t {

@@ -12,7 +12,7 @@ error_t create_task_schedule(task_schedule_t **task_schedule) {
 
     memset(*task_schedule, 0, sizeof(task_schedule_t));
 
-    if (mtx_init(&(*task_schedule)->mutex, mtx_plain) != thrd_success) {
+    if (mtx_init(&(*task_schedule)->mutex, mtx_plain|mtx_recursive) != thrd_success) {
         free(*task_schedule);
         *task_schedule = NULL;
         return ERROR_UNSPECIFIC;
@@ -90,7 +90,7 @@ error_t destroy_task_schedule(task_schedule_t *task_schedule) {
             // TODO: log
             err = TASK_SCHEDULE_ERROR_STILL_SCHEDULED;
         } else {
-            destroy_preallocated_list(queue, free, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS);
+            destroy_preallocated_list(queue, NULL, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS);
             task_schedule->queues[phase] = NULL;
         }
     }
@@ -196,23 +196,8 @@ error_t schedule_task(task_schedule_t *task_schedule, task_t *task, task_schedul
     return ERROR_NONE;
 }
 
-static void destroy_via_task_callback(void *instance) {
-    task_t *task = instance;
-    if (task->destructor) {
-        task->destructor(instance);
-    }
-
-    // TODO: log if not set => memleak
-}
-
 static error_t unschedule_task_queue_item(task_schedule_t *task_schedule, prealloc_list_item_t *item, task_schedule_phase_t phase) {
-    task_t *task = item->value;
-
-    if (task->on_unscheduling) {
-        task->on_unscheduling(task, phase);
-    }
-    
-    if (!prealloc_list_delete_item(task_schedule->queues[phase], item, destroy_via_task_callback, PREALLOC_ITEM_DEFER_DESTRUCTION)) {
+    if (!prealloc_list_delete_item(task_schedule->queues[phase], item, NULL, PREALLOC_ITEM_DEFER_DESTRUCTION)) {
         return ERROR_UNSPECIFIC;
     }
     
@@ -255,69 +240,10 @@ error_t clean_schedule(task_schedule_t *task_schedule) {
     }
 
     for (int i=0; i<TASK_SCHEDULE_NUM_TASK_QUEUES; i++) {
-        // TODO: report memleak
-        if (!prealloc_list_compact(task_schedule->queues[i], destroy_via_task_callback, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS)) {
+        if (!prealloc_list_compact(task_schedule->queues[i], NULL, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS)) {
             success = false;
         }
     }
     
     return success ? ERROR_NONE : ERROR_UNSPECIFIC;
-}
-
-error_t unschedule_session_tasks(task_schedule_t *task_schedule, session_t *session) {
-    error_t err = ERROR_NONE;
-    
-    for (int phase=0; phase<TASK_SCHEDULE_NUM_TASK_QUEUES; phase++) {
-        prealloc_list_t *queue = task_schedule->queues[phase];
-        if (!queue) {
-            continue;
-        }
-
-        prealloc_list_item_t *item = queue->first_in_use_item;
-        while (item) {
-            prealloc_list_item_t *next = item->next_in_use;
-            
-            task_t *task = item->value;
-            if (task->session == session) {
-                error_t task_err = unschedule_task_queue_item(task_schedule, item, phase);
-                if (task_err != ERROR_NONE) {
-                    // TODO: log
-                    err = task_err;
-                }
-            }
-
-            item = next;
-        }
-    }
-    
-    return err;
-}
-
-error_t unschedule_channel_tasks(task_schedule_t *task_schedule, session_t *session, channel_id_t channel_id) {
-    error_t err = ERROR_NONE;
-    
-    for (int phase=0; phase<TASK_SCHEDULE_NUM_TASK_QUEUES; phase++) {
-        prealloc_list_t *queue = task_schedule->queues[phase];
-        if (!queue) {
-            continue;
-        }
-
-        prealloc_list_item_t *item = queue->first_in_use_item;
-        while (item) {
-            prealloc_list_item_t *next = item->next_in_use;
-            
-            task_t *task = item->value;
-            if (task->session == session && task->channel_id == channel_id) {
-                error_t task_err = unschedule_task_queue_item(task_schedule, item, phase);
-                if (task_err != ERROR_NONE) {
-                    // TODO: log
-                    err = task_err;
-                }
-            }
-
-            item = next;
-        }
-    }
-    
-    return err;
 }

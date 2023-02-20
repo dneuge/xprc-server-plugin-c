@@ -9,6 +9,7 @@
 #include <XPLMProcessing.h>
 #include <XPLMUtilities.h>
 
+#include "commands.h"
 #include "lists.h"
 #include "server.h"
 #include "task_schedule.h"
@@ -19,6 +20,8 @@
 XPLMFlightLoopID flight_loop_before_flight_model_id = {0};
 XPLMFlightLoopID flight_loop_after_flight_model_id = {0};
 bool flight_loop_registered = false;
+
+command_factory_t *command_factory = NULL;
 
 server_t *server = NULL;
 server_config_t server_config = {0};
@@ -137,6 +140,13 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
         fatal_error = 1;
         return 1;
     }
+
+    command_factory = create_command_factory();
+    if (!command_factory) {
+        printf("[XPRC] failed to create command factory - simulator restart required\n");
+        fatal_error = 1;
+        return 1;
+    }
     
     // FIXME: load password from persistence and auto-generate if missing
     server_config.password = "brwSrmyrKNnycC3cEt225NNbJRRaqm74";
@@ -145,6 +155,8 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
     server_config.network.enable_ipv6 = true;
     server_config.network.interface = INTERFACE_LOCAL;
     server_config.network.port = 23042;
+
+    server_config.command_factory = command_factory;
 
     plugin_initialized = true;
     
@@ -213,6 +225,18 @@ PLUGIN_API void XPluginDisable() {
         return;
     }
 
+    if (server_started) {
+        error_t err = stop_server(server);
+        if (err != ERROR_NONE) {
+            printf("[XPRC] server failed to stop: %d\n", err);
+            fatal_error = true;
+            return;
+        }
+        
+        server_started = false;
+        server = NULL;
+    }
+
     bool can_join_post_processing_thread = true;
     if (has_post_processing_thread) {
         bool schedule_locked = false;
@@ -251,17 +275,6 @@ PLUGIN_API void XPluginDisable() {
         flight_loop_registered = false;
     }
 
-    if (server_started) {
-        error_t err = stop_server(server);
-        if (err != ERROR_NONE) {
-            printf("[XPRC] server failed to stop: %d\n", err);
-            return;
-        }
-        
-        server_started = false;
-        server = NULL;
-    }
-
     if (has_post_processing_thread) {
         if (!can_join_post_processing_thread) {
             printf("[XPRC] post processing thread cannot be joined safely - simulator restart required\n");
@@ -294,8 +307,13 @@ PLUGIN_API void XPluginStop() {
         printf("[XPRC] a fatal error has occurred, XPRC is stuck - simulator restart required\n");
         return;
     }
-    
+
     cnd_destroy(&post_processing_wait);
+
+    if (command_factory) {
+        destroy_command_factory(command_factory);
+        command_factory = NULL;
+    }
 
     plugin_initialized = false;
 }

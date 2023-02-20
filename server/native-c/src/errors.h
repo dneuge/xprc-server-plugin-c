@@ -9,6 +9,7 @@
 #define REQUEST_ERROR_BASE 10
 #define NETWORK_ERROR_BASE 20
 #define TASK_SCHEDULE_ERROR_BASE 30
+#define SESSION_ERROR_BASE 40
 
 typedef int error_t;
 

@@ -16,6 +16,8 @@ SET(COMMON_SOURCES
 )
 
 SET(XPRC_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/commands.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/command_drqv.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/plugin.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/server.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/session.c

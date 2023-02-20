@@ -1,6 +1,8 @@
 #ifndef REQUESTS_H
 #define REQUESTS_H
 
+typedef struct _request_t request_t;
+
 #include "errors.h"
 #include "channels.h"
 
@@ -20,7 +22,7 @@ typedef struct _command_parameter_t {
     command_parameter_t *next;
 } command_parameter_t;
 
-typedef struct {
+typedef struct _request_t {
     channel_id_t channel_id;
     char *command_name;
     command_option_t *options;
@@ -29,5 +31,8 @@ typedef struct {
 
 error_t parse_request(request_t **request, char *line, int length);
 void destroy_request(request_t *request);
+
+bool request_has_option(request_t *request, char *name);
+char* request_get_option(request_t *request, char *name, char *default_value);
 
 #endif

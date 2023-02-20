@@ -22,24 +22,40 @@ typedef uint32_t channel_id_t;
 
 #define BAD_CHANNEL_ID 0xFFFFFFFF
 
-typedef struct {
+typedef struct _channels_table_t channels_table_t;
+typedef uint8_t channel_state_t;
+
+#define CHANNEL_STATE_INITIAL 0
+#define CHANNEL_STATE_CONFIRMED 1
+#define CHANNEL_STATE_CLOSED 2
+
+typedef struct _channel_t channel_t;
+
+#include "command.h"
+
+typedef struct _channel_t {
     channel_id_t id;
-    // FIXME: add on_destruction callback
+    channel_state_t state;
+    command_t *command;
+    void *command_ref;
 } channel_t;
 
 typedef struct {
     channel_t *channels[CHANNELS_SEGMENT];
 } channels_subtable_t;
 
-typedef struct {
+typedef struct _channels_table_t {
+    bool destruction_pending;
     channels_subtable_t *subtables[CHANNELS_NUM_SUBTABLES];
 } channels_table_t;
+
+typedef void (*channel_destructor_f)(channel_t *channel, void *ref);
 
 channel_id_t string_to_channel_id(char* s);
 void channel_id_to_string(channel_id_t id, char* destination);
 
 channels_table_t* create_channels_table();
-void destroy_channels_table(channels_table_t *table);
+void destroy_channels_table(channels_table_t *table, channel_destructor_f destructor, void *destructor_ref);
 
 channel_t* get_channel(channels_table_t *table, channel_id_t id);
 bool has_channel(channels_table_t *table, channel_id_t id);
