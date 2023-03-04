@@ -54,4 +54,24 @@ prealloc_list_item_t* prealloc_list_get_item(prealloc_list_t *list, int index);
 bool prealloc_list_delete_item(prealloc_list_t *list, prealloc_list_item_t *item, list_value_destructor_f value_destructor, bool defer_value_destruction);
 bool prealloc_list_compact(prealloc_list_t *list, list_value_destructor_f value_destructor, bool override_deferred_destructors);
 
+typedef struct _list_item_t list_item_t;
+typedef struct _list_item_t {
+    void *value;
+    list_item_t *prev;
+    list_item_t *next;
+} list_item_t;
+
+typedef struct {
+    int size;
+    list_item_t *head;
+    list_item_t *tail;
+} list_t;
+
+list_t* create_list();
+void destroy_list(list_t *list, list_value_destructor_f value_destructor);
+
+bool list_append(list_t *list, void *value);
+list_item_t* list_find(list_t *list, void *value);
+void list_delete_item(list_t *list, list_item_t *item, list_value_destructor_f value_destructor);
+
 #endif

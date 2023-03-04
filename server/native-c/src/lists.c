@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "lists.h"
+#include "utils.h"
 
 static prealloc_list_block_t* create_preallocated_list_block() {
     prealloc_list_block_t *block = malloc(sizeof(prealloc_list_block_t));
@@ -232,4 +233,81 @@ bool prealloc_list_compact(prealloc_list_t *list, list_value_destructor_f value_
     }
 
     return true;
+}
+
+list_t* create_list() {
+    return zalloc(sizeof(list_t));
+}
+
+void destroy_list(list_t *list, list_value_destructor_f value_destructor) {
+    list_item_t *item = list->head;
+    while (item) {
+        if (item->value && value_destructor) {
+            value_destructor(item->value);
+        }
+        
+        list_item_t *next = item->next;
+        free(item);
+        item = next;
+    }
+
+    free(list);
+}
+
+bool list_append(list_t *list, void *value) {
+    list_item_t *item = zalloc(sizeof(list_item_t));
+    if (!item) {
+        return false;
+    }
+    
+    item->value = value;
+    item->prev = list->tail;
+    list->tail = item;
+
+    if (item->prev) {
+        item->prev->next = item;
+    }
+
+    if (!list->head) {
+        list->head = item;
+    }
+
+    list->size++;
+}
+
+list_item_t* list_find(list_t *list, void *value) {
+    list_item_t *item = list->head;
+    while (item) {
+        if (item->value == value) {
+            return item;
+        }
+        item = item->next;
+    }
+    return NULL;
+}
+
+void list_delete_item(list_t *list, list_item_t *item, list_value_destructor_f value_destructor) {
+    if (item->prev) {
+        item->prev->next = item->next;
+    }
+
+    if (item->next) {
+        item->next->prev = item->prev;
+    }
+
+    if (list->head == item) {
+        list->head = item->next;
+    }
+
+    if (list->tail == item) {
+        list->tail = item->prev;
+    }
+
+    list->size--;
+    
+    if (item->value && value_destructor) {
+        value_destructor(item->value);
+    }
+
+    free(item);
 }
