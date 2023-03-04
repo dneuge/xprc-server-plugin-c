@@ -19,13 +19,15 @@
 #define CHANNEL_FAILED_ERROR_BUFFER_SIZE 50
 #define CHANNEL_REGISTRATION_ERROR_BUFFER_SIZE 50
 #define COMMAND_FAILED_ERROR_BUFFER_SIZE 50
+#define NO_SUCH_CHANNEL_ERROR_BUFFER_SIZE 50
 
-static void handle_request(session_t *session, request_t *request) {
+// FIXME: use dynamic_sprintf instead of preallocated buffers
+// FIXME: send error messages
+
+static void handle_command_request(session_t *session, request_t *request) {
     char channel_name[5] = {0};
     channel_id_to_string(request->channel_id, channel_name);
 
-    // TODO: support TERM
-    
     if (has_channel(session->channels, request->channel_id)) {
         char buffer[CHANNEL_IN_USE_ERROR_BUFFER_SIZE] = {0};
         int res = snprintf(buffer, CHANNEL_IN_USE_ERROR_BUFFER_SIZE, "-ERR %s %ld channel busy\n", channel_name, millis_since_reference(session));
@@ -67,8 +69,45 @@ static void handle_request(session_t *session, request_t *request) {
             printf("[XPRC] terminating connection because formatting command creation error message failed\n");
             close_network_connection(session->connection);
         }
+    }
+}
+
+static void handle_termination_request(session_t *session, request_t *request) {
+    char channel_name[5] = {0};
+    channel_id_to_string(request->channel_id, channel_name);
+    
+    channel_t *channel = get_channel(session->channels, request->channel_id);
+    if (!channel || channel->state == CHANNEL_STATE_CLOSED || channel->destruction_requested) {
+        char buffer[NO_SUCH_CHANNEL_ERROR_BUFFER_SIZE] = {0};
+        int res = snprintf(buffer, NO_SUCH_CHANNEL_ERROR_BUFFER_SIZE, "-ERR %s %ld channel does not exist\n", channel_name, millis_since_reference(session));
+        if (res < 0 || res >= NO_SUCH_CHANNEL_ERROR_BUFFER_SIZE) {
+            printf("[XPRC] terminating connection because formatting \"no such channel\" message failed\n");
+            close_network_connection(session->connection);
+        }
         return;
     }
+
+    error_t err = channel->command->terminate(channel->command_ref);
+    if (err != ERROR_NONE) {
+        printf("[XPRC] command termination for channel %s failed (error %d), closing connection\n", channel_name, err);
+        close_network_connection(session->connection);
+    }
+}    
+
+static void handle_request(session_t *session, request_t *request) {
+    if (!lock_session(session)) {
+        printf("[XPRC] failed to lock session for request; closing connection\n");
+        close_network_connection(session->connection);
+        return;
+    }
+
+    if (!strcmp("TERM", request->command_name)) {
+        handle_termination_request(session, request);
+    } else {
+        handle_command_request(session, request);
+    }
+
+    unlock_session(session);
 }
 
 static error_t new_connection(network_connection_t *connection, void **handler_reference, void *constructor_reference) {
@@ -240,7 +279,9 @@ error_t start_server(server_t **server, server_config_t *config) {
 
     memset(*server, 0, sizeof(server_t));
 
-    if (mtx_init(&(*server)->mutex, mtx_plain) != thrd_success) {
+    // recursive mutex is needed because closing connections and maintenance may operate on the list
+    // at the same time, requiring duplicate lock by the same thread, see maintain_server
+    if (mtx_init(&(*server)->mutex, mtx_plain | mtx_recursive) != thrd_success) {
         return ERROR_UNSPECIFIC;
     }
     
@@ -295,11 +336,8 @@ error_t register_session(server_t *server, session_t *session) {
     }
 
     list_append(server->sessions, session);
-    int num_sessions = server->sessions->size; // DEBUG
 
     mtx_unlock(&server->mutex);
-
-    printf("[XPRC] %d sessions registered\n", num_sessions); // DEBUG
 
     return ERROR_NONE;
 }
@@ -314,11 +352,68 @@ error_t unregister_session(server_t *server, session_t *session) {
         list_delete_item(server->sessions, item, NULL);
     }
 
-    int num_sessions = server->sessions->size; // DEBUG
-    
     mtx_unlock(&server->mutex);
-
-    printf("[XPRC] %d sessions registered\n", num_sessions); // DEBUG
     
     return item ? ERROR_NONE : ERROR_UNSPECIFIC;
+}
+
+static void destroy_pending_channels(channels_table_t *channels) {
+    for (int i=0; i<CHANNELS_NUM_SUBTABLES; i++) {
+        channels_subtable_t *subtable = channels->subtables[i];
+        if (!subtable) {
+            continue;
+        }
+
+        for (int j=0; j<CHANNELS_SEGMENT; j++) {
+            channel_t *channel = subtable->channels[j];
+            if (!channel || !channel->destruction_requested) {
+                continue;
+            }
+            
+            error_t err = channel->command->destroy(channel->command_ref);
+            if (err != ERROR_NONE) {
+                printf("[XPRC] channel command destruction failed (error %d)\n", err);
+                return;
+            }
+
+            if (!pop_channel(channels, channel->id)) {
+                printf("[XPRC] failed to remove channel after command destruction\n");
+                return;
+            }
+
+            // channel subtable might have been removed, inner loop needs to be aborted in that case
+            if (channels->subtables[i] != subtable) {
+                break;
+            }
+        }
+    }
+}
+
+error_t maintain_server(server_t *server) {
+    error_t out_err = ERROR_NONE;
+    
+    if (mtx_lock(&server->mutex) != thrd_success) {
+        return ERROR_LOCK_FAILED;
+    }
+
+    list_item_t *item = server->sessions->head;
+    while (item) {
+        // channel commands may trigger closing of connections which could unregister the session while
+        // we already process the list, so we need to make sure we don't loose track of list references
+        list_item_t *next_item = item->next;
+        
+        session_t *session = item->value;
+        if (!lock_session(session)) {
+            out_err = ERROR_LOCK_FAILED;
+        } else {
+            destroy_pending_channels(session->channels);
+            unlock_session(session);
+        }
+        
+        item = next_item;
+    }
+    
+    mtx_unlock(&server->mutex);
+    
+    return out_err;
 }

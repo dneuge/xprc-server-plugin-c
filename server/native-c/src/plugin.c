@@ -16,6 +16,7 @@
 
 #define CALL_ON_NEXT_FRAME -1.0f
 #define SCHEDULE_CLEANING_INTERVAL 500
+#define SERVER_MAINTENANCE_INTERVAL 120
 
 XPLMFlightLoopID flight_loop_before_flight_model_id = {0};
 XPLMFlightLoopID flight_loop_after_flight_model_id = {0};
@@ -40,14 +41,17 @@ bool plugin_initialized = false;
 
 int run_post_processing_thread(void *arg) {
     error_t err = ERROR_NONE;
+    bool has_lock = false;
     
-    int cycles_until_cleaning = SCHEDULE_CLEANING_INTERVAL;
+    int cycles_until_schedule_cleaning = SCHEDULE_CLEANING_INTERVAL;
+    int cycles_until_server_maintenance = SERVER_MAINTENANCE_INTERVAL;
     
     err = lock_schedule(task_schedule);
     if (err != ERROR_NONE) {
         printf("[XPRC] post-processing thread failed to lock schedule: %d\n", err);
         return 0;
     }
+    has_lock = true;
     
     while (!shutdown_post_processing) {
         if (cnd_wait(&post_processing_wait, &task_schedule->mutex) != thrd_success) {
@@ -61,17 +65,40 @@ int run_post_processing_thread(void *arg) {
 
         run_tasks(task_schedule, TASK_SCHEDULE_POST_PROCESSING);
         
-        cycles_until_cleaning--;
-        if (cycles_until_cleaning <= 0) {
-            cycles_until_cleaning = SCHEDULE_CLEANING_INTERVAL;
+        cycles_until_schedule_cleaning--;
+        if (cycles_until_schedule_cleaning <= 0) {
+            cycles_until_schedule_cleaning = SCHEDULE_CLEANING_INTERVAL;
             err = clean_schedule(task_schedule);
             if (err != ERROR_NONE) {
                 printf("[XPRC] clean_schedule reported error %d\n", err);
             }
         }
+
+        // TODO: server maintenance should be time-based (once every 2 seconds)
+        cycles_until_server_maintenance--;
+        if (cycles_until_server_maintenance <= 0) {
+            cycles_until_server_maintenance = SERVER_MAINTENANCE_INTERVAL;
+            
+            unlock_schedule(task_schedule);
+            has_lock = false;
+            
+            err = maintain_server(server);
+            if (err != ERROR_NONE) {
+                printf("[XPRC] server maintenance reported error %d\n", err);
+            }
+            
+            err = lock_schedule(task_schedule);
+            if (err != ERROR_NONE) {
+                printf("[XPRC] failed to regain lock on task schedule after server maintenance: %d\n", err);
+                break;
+            }
+            has_lock = true;
+        }
     }
 
-    unlock_schedule(task_schedule);
+    if (has_lock) {
+        unlock_schedule(task_schedule);
+    }
 
     printf("[XPRC] post-processing thread terminates\n");
     

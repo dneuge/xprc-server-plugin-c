@@ -172,3 +172,12 @@ bool put_channel(channels_table_t *table, channel_t *channel) {
     subtable->channels[subtable_address] = channel;
     return true;
 }
+
+void request_channel_destruction(channels_table_t *table, channel_id_t id) {
+    channel_t *channel = get_channel(table, id);
+    if (!channel) {
+        return;
+    }
+
+    channel->destruction_requested = true;
+}

@@ -109,18 +109,15 @@ static error_t drqv_terminate(void *command_ref) {
         free(command->task);
         command->task = NULL;
     }
-    
-    printf("[XPRC] [DRQV] terminate: pop channel\n"); // DEBUG
-    channel_t *channel = pop_channel(command->session->channels, command->channel_id);
-    if (channel) {
-        printf("[XPRC] [DRQV] terminate: freeing channel\n"); // DEBUG
-        free(channel);
-    }
+
+    channel_id_t channel_id = command->channel_id;
     
     printf("[XPRC] [DRQV] terminate: poisoning channel ID\n"); // DEBUG
     command->channel_id = BAD_CHANNEL_ID;
-
-    return drqv_destroy(command);
+    
+    request_channel_destruction(command->session->channels, channel_id);
+    
+    return ERROR_NONE;
 }
 
 static XPLMDataTypeID parse_type(char *s, int count) {

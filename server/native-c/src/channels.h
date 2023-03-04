@@ -36,6 +36,7 @@ typedef struct _channel_t channel_t;
 typedef struct _channel_t {
     channel_id_t id;
     channel_state_t state;
+    bool destruction_requested; // requested by commands, carried out by server maintenance
     command_t *command;
     void *command_ref;
 } channel_t;
@@ -61,5 +62,7 @@ channel_t* get_channel(channels_table_t *table, channel_id_t id);
 bool has_channel(channels_table_t *table, channel_id_t id);
 channel_t* pop_channel(channels_table_t *table, channel_id_t id);
 bool put_channel(channels_table_t *table, channel_t *channel);
+
+void request_channel_destruction(channels_table_t *table, channel_id_t id); // only to be called last in command termination, will destroy command
 
 #endif

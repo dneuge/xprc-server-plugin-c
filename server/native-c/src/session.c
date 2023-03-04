@@ -22,11 +22,16 @@ error_t create_session(session_t **session, network_connection_t *connection, se
 
     memset(*session, 0, sizeof(session_t));
 
+    if (mtx_init(&(*session)->mutex, mtx_plain | mtx_recursive) != thrd_success) {
+        return ERROR_UNSPECIFIC;
+    }
+
     (*session)->connection = connection;
     (*session)->server = server;
     
     (*session)->channels = create_channels_table();
     if (!(*session)->channels) {
+        mtx_destroy(&(*session)->mutex);
         free(*session);
         *session = NULL;
         return ERROR_MEMORY_ALLOCATION;
@@ -36,7 +41,9 @@ error_t create_session(session_t **session, network_connection_t *connection, se
 }
 
 int64_t millis_since_reference(session_t *session) {
-    if (session->reference_millis < 0) {
+    // called during flight loop; keep lock-free
+    
+    if (session->destruction_pending || session->reference_millis < 0) {
         return -1;
     }
 
@@ -153,6 +160,10 @@ static error_t send_channel(session_t *session, channel_t *channel, channel_acti
 error_t confirm_channel(session_t *session, channel_id_t channel_id, int64_t timestamp, char *message) {
     printf("[XPRC] confirm_channel: %s\n", message); // DEBUG
     
+    if (!lock_session(session)) {
+        return ERROR_LOCK_FAILED;
+    }
+    
     channel_t *channel = get_channel(session->channels, channel_id);
     if (!channel) {
         return SESSION_ERROR_NO_SUCH_CHANNEL;
@@ -162,13 +173,19 @@ error_t confirm_channel(session_t *session, channel_id_t channel_id, int64_t tim
     if (err != ERROR_NONE) {
         error_channel(session, channel_id, timestamp, "failed to confirm channel");
     }
-
+    
+    unlock_session(session);
+    
     printf("[XPRC] confirm_channel done with %d\n", err); // DEBUG
     return err;
 }
 
 error_t continue_channel(session_t *session, channel_id_t channel_id, int64_t timestamp, char *message) {
     printf("[XPRC] continue_channel: %s\n", message); // DEBUG
+    
+    if (!lock_session(session)) {
+        return ERROR_LOCK_FAILED;
+    }
     
     channel_t *channel = get_channel(session->channels, channel_id);
     if (!channel) {
@@ -179,13 +196,19 @@ error_t continue_channel(session_t *session, channel_id_t channel_id, int64_t ti
     if (err != ERROR_NONE) {
         error_channel(session, channel_id, timestamp, "failed to continue channel");
     }
-
+    
+    unlock_session(session);
+    
     printf("[XPRC] continue_channel done with %d\n", err); // DEBUG
     return err;
 }
 
 error_t finish_channel(session_t *session, channel_id_t channel_id, int64_t timestamp, char *message) {
     printf("[XPRC] finish_channel: %s\n", message); // DEBUG
+
+    if (!lock_session(session)) {
+        return ERROR_LOCK_FAILED;
+    }
     
     channel_t *channel = get_channel(session->channels, channel_id);
     if (!channel) {
@@ -199,12 +222,18 @@ error_t finish_channel(session_t *session, channel_id_t channel_id, int64_t time
         error_channel(session, channel_id, timestamp, "failed to finish channel");
     }
 
+    unlock_session(session);
+
     printf("[XPRC] finish_channel done with %d\n", err); // DEBUG
     return err;
 }
 
 error_t error_channel(session_t *session, channel_id_t channel_id, int64_t timestamp, char *message) {
     printf("[XPRC] error_channel: %s\n", message); // DEBUG
+
+    if (!lock_session(session)) {
+        return ERROR_LOCK_FAILED;
+    }
     
     channel_t *channel = get_channel(session->channels, channel_id);
     if (!channel) {
@@ -212,6 +241,8 @@ error_t error_channel(session_t *session, channel_id_t channel_id, int64_t times
     }
 
     error_t err = send_channel(session, channel, CHANNEL_ACTION_ERR, timestamp, message);
+
+    unlock_session(session);
 
     printf("[XPRC] error_channel done with %d\n", err); // DEBUG
     return err;
@@ -222,20 +253,15 @@ static void destroy_session_channel(channel_t *channel, void *ref) {
     
     session_t *session = ref;
 
-    channel_id_t channel_id = channel->id;
+    if (!channel->destruction_requested) {
+        if (channel->command && channel->command->terminate) {
+            // TODO: log error
+            channel->command->terminate(channel->command_ref);
+        }
 
-    if (channel->command && channel->command->terminate) {
-        // TODO: log error
-        channel->command->terminate(channel->command_ref);
-    }
-
-    if (!get_channel(session->channels, channel_id)) {
-        // channel has already been removed by command termination
-        return;
-    }
-
-    if (channel->state != CHANNEL_STATE_CLOSED) {
-        send_channel(session, channel, CHANNEL_ACTION_CLOSE, CURRENT_TIME_REFERENCE, NULL);
+        if (channel->state != CHANNEL_STATE_CLOSED) {
+            send_channel(session, channel, CHANNEL_ACTION_CLOSE, CURRENT_TIME_REFERENCE, NULL);
+        }
     }
 
     if (channel->command && channel->command->destroy) {
@@ -249,6 +275,31 @@ static void destroy_session_channel(channel_t *channel, void *ref) {
 }
 
 void destroy_session(session_t *session) {
+    session->destruction_pending = true;
+    lock_session(session); // will fail; needed to make sure all threads noticed pending destruction
+    
     destroy_channels_table(session->channels, destroy_session_channel, session);
+    mtx_destroy(&session->mutex);
     free(session);
+}
+
+bool lock_session(session_t *session) {
+    if (session->destruction_pending) {
+        return false;
+    }
+    
+    if (mtx_lock(&session->mutex) != thrd_success) {
+        return false;
+    }
+
+    if (session->destruction_pending) {
+        mtx_unlock(&session->mutex);
+        return false;
+    }
+
+    return true;
+}
+
+void unlock_session(session_t *session) {
+    mtx_unlock(&session->mutex);
 }

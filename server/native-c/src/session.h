@@ -30,10 +30,15 @@ typedef struct _session_t {
     channels_table_t *channels;
     network_connection_t *connection;
     server_t *server;
+    mtx_t mutex;
+    bool destruction_pending;
 } session_t;
 
 error_t create_session(session_t **session, network_connection_t *connection, server_t *server);
 void destroy_session(session_t *session);
+
+bool lock_session(session_t *session);
+void unlock_session(session_t *session);
 
 int64_t millis_since_reference(session_t *session);
 

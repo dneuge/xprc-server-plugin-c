@@ -28,6 +28,8 @@ typedef struct _server_t {
 error_t start_server(server_t **server, server_config_t *config);
 error_t stop_server(server_t *server);
 
+error_t maintain_server(server_t *server);
+
 error_t register_session(server_t *server, session_t *session);
 error_t unregister_session(server_t *server, session_t *session);
 
