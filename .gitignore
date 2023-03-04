@@ -1,6 +1,8 @@
 __pycache__
 
 *~
+*.kate-swp
+
 *.nocommit
 
 server/native-c/build/
