@@ -61,6 +61,11 @@ static void handle_command_request(session_t *session, request_t *request) {
     error_t err = create_command(session->server->config.command_factory, channel, session, request);
     if (err != ERROR_NONE) {
         send_or_close(session->connection, "-ERR %s %ld command creation failed\n", channel_name, millis_since_reference(session));
+        
+        if (!pop_channel(session->channels, channel->id)) {
+            printf("[XPRC] failed to clear dead channel %s after command creation failed, closing connection\n", channel_name);
+            close_network_connection(session->connection);
+        }
     }
 }
 
@@ -344,11 +349,13 @@ static void destroy_pending_channels(channels_table_t *channels) {
             if (!channel || !channel->destruction_requested) {
                 continue;
             }
-            
-            error_t err = channel->command->destroy(channel->command_ref);
-            if (err != ERROR_NONE) {
-                printf("[XPRC] channel command destruction failed (error %d)\n", err);
-                return;
+
+            if (channel->command && channel->command->destroy) {
+                error_t err = channel->command->destroy(channel->command_ref);
+                if (err != ERROR_NONE) {
+                    printf("[XPRC] channel command destruction failed (error %d)\n", err);
+                    return;
+                }
             }
 
             if (!pop_channel(channels, channel->id)) {
