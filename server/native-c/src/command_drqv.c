@@ -357,9 +357,9 @@ static void drqv_process_post(command_drqv_t *command) {
     
     destroy_preallocated_list(list, free, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS);
 
-    bool will_continue = false;
+    bool will_continue = (command->times_remaining > 0) || (command->times_remaining == INFINITE_REPETITION);
     error_t err = ERROR_NONE;
-    if (!will_continue) {
+    if (will_continue) {
         err = continue_channel(command->session, command->channel_id, command->timestamp, out);
     } else {
         finish_channel(command->session, command->channel_id, command->timestamp, out);
