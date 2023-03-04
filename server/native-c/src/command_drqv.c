@@ -201,10 +201,7 @@ static void drqv_process_flightloop(command_drqv_t *command) {
         } else {
             // ... based on (flight loop) frame count
             command->interval_wait--;
-            if (command->interval_wait <= 0) {
-                should_run = true;
-                command->interval_wait = command->interval;
-            }
+            should_run = (command->interval_wait <= 0);
         }
     }
 
@@ -213,9 +210,13 @@ static void drqv_process_flightloop(command_drqv_t *command) {
         return;
     }
 
-    // if interval is time-based forward to next multiple based on start time
-    // (try to maintain interval, avoid progressively slower intervals)
-    if (!command->is_interval_frames) {
+    // reset "timer"
+    if (command->is_interval_frames) {
+        // interval is frame-based: just reset number of frames
+        command->interval_wait = command->interval;
+    } else {
+        // interval is time-based: forward to next multiple based on start time
+        // (try to maintain interval, avoid progressively slower intervals)
         while (command->interval_not_before_timestamp <= now) {
             command->interval_not_before_timestamp += command->interval;
         }
