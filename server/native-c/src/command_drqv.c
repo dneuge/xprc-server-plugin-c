@@ -309,7 +309,9 @@ static void drqv_process_post(command_drqv_t *command) {
     bool is_first = true;
     int total_length = 0;
     while (dataref) {
-        if (!is_first) {
+        if (is_first) {
+            is_first = false;
+        } else {
             char *separator_copy = copy_string(";");
             if (!separator_copy) {
                 error_channel(command->session, command->channel_id, command->timestamp, "failed to encode value");
@@ -505,6 +507,7 @@ static error_t drqv_create(void **command_ref, session_t *session, request_t *re
         }
 
         parameter = parameter->next;
+        dataref_ref = &dataref->next;
     }
 
     task_t *task = zalloc(sizeof(task_t));
