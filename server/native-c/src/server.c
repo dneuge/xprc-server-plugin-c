@@ -14,61 +14,53 @@
 
 #define REFERENCE_COARSE_TIMESTAMP_BUFFER_SIZE 30
 #define HANDSHAKE_COMPLETION_BUFFER_SIZE 50
-#define INVALID_SYNTAX_ERROR_BUFFER_SIZE 50
-#define CHANNEL_IN_USE_ERROR_BUFFER_SIZE 50
-#define CHANNEL_FAILED_ERROR_BUFFER_SIZE 50
-#define CHANNEL_REGISTRATION_ERROR_BUFFER_SIZE 50
-#define COMMAND_FAILED_ERROR_BUFFER_SIZE 50
-#define NO_SUCH_CHANNEL_ERROR_BUFFER_SIZE 50
 
-// FIXME: use dynamic_sprintf instead of preallocated buffers
-// FIXME: send error messages
+static void send_or_close(network_connection_t *connection, char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    char *msg = dynamic_vsprintf(format, args);
+    va_end(args);
+    
+    if (!msg) {
+        printf("[XPRC] terminating connection because formatting channel message failed: %s\n", format);
+        close_network_connection(connection);
+        return;
+    }
+    
+    error_t err = send_to_network(connection, msg, NETWORK_SEND_COMPLETE_STRING);
+    if (err != ERROR_NONE) {
+        printf("[XPRC] terminating connection because sending channel message failed: %s\n", msg);
+        close_network_connection(connection);
+    }
+
+    free(msg);
+}
 
 static void handle_command_request(session_t *session, request_t *request) {
     char channel_name[5] = {0};
     channel_id_to_string(request->channel_id, channel_name);
 
     if (has_channel(session->channels, request->channel_id)) {
-        char buffer[CHANNEL_IN_USE_ERROR_BUFFER_SIZE] = {0};
-        int res = snprintf(buffer, CHANNEL_IN_USE_ERROR_BUFFER_SIZE, "-ERR %s %ld channel busy\n", channel_name, millis_since_reference(session));
-        if (res < 0 || res >= CHANNEL_IN_USE_ERROR_BUFFER_SIZE) {
-            printf("[XPRC] terminating connection because formatting channel busy error message failed\n");
-            close_network_connection(session->connection);
-        }
+        send_or_close(session->connection, "-ERR %s %ld channel busy\n", channel_name, millis_since_reference(session));
         return;
     }
 
     channel_t *channel = zalloc(sizeof(channel_t));
     if (!channel) {
-        char buffer[CHANNEL_FAILED_ERROR_BUFFER_SIZE] = {0};
-        int res = snprintf(buffer, CHANNEL_FAILED_ERROR_BUFFER_SIZE, "-ERR %s %ld channel creation failed\n", channel_name, millis_since_reference(session));
-        if (res < 0 || res >= CHANNEL_FAILED_ERROR_BUFFER_SIZE) {
-            printf("[XPRC] terminating connection because formatting channel creation error message failed\n");
-            close_network_connection(session->connection);
-        }
+        send_or_close(session->connection, "-ERR %s %ld channel creation failed\n", channel_name, millis_since_reference(session));
         return;
     }
 
     channel->id = request->channel_id;
     channel->state = CHANNEL_STATE_INITIAL;
     if (!put_channel(session->channels, channel)) {
-        char buffer[CHANNEL_REGISTRATION_ERROR_BUFFER_SIZE] = {0};
-        int res = snprintf(buffer, CHANNEL_REGISTRATION_ERROR_BUFFER_SIZE, "-ERR %s %ld channel registration failed\n", channel_name, millis_since_reference(session));
-        if (res < 0 || res >= CHANNEL_REGISTRATION_ERROR_BUFFER_SIZE) {
-            printf("[XPRC] terminating connection because formatting channel registration error message failed\n");
-            close_network_connection(session->connection);
-        }
+        send_or_close(session->connection, "-ERR %s %ld channel registration failed\n", channel_name, millis_since_reference(session));
         return;
     }
     
     error_t err = create_command(session->server->config.command_factory, channel, session, request);
     if (err != ERROR_NONE) {
-        char buffer[COMMAND_FAILED_ERROR_BUFFER_SIZE] = {0};
-        int res = snprintf(buffer, COMMAND_FAILED_ERROR_BUFFER_SIZE, "-ERR %s %ld command creation failed\n", channel_name, millis_since_reference(session));
-        if (res < 0 || res >= COMMAND_FAILED_ERROR_BUFFER_SIZE) {
-            printf("[XPRC] terminating connection because formatting command creation error message failed\n");
-            close_network_connection(session->connection);
-        }
+        send_or_close(session->connection, "-ERR %s %ld command creation failed\n", channel_name, millis_since_reference(session));
     }
 }
 
@@ -78,12 +70,7 @@ static void handle_termination_request(session_t *session, request_t *request) {
     
     channel_t *channel = get_channel(session->channels, request->channel_id);
     if (!channel || channel->state == CHANNEL_STATE_CLOSED || channel->destruction_requested) {
-        char buffer[NO_SUCH_CHANNEL_ERROR_BUFFER_SIZE] = {0};
-        int res = snprintf(buffer, NO_SUCH_CHANNEL_ERROR_BUFFER_SIZE, "-ERR %s %ld channel does not exist\n", channel_name, millis_since_reference(session));
-        if (res < 0 || res >= NO_SUCH_CHANNEL_ERROR_BUFFER_SIZE) {
-            printf("[XPRC] terminating connection because formatting \"no such channel\" message failed\n");
-            close_network_connection(session->connection);
-        }
+        send_or_close(session->connection, "-ERR %s %ld channel does not exist\n", channel_name, millis_since_reference(session));
         return;
     }
 
@@ -147,19 +134,7 @@ static void on_line_received(void *handler_reference, char *line, int length) {
         request_t *request = NULL;
         error_t err = parse_request(&request, line, length);
         if (err != ERROR_NONE) {
-            char buffer[INVALID_SYNTAX_ERROR_BUFFER_SIZE] = {0};
-            int res = snprintf(buffer, INVALID_SYNTAX_ERROR_BUFFER_SIZE, "*ERR %ld invalid syntax\n", millis_since_reference(session));
-            if (res < 0 || res >= INVALID_SYNTAX_ERROR_BUFFER_SIZE) {
-                printf("[XPRC] terminating connection because formatting invalid syntax error message failed\n");
-                close_network_connection(session->connection);
-            }
-
-            error_t err = send_to_network(session->connection, buffer, NETWORK_SEND_COMPLETE_STRING);
-            if (err != ERROR_NONE) {
-                printf("[XPRC] terminating connection because sending invalid syntax error message failed\n");
-                close_network_connection(session->connection);
-            }
-            
+            send_or_close(session->connection, "*ERR %ld invalid syntax\n", millis_since_reference(session));
             return;
         }
 
