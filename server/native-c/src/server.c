@@ -81,6 +81,12 @@ static error_t new_connection(network_connection_t *connection, void **handler_r
     
     session_t *session = *handler_reference;
     session->phase = SESSION_PHASE_AWAIT_VERSION;
+
+    err = register_session(server, session);
+    if (err != ERROR_NONE) {
+        printf("[XPRC] failed to register session \n");
+        return err;
+    }
     
     err = send_to_network(connection, "XPRC;version,password\n", NETWORK_SEND_COMPLETE_STRING);
     if (err != ERROR_NONE) {
@@ -217,6 +223,12 @@ static void on_line_received(void *handler_reference, char *line, int length) {
 
 static void on_connection_closing(void *handler_reference) {
     session_t *session = handler_reference;
+    
+    error_t err = unregister_session(session->server, session);
+    if (err != ERROR_NONE) {
+        printf("[XPRC] failed to unregister session from server: %d\n", err);
+    }
+    
     destroy_session(session);
 }
 
@@ -228,9 +240,21 @@ error_t start_server(server_t **server, server_config_t *config) {
 
     memset(*server, 0, sizeof(server_t));
 
+    if (mtx_init(&(*server)->mutex, mtx_plain) != thrd_success) {
+        return ERROR_UNSPECIFIC;
+    }
+    
+    (*server)->sessions = create_list();
+    if (!(*server)->sessions) {
+        mtx_destroy(&(*server)->mutex);
+        return ERROR_MEMORY_ALLOCATION;
+    }
+
     (*server)->config = *config;
     (*server)->config.password = copy_string(config->password);
     if (!(*server)->config.password) {
+        destroy_list((*server)->sessions, NULL);
+        mtx_destroy(&(*server)->mutex);
         free(*server);
         *server = NULL;
         return ERROR_MEMORY_ALLOCATION;
@@ -245,6 +269,8 @@ error_t start_server(server_t **server, server_config_t *config) {
 
     error_t err = create_network_server(&(*server)->network, &(*server)->config.network, handler);
     if (err != ERROR_NONE) {
+        destroy_list((*server)->sessions, NULL);
+        mtx_destroy(&(*server)->mutex);
         free((*server)->config.password);
         free(*server);
         *server = NULL;
@@ -256,8 +282,43 @@ error_t start_server(server_t **server, server_config_t *config) {
 
 error_t stop_server(server_t *server) {
     destroy_network_server(server->network);
+    destroy_list(server->sessions, NULL);
+    mtx_destroy(&server->mutex);
     free(server->config.password);
     free(server);
     return ERROR_NONE;
 }
 
+error_t register_session(server_t *server, session_t *session) {
+    if (mtx_lock(&server->mutex) != thrd_success) {
+        return ERROR_LOCK_FAILED;
+    }
+
+    list_append(server->sessions, session);
+    int num_sessions = server->sessions->size; // DEBUG
+
+    mtx_unlock(&server->mutex);
+
+    printf("[XPRC] %d sessions registered\n", num_sessions); // DEBUG
+
+    return ERROR_NONE;
+}
+
+error_t unregister_session(server_t *server, session_t *session) {
+    if (mtx_lock(&server->mutex) != thrd_success) {
+        return ERROR_LOCK_FAILED;
+    }
+
+    list_item_t *item = list_find(server->sessions, session);
+    if (item) {
+        list_delete_item(server->sessions, item, NULL);
+    }
+
+    int num_sessions = server->sessions->size; // DEBUG
+    
+    mtx_unlock(&server->mutex);
+
+    printf("[XPRC] %d sessions registered\n", num_sessions); // DEBUG
+    
+    return item ? ERROR_NONE : ERROR_UNSPECIFIC;
+}
