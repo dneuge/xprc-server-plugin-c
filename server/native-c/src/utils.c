@@ -48,7 +48,7 @@ bool ends_with(char *haystack, char *needle) {
         return false;
     }
 
-    return strncmp(&haystack[haystack_len-needle_len-1], needle, needle_len);
+    return !strncmp(&haystack[haystack_len-needle_len], needle, needle_len);
 }
 
 int strpos(char *haystack, char *needle, int start) {
