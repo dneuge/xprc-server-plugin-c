@@ -10,7 +10,7 @@
 #define CHANNEL_ACTION_ACK_CONTINUE 1
 #define CHANNEL_ACTION_ACK_CLOSE 2
 #define CHANNEL_ACTION_CONTINUE 3
-#define CHANNEL_ACTION_CLOSE 3
+#define CHANNEL_ACTION_CLOSE 4
 
 typedef uint8_t channel_action_t;
 
@@ -102,9 +102,9 @@ static error_t send_channel(session_t *session, channel_t *channel, channel_acti
         timestamp_length = 1;
     }
 
-    bool needs_state_prefix = (action != CHANNEL_ACTION_CONTINUE);
-    
     int message_length = (message != NULL) ? strlen(message) : 0;
+    bool needs_state_prefix = (message_length == 0) || (channel->state == CHANNEL_STATE_INITIAL);
+    
     int out_length = 1 /* continuation */ + 4 /* channel ID */ + 1 /* space */ + timestamp_length + 1 /* LF */;
     if (message_length > 0) {
         out_length += 1 /* space */ + message_length;
