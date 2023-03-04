@@ -15,7 +15,11 @@ char* dynamic_sprintf(char *format, ...) {
 }
 
 char* dynamic_vsprintf(char *format, va_list args) {
-    int required_size = vsnprintf(NULL, 0, format, args);
+    va_list args_copy;
+    va_copy(args_copy, args);
+    int required_size = vsnprintf(NULL, 0, format, args_copy);
+    va_end(args_copy);
+    
     if (required_size < 1) {
         return NULL;
     }
