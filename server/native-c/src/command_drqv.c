@@ -31,14 +31,16 @@ typedef struct {
     task_schedule_phase_t phase;
     
     int32_t interval;
+    int32_t interval_wait;
     bool is_interval_frames;
     int32_t times_remaining;
+    int64_t interval_not_before_timestamp;
 
     bool initialized;
     bool failed;
 
     drqv_dataref_t *datarefs;
-    int64_t timestamp; // last flightloop
+    int64_t timestamp; // last flightloop, 0 if we data was not updated since it has last been sent
 } command_drqv_t;
 
 static error_t drqv_destroy(void *command_ref) {
@@ -176,19 +178,60 @@ static void drqv_process_flightloop(command_drqv_t *command) {
         return;
     }
 
-    // TODO: check interval
+    int64_t now = millis_since_reference(command->session);
+    if (now < 0) {
+        return;
+    }
 
-    command->timestamp = millis_since_reference(command->session);
-    
+    bool should_run = false;
     if (!command->initialized) {
         if (!drqv_initialize(command)) {
             command->failed = true;
             return;
         }
+        confirm_channel(command->session, command->channel_id, now, NULL);
 
-        confirm_channel(command->session, command->channel_id, command->timestamp, NULL);
+        // we always run immediately after initialization
+        should_run = true;
+    } else {
+        // check interval
+        if (!command->is_interval_frames) {
+            // ... based on time
+            should_run = (now >= command->interval_not_before_timestamp);
+        } else {
+            // ... based on (flight loop) frame count
+            command->interval_wait--;
+            if (command->interval_wait <= 0) {
+                should_run = true;
+                command->interval_wait = command->interval;
+            }
+        }
     }
 
+    // skip further updates if we should not run
+    if (!should_run) {
+        return;
+    }
+
+    // if interval is time-based forward to next multiple based on start time
+    // (try to maintain interval, avoid progressively slower intervals)
+    if (!command->is_interval_frames) {
+        while (command->interval_not_before_timestamp <= now) {
+            command->interval_not_before_timestamp += command->interval;
+        }
+    }
+
+    // count repetitions
+    if (command->times_remaining > 0) {
+        command->times_remaining--;
+    } else if (command->times_remaining != INFINITE_REPETITION) {
+        return;
+    }
+
+    // timestamp data
+    command->timestamp = now;
+
+    // update data
     drqv_dataref_t *dataref = command->datarefs;
     while (dataref) {
         switch (dataref->type) {
@@ -329,6 +372,8 @@ static void drqv_process_post(command_drqv_t *command) {
         error_channel(command->session, command->channel_id, command->timestamp, "error on result submission");
         command->failed = true;
     }
+    
+    command->timestamp = 0;
 }
 
 static void drqv_process(task_t *task, task_schedule_phase_t phase) {
@@ -357,7 +402,12 @@ static bool is_valid_interval(char *s) {
 static error_t drqv_create(void **command_ref, session_t *session, request_t *request) {
     error_t err = ERROR_NONE;
     error_t out_error = ERROR_NONE;
-
+    
+    int64_t now = millis_since_reference(session);
+    if (now < 0) {
+        return ERROR_UNSPECIFIC;
+    }
+    
     channel_id_t channel_id = request->channel_id;
     
     command_drqv_t *command = zalloc(sizeof(command_drqv_t));
@@ -367,6 +417,7 @@ static error_t drqv_create(void **command_ref, session_t *session, request_t *re
 
     command->session = session;
     command->channel_id = channel_id;
+    command->interval_not_before_timestamp = now;
 
     // TODO: check full format (atoi ignores alphabet)
     
