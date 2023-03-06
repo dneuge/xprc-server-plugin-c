@@ -10,6 +10,7 @@ SET(COMMON_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/requests.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/channels.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/network.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/arrays.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hashmap.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/lists.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils.c

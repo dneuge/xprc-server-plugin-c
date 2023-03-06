@@ -6,10 +6,20 @@
 
 #include <XPLMDataAccess.h>
 
+#include "arrays.h"
 #include "session.h"
 #include "utils.h"
 
 #define INFINITE_REPETITION -2134896
+
+#define SIZE_XPLM_INT 4
+#define SIZE_XPLM_FLOAT 4
+#define SIZE_XPLM_DOUBLE 8
+
+#define SIZE_XPLM_INT_FLOAT SIZE_XPLM_FLOAT
+#if SIZE_XPLM_INT != SIZE_XPLM_FLOAT
+#error size of X-Plane integer and float types do not match
+#endif
 
 typedef struct _drqv_dataref_t drqv_dataref_t;
 typedef struct _drqv_dataref_t {
@@ -143,7 +153,7 @@ static XPLMDataTypeID parse_type(char *s, int count) {
 static bool drqv_initialize(command_drqv_t *command) {
     drqv_dataref_t *dataref = command->datarefs;
     while (dataref) {
-        if (!dataref->value_buffer || dataref->value_buffer_size <= 0) {
+        if (!dataref->value_buffer) {
             error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "internal error preparing dataref buffer");
             command->failed = true;
             return false;
@@ -171,6 +181,30 @@ static bool drqv_initialize(command_drqv_t *command) {
     command->initialized = true;
     
     return command->initialized;
+}
+
+typedef int (*xplm_dataref_array_getter_f)(XPLMDataRef, void*, int, int); // 2nd argument void* matches for blob, otherwise int* or float*
+
+static bool copy_xplm_dataref_array(command_drqv_t *command, drqv_dataref_t *dataref, xplm_dataref_array_getter_f xplm_getter) {
+    int length = xplm_getter(dataref->xp_ref, NULL, 0, 0);
+    if (length < 0) {
+        error_channel(command->session, command->channel_id, command->timestamp, "negative length received for dataref array");
+        return false;
+    }
+    
+    if (!dynamic_array_set_length(dataref->value_buffer, length)) {
+        error_channel(command->session, command->channel_id, command->timestamp, "failed to resize internal array");
+        return false;
+    }
+    
+    void *dest = dynamic_array_get_pointer(dataref->value_buffer, 0);
+    int actual = xplm_getter(dataref->xp_ref, dest, 0, length);
+    if (actual != length) {
+        error_channel(command->session, command->channel_id, command->timestamp, "dataref returned inconsistent number of items");
+        return false;
+    }
+
+    return true;
 }
 
 static void drqv_process_flightloop(command_drqv_t *command) {
@@ -248,8 +282,27 @@ static void drqv_process_flightloop(command_drqv_t *command) {
             *((double*) dataref->value_buffer) = XPLMGetDatad(dataref->xp_ref);
             break;
 
-        // TODO: add arrays and blob support (get full array, resize buffer if too small)
-            
+        case xplmType_IntArray:
+            if (!copy_xplm_dataref_array(command, dataref, (xplm_dataref_array_getter_f) XPLMGetDatavi)) {
+                command->failed = true;
+                return;
+            }
+            break;
+
+        case xplmType_FloatArray:
+            if (!copy_xplm_dataref_array(command, dataref, (xplm_dataref_array_getter_f) XPLMGetDatavf)) {
+                command->failed = true;
+                return;
+            }
+            break;
+
+        case xplmType_Data:
+            if (!copy_xplm_dataref_array(command, dataref, (xplm_dataref_array_getter_f) XPLMGetDatab)) {
+                command->failed = true;
+                return;
+            }
+            break;
+
         default:
             error_channel(command->session, command->channel_id, command->timestamp, "unsupported type");
             command->failed = true;
@@ -278,8 +331,82 @@ static char* encode_value(XPLMDataTypeID type, void *value, size_t value_size) {
     return out;
 }
 
+static char* encode_array(XPLMDataTypeID type, dynamic_array_t *arr) {
+    if (!arr) {
+        return NULL;
+    }
+
+    if (type != xplmType_IntArray && type != xplmType_FloatArray && type != xplmType_Data) {
+        // unhandled type
+        return NULL;
+    }
+
+    if (arr->length == 0) {
+        // no need to go through concatenation if there are no items; only length prefix is needed
+        return copy_string("0");
+    }
+    
+    // prepare list for string concatenation
+    prealloc_list_t *list = create_preallocated_list();
+    if (!list) {
+        return NULL;
+    }
+
+    char *s = NULL;
+    int total_length = 0;
+
+    // all encoded array types are prefixed by array length
+    // int[] and float[] separate each value by comma as part of value encoding but not blob
+    char *format = (type == xplmType_Data) ? "%ld," : "%ld";
+    s = dynamic_sprintf(format, arr->length);
+    if (!s || !prealloc_list_append(list, s)) {
+        destroy_preallocated_list(list, free, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS);
+        return NULL;
+    }
+    total_length += strlen(s);
+
+    // encode all values
+    for (int i=0; i < arr->length; i++) {
+        if (type == xplmType_IntArray) {
+            s = dynamic_sprintf(",%d", dynamic_array_get_item(int32_t, arr, i));
+        } else if (type == xplmType_FloatArray) {
+            s = dynamic_sprintf(",%f", dynamic_array_get_item(float, arr, i));
+        } else {
+            s = dynamic_sprintf("%02X", dynamic_array_get_item(uint8_t, arr, i));
+        }
+        
+        if (!s || !prealloc_list_append(list, s)) {
+            destroy_preallocated_list(list, free, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS);
+            return NULL;
+        }
+        
+        total_length += strlen(s);
+    }
+
+    // concatenate everything to a single string
+    char *out = zalloc(total_length+1);
+    if (out) {
+        char *dest = out;
+        prealloc_list_item_t *item = list->first_in_use_item;
+        while (item) {
+            int len = strlen(item->value);
+            memcpy(dest, item->value, len);
+            dest += len;
+            item = item->next_in_use;
+        }
+    }
+    
+    destroy_preallocated_list(list, free, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS);
+
+    return out;
+}
+
 static char* encode_dataref_value(drqv_dataref_t *dataref) {
-    return encode_value(dataref->type, dataref->value_buffer, dataref->value_buffer_size);
+    if (dataref->type == xplmType_IntArray || dataref->type == xplmType_FloatArray || dataref->type == xplmType_Data) {
+        return encode_array(dataref->type, dataref->value_buffer);
+    } else {
+        return encode_value(dataref->type, dataref->value_buffer, dataref->value_buffer_size);
+    }
 }
 
 static void drqv_process_post(command_drqv_t *command) {
@@ -505,16 +632,31 @@ static error_t drqv_create(void **command_ref, session_t *session, request_t *re
         }
         
         *dataref_ref = dataref;
-        
-        // preallocate if required buffer size is already known
+
+        // allocate buffers
         if (wanted_type == xplmType_Int || wanted_type == xplmType_Float || wanted_type == xplmType_Double) {
-            dataref->value_buffer_size = (wanted_type == xplmType_Double) ? 8 : 4;
+            // single value: exact size is already known by type
+            dataref->value_buffer_size = (wanted_type == xplmType_Double) ? SIZE_XPLM_DOUBLE : SIZE_XPLM_INT_FLOAT;
             dataref->value_buffer = zalloc(dataref->value_buffer_size);
             if (!dataref->value_buffer) {
-                error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "internal dataref value buffer could not be allocated");
+                error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "internal dataref direct value buffer could not be allocated");
                 out_error = ERROR_MEMORY_ALLOCATION;
                 goto error;
             }
+        } else if (wanted_type == xplmType_IntArray || wanted_type == xplmType_FloatArray || wanted_type == xplmType_Data) {
+            // array types: create only dynamic array, length and capacity are determined during data retrieval
+            size_t item_size = (wanted_type == xplmType_Data) ? 1 : SIZE_XPLM_INT_FLOAT;
+            dataref->value_buffer = create_dynamic_array(item_size, 0);
+            if (!dataref->value_buffer) {
+                error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "internal dataref dynamic array value buffer could not be allocated");
+                out_error = ERROR_MEMORY_ALLOCATION;
+                goto error;
+            }
+        } else {
+            // unsupported type
+            error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "dataref type is not handled");
+            out_error = ERROR_UNSPECIFIC;
+            goto error;
         }
 
         parameter = parameter->next;
