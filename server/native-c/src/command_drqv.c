@@ -315,14 +315,19 @@ static void drqv_process_post(command_drqv_t *command) {
         } else {
             char *separator_copy = copy_string(";");
             if (!separator_copy) {
-                error_channel(command->session, command->channel_id, command->timestamp, "failed to encode value");
+                error_channel(command->session, command->channel_id, command->timestamp, "failed to copy separator");
                 command->failed = true;
                 destroy_preallocated_list(list, free, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS);
                 return;
             }
 
             total_length++;
-            prealloc_list_append(list, separator_copy);
+            if (!prealloc_list_append(list, separator_copy)) {
+                error_channel(command->session, command->channel_id, command->timestamp, "failed to append separator to list");
+                command->failed = true;
+                destroy_preallocated_list(list, free, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS);
+                return;
+            }
         }
         
         char *encoded_value = encode_dataref_value(dataref);
@@ -334,7 +339,12 @@ static void drqv_process_post(command_drqv_t *command) {
         }
 
         total_length += strlen(encoded_value);
-        prealloc_list_append(list, encoded_value);
+        if (!prealloc_list_append(list, encoded_value)) {
+            error_channel(command->session, command->channel_id, command->timestamp, "failed to append encoded value to list");
+            command->failed = true;
+            destroy_preallocated_list(list, free, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS);
+            return;
+        }
 
         dataref = dataref->next;
     }
