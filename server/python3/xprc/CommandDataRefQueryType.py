@@ -31,7 +31,7 @@ class CommandDataRefQueryType(CommandController):
             self.callback.fatal_error('DataRef currently does not provide any supported types: %s' % (self.data_ref_name))
             return
         
-        self.callback.send(';'.join(types), close_channel=True)
+        self.callback.send(','.join(types), close_channel=True)
 
     def type_flags_to_strings(self, types):
         # FIXME: use plugin-wide constants for type strings
