@@ -30,7 +30,7 @@ mkdir -p "${release_dir}"
 ## BUILD
 cd "${build_dir}"
 
-cmake .. || die "CMake failed"
+cmake -D XPLANE_TARGET="${XPLANE_TARGET}" .. || die "CMake failed"
 make -j$num_jobs || die "make failed"
 
 ## COPY

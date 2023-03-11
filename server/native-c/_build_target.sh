@@ -10,6 +10,16 @@ if [[ "$#" -ge 1 ]]; then
 fi
 export BUILD_TARGET
 
+XPLANE_TARGET="12.04"
+if [[ "$#" -ge 2 ]]; then
+	XPLANE_TARGET="$2"
+fi
+export XPLANE_TARGET
+
+if [[ ! "${XPLANE_TARGET}" =~ ^11|12\.04$ ]]; then
+	die "Unknown X-Plane target version: ${XPLANE_TARGET}"
+fi
+
 HOST_OS_NAME="$([[ -f /etc/os-release ]] && source /etc/os-release && echo $NAME)"
 HOST_OS_VERSION="$([[ -f /etc/os-release ]] && source /etc/os-release && [[ "$NAME" == "Ubuntu" ]] && echo $UBUNTU_CODENAME)"
 if [[ "${HOST_OS_NAME}" == "" ]]; then
@@ -43,7 +53,7 @@ if [[ "${CMAKE_TOOLCHAIN_FILE}" != "" ]]; then
 	CMAKE_TOOLCHAIN_FILE=$(realpath "${CMAKE_TOOLCHAIN_FILE}")
 fi
 
-echo "Build target: ${BUILD_TARGET}"
+echo "Build target: X-Plane ${XPLANE_TARGET} on ${BUILD_TARGET}"
 if [[ "${CMAKE_TOOLCHAIN_FILE}" != "" ]]; then
 	echo "  applying CMake toolchain: ${CMAKE_TOOLCHAIN_FILE}"
 	export CMAKE_TOOLCHAIN_FILE
