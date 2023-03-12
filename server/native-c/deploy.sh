@@ -16,10 +16,26 @@ if [[ ! -e user.cfg ]]; then
     exit 0
 fi
 
+source _build_target.sh || die "Failed to include build target script"
+
 . user.cfg
 
+DEPLOYDIR=""
+if [[ "${XPLANE_TARGET_MAJOR}" == "11" ]]; then
+    DEPLOYDIR="${DEPLOYDIR_XP11:-}"
+elif [[ "${XPLANE_TARGET_MAJOR}" == "12" ]]; then
+    DEPLOYDIR="${DEPLOYDIR_XP12:-}"
+else
+    die "unhandled X-Plane major version ${XPLANE_TARGET_MAJOR}"
+fi
 
-mkdir -p "${DEPLOYDIR}/lin_x64" || die "Failed to make sure deployment directory exists"
-cp release/xprc/lin_x64/* "${DEPLOYDIR}/lin_x64/" || die "Failed to deploy Linux plugin to ${DEPLOYDIR}"
+if [[ "${DEPLOYDIR}" == "" ]]; then
+    echo "No deployment directory configured for X-Plane ${XPLANE_TARGET_MAJOR}, skipping deployment."
+    exit 0
+fi
 
-echo Deployed.
+DEPLOYSUBDIR="${DEPLOYDIR}/${XPLANE_PLATFORM_ID}"
+mkdir -p "${DEPLOYSUBDIR}" || die "Failed to make sure deployment directory ${DEPLOYSUBDIR} exists"
+cp release/xprc/${XPLANE_PLATFORM_ID}/* "${DEPLOYSUBDIR}/" || die "Failed to deploy plugin to ${DEPLOYSUBDIR}"
+
+echo "Deployed to ${DEPLOYSUBDIR}"

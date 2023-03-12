@@ -20,6 +20,13 @@ if [[ ! "${XPLANE_TARGET}" =~ ^11|12\.04$ ]]; then
 	die "Unknown X-Plane target version: ${XPLANE_TARGET}"
 fi
 
+XPLANE_TARGET_MAJOR=0
+if [[ "${XPLANE_TARGET}" =~ ^11(\..*)?$ ]]; then
+	XPLANE_TARGET_MAJOR=11
+elif [[ "${XPLANE_TARGET}" =~ ^12(\..*)?$ ]]; then
+	XPLANE_TARGET_MAJOR=12
+fi
+
 HOST_OS_NAME="$([[ -f /etc/os-release ]] && source /etc/os-release && echo $NAME)"
 HOST_OS_VERSION="$([[ -f /etc/os-release ]] && source /etc/os-release && [[ "$NAME" == "Ubuntu" ]] && echo $UBUNTU_CODENAME)"
 if [[ "${HOST_OS_NAME}" == "" ]]; then
