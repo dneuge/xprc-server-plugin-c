@@ -14,8 +14,12 @@ dynamic_array_t* create_dynamic_array(size_t item_size, int initial_capacity) {
     
     memset(arr, 0, sizeof(dynamic_array_t));
 
-    arr->capacity = initial_capacity;
     arr->item_size = item_size;
+
+    if (!dynamic_array_ensure_capacity(arr, initial_capacity)) {
+        destroy_dynamic_array(arr);
+        return NULL;
+    }
     
     return arr;
 }
