@@ -93,7 +93,7 @@ char* xprc_encode_array(XPLMDataTypeID type, dynamic_array_t *arr) {
     return out;
 }
 
-char* encode_value(XPLMDataTypeID type, void *value, size_t value_size) {
+char* xprc_encode_value(XPLMDataTypeID type, void *value, size_t value_size) {
     if (!value || value_size < 1) {
         return NULL;
     }
