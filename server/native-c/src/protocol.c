@@ -109,3 +109,63 @@ char* xprc_encode_value(XPLMDataTypeID type, void *value, size_t value_size) {
 
     return out;
 }
+
+inline static void encode_types_add(bool condition, const char *encoded, const size_t length, char **pos, bool *is_first) {
+    if (!condition) {
+        return;
+    }
+    
+    if (*is_first) {
+        *is_first = false;
+    } else {
+        strncpy(*pos, XPRC_TYPE_SEPARATOR, XPRC_TYPE_SEPARATOR_LENGTH);
+        *pos = *pos + XPRC_TYPE_SEPARATOR_LENGTH;
+    }
+    
+    strncpy(*pos, encoded, length);
+    *pos = *pos + length;
+}
+
+char* xprc_encode_types(XPLMDataTypeID types) {
+    bool is_int = (types & xplmType_Int) != 0;
+    bool is_float = (types & xplmType_Float) != 0;
+    bool is_double = (types & xplmType_Double) != 0;
+    bool is_float_array = (types & xplmType_FloatArray) != 0;
+    bool is_int_array = (types & xplmType_IntArray) != 0;
+    bool is_blob = (types & xplmType_Data) != 0;
+
+    int num_types = (is_int ? 1 : 0) + (is_float ? 1 : 0) + (is_double ? 1 : 0)
+        + (is_float_array ? 1 : 0) + (is_int_array ? 1 : 0)
+        + (is_blob ? 1 : 0);
+
+    if (num_types <= 0) {
+        return NULL;
+    }
+
+    size_t length = (is_int ? XPRC_TYPE_INT_LENGTH : 0)
+        + (is_float ? XPRC_TYPE_FLOAT_LENGTH : 0)
+        + (is_double ? XPRC_TYPE_DOUBLE_LENGTH : 0)
+        + (is_float_array ? XPRC_TYPE_FLOAT_ARRAY_LENGTH : 0)
+        + (is_int_array ? XPRC_TYPE_INT_ARRAY_LENGTH : 0)
+        + (is_blob ? XPRC_TYPE_BLOB_LENGTH : 0)
+        + ((num_types-1) * XPRC_TYPE_SEPARATOR_LENGTH);
+
+    char *out = zalloc(length + 1);
+    if (!out) {
+        return NULL;
+    }
+
+    char *pos = out;
+    bool is_first = true;
+
+    encode_types_add(is_int, XPRC_TYPE_INT, XPRC_TYPE_INT_LENGTH, &pos, &is_first);
+    encode_types_add(is_float, XPRC_TYPE_FLOAT, XPRC_TYPE_FLOAT_LENGTH, &pos, &is_first);
+    encode_types_add(is_double, XPRC_TYPE_DOUBLE, XPRC_TYPE_DOUBLE_LENGTH, &pos, &is_first);
+    encode_types_add(is_int_array, XPRC_TYPE_INT_ARRAY, XPRC_TYPE_INT_ARRAY_LENGTH, &pos, &is_first);
+    encode_types_add(is_float_array, XPRC_TYPE_FLOAT_ARRAY, XPRC_TYPE_FLOAT_ARRAY_LENGTH, &pos, &is_first);
+    encode_types_add(is_blob, XPRC_TYPE_BLOB, XPRC_TYPE_BLOB_LENGTH, &pos, &is_first);
+
+    out[length] = 0;
+    
+    return out;
+}

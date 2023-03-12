@@ -3,6 +3,7 @@
 
 #include "commands.h"
 
+#include "command_drls.h"
 #include "command_drqv.h"
 
 static bool register_command(command_factory_t *factory, command_t *command) {
@@ -25,6 +26,7 @@ command_factory_t* create_command_factory() {
     }
 
     bool success = true;
+    success &= register_command(factory, &command_drls);
     success &= register_command(factory, &command_drqv);
 
     if (!success) {
