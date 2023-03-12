@@ -60,7 +60,14 @@ static void handle_command_request(session_t *session, request_t *request) {
     
     error_t err = create_command(session->server->config.command_factory, channel, session, request);
     if (err != ERROR_NONE) {
-        send_or_close(session->connection, "-ERR %s %ld command creation failed\n", channel_name, millis_since_reference(session));
+        // use session error_channel function instead of raw send_or_close/send_to_network as the channel might have been closed
+        // already by the command that just failed to be created
+        err = error_channel(session, channel->id, CURRENT_TIME_REFERENCE, "command creation failed");
+        if (err != ERROR_NONE && err != SESSION_ERROR_INVALID_CHANNEL_STATE) {
+            printf("[XPRC] terminating connection because sending channel error failed after failed command creation\n");
+            close_network_connection(session->connection);
+            return;
+        }
         
         if (!pop_channel(session->channels, channel->id)) {
             printf("[XPRC] failed to clear dead channel %s after command creation failed, closing connection\n", channel_name);
