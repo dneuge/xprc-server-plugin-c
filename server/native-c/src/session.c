@@ -181,7 +181,7 @@ error_t confirm_channel(session_t *session, channel_id_t channel_id, int64_t tim
 }
 
 error_t continue_channel(session_t *session, channel_id_t channel_id, int64_t timestamp, char *message) {
-    printf("[XPRC] continue_channel: %s\n", message); // DEBUG
+    //printf("[XPRC] continue_channel: %s\n", message); // DEBUG
     
     if (!lock_session(session)) {
         return ERROR_LOCK_FAILED;
@@ -199,7 +199,7 @@ error_t continue_channel(session_t *session, channel_id_t channel_id, int64_t ti
     
     unlock_session(session);
     
-    printf("[XPRC] continue_channel done with %d\n", err); // DEBUG
+    //printf("[XPRC] continue_channel done with %d\n", err); // DEBUG
     return err;
 }
 
