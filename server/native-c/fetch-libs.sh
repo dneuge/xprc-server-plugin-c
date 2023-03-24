@@ -140,4 +140,4 @@ function git_mirror {
     rm -Rf "${mirror_workdir}" || die "failed to delete git mirror working directory ${mirror_workdir}"
 }
 
-download "X-Plane SDK" XPSDK XPSDK400.zip 500497 https://developer.x-plane.com/wp-content/plugins/code-sample-generation/sample_templates/XPSDK400.zip 6d7a1d36e51764554bf5e17a5ff13df1a48187b828172c6752868ddde24c938e 311b5f2057dec1ce7e580c743886082a
+download "X-Plane SDK" XPSDK XPSDK401.zip 500613 https://developer.x-plane.com/wp-content/plugins/code-sample-generation/sample_templates/XPSDK401.zip c1104e83d9b54b03d0084c1db52ee6491e5290994503e8dd2d4a0af637e2bdd7 c5445598297a5ffa6efc9760c3f773e6
