@@ -1,19 +1,15 @@
-# X-Plane Remote Control
+# X-Plane Remote Control (Native Plugin written in C)
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 
 XPRC provides an easy way to interact with X-Plane datarefs and commands from other applications/computers via a TCP network connection.
 
-This project currently contains:
+This project contains a native plugin implementing the protocol, written in C.
 
-- server implementations: (X-Plane plugins)
-  - [server/python3](server/python3/): implementation using [XPPython3](https://xppython3.readthedocs.io/) (incomplete)
-  - [server/native-c](server/native-c/): native plugin written in C (incomplete)
+Related projects:
 
-It will also contain at some point:
-
-- the protocol specification
-- a Java client library
+- the protocol specification (TBD)
+- a Java client library (TBD)
 
 ## License
 

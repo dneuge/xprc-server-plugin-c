@@ -7,11 +7,11 @@ __pycache__
 
 *.nocommit
 
-server/native-c/build/
-server/native-c/lib/
-server/native-c/release/
-server/native-c/user.cfg
+build/
+lib/
+release/
+user.cfg
 
 manualtest*
-!server/native-c/src/manualtest-network.c
-!server/native-c/src/manualtest-parser.c
+!src/manualtest-network.c
+!src/manualtest-parser.c
