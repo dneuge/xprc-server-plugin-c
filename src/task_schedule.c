@@ -107,7 +107,7 @@ error_t destroy_task_schedule(task_schedule_t *task_schedule) {
 
 error_t lock_schedule(task_schedule_t *task_schedule) {
     if (task_schedule->destruction_pending) {
-        return TASK_SCHEDULE_ERROR_DESTRUCTION_PENDING;
+        return ERROR_DESTRUCTION_PENDING;
     }
 
     if (mtx_lock(&task_schedule->mutex) != thrd_success) {
@@ -116,7 +116,7 @@ error_t lock_schedule(task_schedule_t *task_schedule) {
 
     if (task_schedule->destruction_pending) {
         mtx_unlock(&task_schedule->mutex);
-        return TASK_SCHEDULE_ERROR_DESTRUCTION_PENDING;
+        return ERROR_DESTRUCTION_PENDING;
     }
 
     return ERROR_NONE;
@@ -186,7 +186,7 @@ error_t schedule_task(task_schedule_t *task_schedule, task_t *task, task_schedul
     }
 
     if (task_schedule->destruction_pending) {
-        return TASK_SCHEDULE_ERROR_DESTRUCTION_PENDING;
+        return ERROR_DESTRUCTION_PENDING;
     }
 
     if (!prealloc_list_append(task_schedule->queues[phase], task)) {
@@ -236,7 +236,7 @@ error_t clean_schedule(task_schedule_t *task_schedule) {
     bool success = true;
     
     if (task_schedule->destruction_pending) {
-        return TASK_SCHEDULE_ERROR_DESTRUCTION_PENDING;
+        return ERROR_DESTRUCTION_PENDING;
     }
 
     for (int i=0; i<TASK_SCHEDULE_NUM_TASK_QUEUES; i++) {
