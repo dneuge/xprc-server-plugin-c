@@ -10,17 +10,9 @@
 #include "protocol.h"
 #include "session.h"
 #include "utils.h"
+#include "xptypes.h"
 
 #define INFINITE_REPETITION -2134896
-
-#define SIZE_XPLM_INT 4
-#define SIZE_XPLM_FLOAT 4
-#define SIZE_XPLM_DOUBLE 8
-
-#define SIZE_XPLM_INT_FLOAT SIZE_XPLM_FLOAT
-#if SIZE_XPLM_INT != SIZE_XPLM_FLOAT
-#error size of X-Plane integer and float types do not match
-#endif
 
 typedef struct _drqv_dataref_t drqv_dataref_t;
 typedef struct _drqv_dataref_t {
