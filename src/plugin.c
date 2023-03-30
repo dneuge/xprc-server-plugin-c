@@ -212,7 +212,7 @@ PLUGIN_API int XPluginEnable() {
     
     err = create_task_schedule(&task_schedule);
     if (err != ERROR_NONE) {
-        printf("[XPRC] failed to create task schedule\n");
+        printf("[XPRC] failed to create task schedule: %d\n", err);
         return 1;
     }
     server_config.task_schedule = task_schedule;
