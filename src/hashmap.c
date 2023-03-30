@@ -105,6 +105,11 @@ bool hashmap_put(hashmap_t *map, char *key, void *value, void **old_value) {
     memset(item, 0, sizeof(hashmap_item_t));
 
     item->key = copy_string(key);
+    if (!item->key) {
+        free(item);
+        return false;
+    }
+    
     item->value = value;
 
     *reference = item;
