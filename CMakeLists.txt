@@ -25,6 +25,7 @@ SET(XPRC_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/plugin.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/server.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/dataproxy.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/session.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/task_schedule.c
     ${COMMON_SOURCES}

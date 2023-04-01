@@ -16,6 +16,7 @@ typedef struct {
     network_server_config_t network;
     task_schedule_t *task_schedule;
     command_factory_t *command_factory;
+    void *dataproxy_registry; // importing dataproxy.h requires X-Plane SDK which breaks test compilation
 } server_config_t;
 
 typedef struct _server_t {

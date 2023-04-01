@@ -10,6 +10,7 @@
 #include <XPLMUtilities.h>
 
 #include "commands.h"
+#include "dataproxy.h"
 #include "lists.h"
 #include "server.h"
 #include "task_schedule.h"
@@ -27,6 +28,8 @@ command_factory_t *command_factory = NULL;
 server_t *server = NULL;
 server_config_t server_config = {0};
 bool server_started = false;
+
+dataproxy_registry_t *dataproxy_registry = NULL;
 
 task_schedule_t *task_schedule = NULL;
 bool flight_loop_locked_task_schedule = false;
@@ -184,6 +187,7 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
     server_config.network.port = 23042;
 
     server_config.command_factory = command_factory;
+    server_config.dataproxy_registry = dataproxy_registry;
 
     plugin_initialized = true;
     
@@ -207,6 +211,18 @@ PLUGIN_API int XPluginEnable() {
     if (task_schedule) {
         printf("[XPRC] task schedule already exists; did you install the plugin twice? simulator restart required\n");
         fatal_error = true;
+        return 1;
+    }
+    
+    if (dataproxy_registry) {
+        printf("[XPRC] dataproxy registry already exists; did you install the plugin twice? simulator restart required\n");
+        fatal_error = true;
+        return 1;
+    }
+
+    err = create_dataproxy_registry(&dataproxy_registry);
+    if (err != ERROR_NONE) {
+        printf("[XPRC] failed to create dataproxy registry: %d\n", err);
         return 1;
     }
     
@@ -247,6 +263,8 @@ PLUGIN_API int XPluginEnable() {
 }
 
 PLUGIN_API void XPluginDisable() {
+    error_t err = ERROR_NONE;
+    
     if (fatal_error) {
         printf("[XPRC] a fatal error has occurred, XPRC is stuck - simulator restart required\n");
         return;
@@ -319,13 +337,23 @@ PLUGIN_API void XPluginDisable() {
     }
 
     if (task_schedule) {
-        error_t err = destroy_task_schedule(task_schedule);
+        err = destroy_task_schedule(task_schedule);
         if (err != ERROR_NONE) {
             printf("[XPRC] task schedule could not be destroyed (error %d); plugin shutdown is not possible\n", err);
             fatal_error = true;
             return;
         }
         task_schedule = NULL;
+    }
+
+    if (dataproxy_registry) {
+        err = destroy_dataproxy_registry(dataproxy_registry);
+        if (err != ERROR_NONE) {
+            printf("[XPRC] dataproxy registry could not be destroyed (error %d); plugin shutdown is not possible\n", err);
+            fatal_error = true;
+            return;
+        }
+        dataproxy_registry = NULL;
     }
 }
 
