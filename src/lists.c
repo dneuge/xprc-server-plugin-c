@@ -273,6 +273,8 @@ bool list_append(list_t *list, void *value) {
     }
 
     list->size++;
+
+    return true;
 }
 
 list_item_t* list_find(list_t *list, void *value) {
