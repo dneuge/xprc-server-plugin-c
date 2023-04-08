@@ -24,6 +24,7 @@ typedef struct _dataproxy_registry_t dataproxy_registry_t;
 #define DATAPROXY_STATE_INACTIVE 0
 #define DATAPROXY_STATE_RESERVED 1
 #define DATAPROXY_STATE_REGISTERED 2
+#define DATAPROXY_STATE_DROPPED 3
 
 typedef uint8_t dataproxy_state_t;
 
@@ -80,16 +81,19 @@ void unlock_dataproxy_registry(dataproxy_registry_t *registry);
 error_t lock_dataproxy(dataproxy_t *proxy);
 void unlock_dataproxy(dataproxy_t *proxy);
 
+error_t unregister_dropped_dataproxies(dataproxy_registry_t *registry); // run only in XP context
+
 // used by owners
 dataproxy_t* reserve_dataproxy(dataproxy_registry_t *registry, char *dataref_name, XPLMDataTypeID types, dataproxy_permission_t write_permission, void *operations_ref, session_t *session, dataproxy_operations_t operations);
 error_t release_dataproxy(dataproxy_t *proxy); // must be unregistered before release
 error_t register_dataproxy(dataproxy_t *proxy); // run only in XP context; needed for internal activation as well
 error_t unregister_dataproxy(dataproxy_t *proxy); // run only in XP context; needed for internal activation as well
+error_t drop_dataproxy(dataproxy_t *proxy); // like release but with delayed unregistration (XP context not needed)
 
-// used for access within XPRC
+// used for access throughout XPRC (not limited to owners)
 // operations and internals should never be interacted with directly, use these functions instead
 dataproxy_t* find_registered_dataproxy(dataproxy_registry_t *registry, char *dataref_name);
-prealloc_list_t* list_registered_dataproxies(dataproxy_registry_t *registry); // returns a static copy of pointers to all registered proxies at time of call; array is to be managed/destroyed by caller but values must not be freed!
+prealloc_list_t* list_dataproxies_with_state(dataproxy_registry_t *registry, dataproxy_state_t wanted_state); // returns a static copy of pointers to all proxies in specified state at time of call; array is to be managed/destroyed by caller but values must not be freed!
 error_t dataproxy_get_name(dataproxy_t *proxy, char **dest); // do not modify dest pointer content, it's not a copy
 error_t dataproxy_get_types(dataproxy_t *proxy, XPLMDataTypeID *dest);
 bool dataproxy_can_write(dataproxy_t *proxy, session_t *session);

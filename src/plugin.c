@@ -18,6 +18,7 @@
 #define CALL_ON_NEXT_FRAME -1.0f
 #define SCHEDULE_CLEANING_INTERVAL 500
 #define SERVER_MAINTENANCE_INTERVAL 120
+#define DATAPROXY_MAINTENANCE_INTERVAL 600
 
 XPLMFlightLoopID flight_loop_before_flight_model_id = {0};
 XPLMFlightLoopID flight_loop_after_flight_model_id = {0};
@@ -48,6 +49,7 @@ int run_post_processing_thread(void *arg) {
     
     int cycles_until_schedule_cleaning = SCHEDULE_CLEANING_INTERVAL;
     int cycles_until_server_maintenance = SERVER_MAINTENANCE_INTERVAL;
+    int cycles_until_dataproxy_maintenance = DATAPROXY_MAINTENANCE_INTERVAL;
     
     err = lock_schedule(task_schedule);
     if (err != ERROR_NONE) {
@@ -93,6 +95,27 @@ int run_post_processing_thread(void *arg) {
             err = lock_schedule(task_schedule);
             if (err != ERROR_NONE) {
                 printf("[XPRC] failed to regain lock on task schedule after server maintenance: %d\n", err);
+                break;
+            }
+            has_lock = true;
+        }
+
+        // TODO: dataproxy maintenance should be time-based (once every 2 seconds)
+        cycles_until_dataproxy_maintenance--;
+        if (cycles_until_dataproxy_maintenance <= 0) {
+            cycles_until_dataproxy_maintenance = DATAPROXY_MAINTENANCE_INTERVAL;
+            
+            unlock_schedule(task_schedule);
+            has_lock = false;
+            
+            err = unregister_dropped_dataproxies(dataproxy_registry);
+            if (err != ERROR_NONE) {
+                printf("[XPRC] error %d while unregistering dropped dataproxies (maintenance)\n", err);
+            }
+            
+            err = lock_schedule(task_schedule);
+            if (err != ERROR_NONE) {
+                printf("[XPRC] failed to regain lock on task schedule after dataproxy maintenance: %d\n", err);
                 break;
             }
             has_lock = true;
@@ -347,6 +370,13 @@ PLUGIN_API void XPluginDisable() {
     }
 
     if (dataproxy_registry) {
+        err = unregister_dropped_dataproxies(dataproxy_registry);
+        if (err != ERROR_NONE) {
+            printf("[XPRC] dropped dataproxies could not be unregistered (error %d); plugin shutdown is not possible\n", err);
+            fatal_error = true;
+            return;
+        }
+        
         err = destroy_dataproxy_registry(dataproxy_registry);
         if (err != ERROR_NONE) {
             printf("[XPRC] dataproxy registry could not be destroyed (error %d); plugin shutdown is not possible\n", err);

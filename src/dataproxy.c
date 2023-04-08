@@ -84,6 +84,11 @@ error_t destroy_dataproxy_registry(dataproxy_registry_t *registry) {
 }
 
 error_t lock_dataproxy_registry(dataproxy_registry_t *registry) {
+    if (!registry) {
+        printf("[XPRC] [dataproxy] lock_dataproxy_registry called with NULL\n"); // DEBUG
+        return ERROR_UNSPECIFIC;
+    }
+    
     if (registry->destruction_pending) {
         return ERROR_DESTRUCTION_PENDING;
     }
@@ -105,6 +110,11 @@ void unlock_dataproxy_registry(dataproxy_registry_t *registry) {
 }
 
 error_t lock_dataproxy(dataproxy_t *proxy) {
+    if (!proxy) {
+        printf("[XPRC] [dataproxy] lock_dataproxy called with NULL\n"); // DEBUG
+        return ERROR_UNSPECIFIC;
+    }
+    
     return lock_dataproxy_registry(proxy->registry);
 }
 
@@ -164,23 +174,32 @@ static bool has_all_operations(dataproxy_operations_t *operations) {
 }
 
 dataproxy_t* reserve_dataproxy(dataproxy_registry_t *registry, char *dataref_name, XPLMDataTypeID types, dataproxy_permission_t write_permission, void *operations_ref, session_t *session, dataproxy_operations_t operations) {
+    printf("[XPRC] [dataproxy] reserve\n"); // DEBUG
+    
     bool is_valid = is_valid_combined_type(types) && is_valid_write_permission(write_permission) && has_all_operations(&operations);
     if (!is_valid) {
-        return NULL;
-    }
-    
-    if (lock_dataproxy_registry(registry) != ERROR_NONE) {
+        printf("[XPRC] [dataproxy] reserve: invalid\n"); // DEBUG
         return NULL;
     }
 
+    printf("[XPRC] [dataproxy] reserve: locking\n"); // DEBUG
+    if (lock_dataproxy_registry(registry) != ERROR_NONE) {
+        printf("[XPRC] [dataproxy] reserve: lock failed\n"); // DEBUG
+        return NULL;
+    }
+
+    printf("[XPRC] [dataproxy] reserve: get existing proxy\n"); // DEBUG
+    
     dataproxy_t *proxy = hashmap_get(registry->by_dataref_name, dataref_name);
     if (!proxy) {
+        printf("[XPRC] [dataproxy] reserve: no proxy found\n"); // DEBUG
         proxy = create_dataproxy(registry, dataref_name);
         if (!proxy) {
             unlock_dataproxy_registry(registry);
             return NULL;
         }
 
+        printf("[XPRC] [dataproxy] reserve: putting proxy to map\n"); // DEBUG
         dataproxy_t *old_proxy = NULL;
         if (!hashmap_put(registry->by_dataref_name, dataref_name, proxy, (void**) &old_proxy)) {
             unlock_dataproxy_registry(registry);
@@ -191,6 +210,17 @@ dataproxy_t* reserve_dataproxy(dataproxy_registry_t *registry, char *dataref_nam
         if (old_proxy) {
             // there's no reasonable way to rollback and abort, just log
             printf("[XPRC] dataproxy registry detected concurrent modification during reservation; expect memleak and crash: %s\n", dataref_name);
+        }
+    }
+
+    if (proxy->state == DATAPROXY_STATE_DROPPED) {
+        // previous dataref is still registered after owner dropped it,
+        // we need to unregister the dataref before we can redefine it
+        printf("[XPRC] [dataproxy] reserve: proxy was dropped, unregistering\n"); // DEBUG
+        error_t err = unregister_dataproxy(proxy);
+        if (err != ERROR_NONE) {
+            unlock_dataproxy_registry(registry);
+            return NULL;
         }
     }
 
@@ -208,6 +238,8 @@ dataproxy_t* reserve_dataproxy(dataproxy_registry_t *registry, char *dataref_nam
     
     unlock_dataproxy_registry(registry);
 
+    printf("[XPRC] [dataproxy] reserve: done\n"); // DEBUG
+    
     return proxy;
 }
 
@@ -374,13 +406,41 @@ error_t unregister_dataproxy(dataproxy_t *proxy) {
         return err;
     }
 
+    if (proxy->state == DATAPROXY_STATE_REGISTERED) {
+        XPLMUnregisterDataAccessor(proxy->xp_dataref);
+        
+        proxy->state = DATAPROXY_STATE_RESERVED;
+        proxy->xp_dataref = NO_XP_DATAREF;
+    } else if (proxy->state == DATAPROXY_STATE_DROPPED) {
+        XPLMUnregisterDataAccessor(proxy->xp_dataref);
+
+        proxy->state = DATAPROXY_STATE_INACTIVE;
+        clear_dataproxy(proxy);
+    } else {
+        out_err = DATAPROXY_ERROR_INVALID_STATE;
+    }
+
+    unlock_dataproxy(proxy);
+
+    return out_err;
+}
+
+error_t drop_dataproxy(dataproxy_t *proxy) {
+    error_t err = ERROR_NONE;
+    error_t out_err = ERROR_NONE;
+    
+    err = lock_dataproxy(proxy);
+    if (err != ERROR_NONE) {
+        return err;
+    }
+
     if (proxy->state != DATAPROXY_STATE_REGISTERED) {
         out_err = DATAPROXY_ERROR_INVALID_STATE;
     } else {
-        XPLMUnregisterDataAccessor(proxy->xp_dataref);
-
-        proxy->state = DATAPROXY_STATE_RESERVED;
-        proxy->xp_dataref = NO_XP_DATAREF;
+        proxy->state = DATAPROXY_STATE_DROPPED;
+        proxy->owner_session = NULL;
+        proxy->operations_ref = NULL;
+        memset(&proxy->operations, 0, sizeof(dataproxy_operations_t));
     }
 
     unlock_dataproxy(proxy);
@@ -410,7 +470,7 @@ dataproxy_t* find_registered_dataproxy(dataproxy_registry_t *registry, char *dat
     return proxy;
 }
 
-prealloc_list_t* list_registered_dataproxies(dataproxy_registry_t *registry) {
+prealloc_list_t* list_dataproxies_with_state(dataproxy_registry_t *registry, dataproxy_state_t wanted_state) {
     error_t err = ERROR_NONE;
 
     prealloc_list_t *out = create_preallocated_list();
@@ -429,7 +489,7 @@ prealloc_list_t* list_registered_dataproxies(dataproxy_registry_t *registry) {
         item = hashmap_root_items[i];
         while (item) {
             dataproxy_t *proxy = item->value;
-            if (proxy && proxy->state == DATAPROXY_STATE_REGISTERED) {
+            if (proxy && proxy->state == wanted_state) {
                 if (!prealloc_list_append(out, proxy)) {
                     // memory allocation failed; abort
                     destroy_preallocated_list(out, NULL, PREALLOC_LIST_OVERRIDE_DEFERRED_DESTRUCTORS);
@@ -650,4 +710,38 @@ error_t dataproxy_array_update(dataproxy_t *proxy, XPLMDataTypeID type, void *va
     unlock_dataproxy(proxy);
 
     return err;
+}
+
+error_t unregister_dropped_dataproxies(dataproxy_registry_t *registry) {
+    error_t err = ERROR_NONE;
+    error_t out_err = ERROR_NONE;
+
+    err = lock_dataproxy_registry(registry);
+    if (err != ERROR_NONE) {
+        return err;
+    }
+
+    prealloc_list_t *list = list_dataproxies_with_state(registry, DATAPROXY_STATE_DROPPED);
+    if (!list) {
+        unlock_dataproxy_registry(registry);
+        return ERROR_MEMORY_ALLOCATION;
+    }
+    
+    prealloc_list_item_t *item = list->first_in_use_item;
+    while (item) {
+        dataproxy_t *proxy = item->value;
+        if (proxy && proxy->state == DATAPROXY_STATE_DROPPED) {
+            err = unregister_dataproxy(proxy);
+            if (err != ERROR_NONE) {
+                printf("[XPRC] [dataproxy] failed to unregister dropped dataproxy %s (error %d)\n", proxy->dataref_name, err);
+                out_err = ERROR_UNSPECIFIC;
+            }
+        }
+        
+        item = item->next_in_use;
+    }
+
+    unlock_dataproxy_registry(registry);
+
+    return out_err;
 }
