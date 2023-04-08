@@ -187,7 +187,6 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
     server_config.network.port = 23042;
 
     server_config.command_factory = command_factory;
-    server_config.dataproxy_registry = dataproxy_registry;
 
     plugin_initialized = true;
     
@@ -225,6 +224,7 @@ PLUGIN_API int XPluginEnable() {
         printf("[XPRC] failed to create dataproxy registry: %d\n", err);
         return 1;
     }
+    server_config.dataproxy_registry = dataproxy_registry;
     
     err = create_task_schedule(&task_schedule);
     if (err != ERROR_NONE) {
