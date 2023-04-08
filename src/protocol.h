@@ -24,6 +24,7 @@
 #define XPRC_TYPE_SEPARATOR_LENGTH 1
 
 XPLMDataTypeID xprc_parse_type(char *s, int count);
+XPLMDataTypeID xprc_parse_types(char *s, int count);
 char* xprc_encode_array(XPLMDataTypeID type, dynamic_array_t *arr);
 char* xprc_encode_value(XPLMDataTypeID type, void *value, size_t value_size);
 char* xprc_encode_types(XPLMDataTypeID types);

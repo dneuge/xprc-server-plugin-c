@@ -5,6 +5,11 @@
 
 #include "protocol.h"
 
+#if xplmType_Unknown != 0
+/* type parsing relies on 0 meaning unknown */
+#error "xplmType_Unknown is not 0"
+#endif
+
 XPLMDataTypeID xprc_parse_type(char *s, int count) {
     if (!strncmp("int", s, count)) {
         return xplmType_Int;
@@ -21,6 +26,36 @@ XPLMDataTypeID xprc_parse_type(char *s, int count) {
     } else {
         return xplmType_Unknown;
     }
+}
+
+XPLMDataTypeID xprc_parse_types(char *s, int count) {
+    XPLMDataTypeID types = xplmType_Unknown;
+    XPLMDataTypeID type = xplmType_Unknown;
+
+    while (s && count > 0) {
+        int type_length = count;
+        char *offset_separator = strstr(s, XPRC_TYPE_SEPARATOR);
+        if (offset_separator) {
+            type_length = offset_separator - s;
+        }
+        
+        type = xprc_parse_type(s, type_length);
+        if (type == xplmType_Unknown) {
+            return xplmType_Unknown;
+        }
+        
+        types = types | type;
+
+        if (!offset_separator) {
+            break;
+        }
+
+        int skip_count = type_length + XPRC_TYPE_SEPARATOR_LENGTH;
+        s += skip_count;
+        count -= skip_count;
+    }
+
+    return types;
 }
 
 char* xprc_encode_array(XPLMDataTypeID type, dynamic_array_t *arr) {
