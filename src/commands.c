@@ -3,6 +3,7 @@
 
 #include "commands.h"
 
+#include "command_drci.h"
 #include "command_drls.h"
 #include "command_drqv.h"
 
@@ -26,6 +27,7 @@ command_factory_t* create_command_factory() {
     }
 
     bool success = true;
+    success &= register_command(factory, &command_drci);
     success &= register_command(factory, &command_drls);
     success &= register_command(factory, &command_drqv);
 
