@@ -219,12 +219,14 @@ dataproxy_t* reserve_dataproxy(dataproxy_registry_t *registry, char *dataref_nam
         printf("[XPRC] [dataproxy] reserve: proxy was dropped, unregistering\n"); // DEBUG
         error_t err = unregister_dataproxy(proxy);
         if (err != ERROR_NONE) {
+            printf("[XPRC] [dataproxy] reserve: unregistering dropped proxy failed: %d\n", err); // DEBUG
             unlock_dataproxy_registry(registry);
             return NULL;
         }
     }
 
     if (proxy->state != DATAPROXY_STATE_INACTIVE) {
+        printf("[XPRC] [dataproxy] reserve: bad state: %d\n", proxy->state); // DEBUG
         unlock_dataproxy_registry(registry);
         return NULL;
     }
@@ -578,8 +580,14 @@ error_t dataproxy_simple_get(dataproxy_t *proxy, XPLMDataTypeID type, void *dest
     if (err != ERROR_NONE) {
         return err;
     }
-
-    err = proxy->operations.simple_get(proxy->operations_ref, type, dest);
+    
+    if (proxy->state != DATAPROXY_STATE_REGISTERED) {
+        err = DATAPROXY_ERROR_INVALID_STATE;
+    } else if (!proxy->operations.simple_get || (proxy->types & type) == 0) {
+        err = DATAPROXY_ERROR_UNSUPPORTED_TYPE;
+    } else {
+        err = proxy->operations.simple_get(proxy->operations_ref, type, dest);
+    }
     
     unlock_dataproxy(proxy);
 
@@ -601,9 +609,13 @@ error_t dataproxy_simple_set(dataproxy_t *proxy, XPLMDataTypeID type, void *valu
     if (err != ERROR_NONE) {
         return err;
     }
-
-    if (!dataproxy_can_write(proxy, source_session)) {
+    
+    if (proxy->state != DATAPROXY_STATE_REGISTERED) {
+        err = DATAPROXY_ERROR_INVALID_STATE;
+    } else if (!dataproxy_can_write(proxy, source_session)) {
         err = DATAPROXY_ERROR_PERMISSION_DENIED;
+    } else if (!proxy->operations.simple_set || (proxy->types & type) == 0) {
+        err = DATAPROXY_ERROR_UNSUPPORTED_TYPE;
     } else {
         err = proxy->operations.simple_set(proxy->operations_ref, type, value, source_session);
     }
@@ -637,11 +649,17 @@ error_t dataproxy_array_get(dataproxy_t *proxy, XPLMDataTypeID type, void *dest,
         return err;
     }
 
-    err = proxy->operations.array_get(proxy->operations_ref, type, dest, num_copied, offset, count);
-    if (*num_copied < 0) {
-        *num_copied = 0;
-        if (err != ERROR_NONE) {
-            err = ERROR_UNSPECIFIC;
+    if (proxy->state != DATAPROXY_STATE_REGISTERED) {
+        err = DATAPROXY_ERROR_INVALID_STATE;
+    } else if (!proxy->operations.array_get || (proxy->types & type) == 0) {
+        err = DATAPROXY_ERROR_UNSUPPORTED_TYPE;
+    } else {
+        err = proxy->operations.array_get(proxy->operations_ref, type, dest, num_copied, offset, count);
+        if (*num_copied < 0) {
+            *num_copied = 0;
+            if (err != ERROR_NONE) {
+                err = ERROR_UNSPECIFIC;
+            }
         }
     }
     
@@ -662,6 +680,8 @@ error_t dataproxy_array_length(dataproxy_t *proxy, XPLMDataTypeID type, int *len
 
     if (proxy->state != DATAPROXY_STATE_REGISTERED) {
         out_err = DATAPROXY_ERROR_INVALID_STATE;
+    } else if (!proxy->operations.array_length || (proxy->types & type) == 0) {
+        out_err = DATAPROXY_ERROR_UNSUPPORTED_TYPE;
     } else {
         int out = 0;
         err = proxy->operations.array_length(proxy->operations_ref, type, &out);
@@ -700,9 +720,13 @@ error_t dataproxy_array_update(dataproxy_t *proxy, XPLMDataTypeID type, void *va
     if (err != ERROR_NONE) {
         return err;
     }
-
-    if (!dataproxy_can_write(proxy, source_session)) {
+    
+    if (proxy->state != DATAPROXY_STATE_REGISTERED) {
+        err = DATAPROXY_ERROR_INVALID_STATE;
+    } else if (!dataproxy_can_write(proxy, source_session)) {
         err = DATAPROXY_ERROR_PERMISSION_DENIED;
+    } else if (!proxy->operations.array_update || (proxy->types & type) == 0) {
+        err = DATAPROXY_ERROR_UNSUPPORTED_TYPE;
     } else {
         err = proxy->operations.array_update(proxy->operations_ref, type, values, offset, count, source_session);
     }
@@ -715,7 +739,9 @@ error_t dataproxy_array_update(dataproxy_t *proxy, XPLMDataTypeID type, void *va
 error_t unregister_dropped_dataproxies(dataproxy_registry_t *registry) {
     error_t err = ERROR_NONE;
     error_t out_err = ERROR_NONE;
-
+    
+    printf("[XPRC] [dataproxy] unregister_dropped_dataproxies\n"); // DEBUG
+       
     err = lock_dataproxy_registry(registry);
     if (err != ERROR_NONE) {
         return err;
@@ -723,6 +749,7 @@ error_t unregister_dropped_dataproxies(dataproxy_registry_t *registry) {
 
     prealloc_list_t *list = list_dataproxies_with_state(registry, DATAPROXY_STATE_DROPPED);
     if (!list) {
+        printf("[XPRC] [dataproxy] unregister_dropped_dataproxies: failed listing\n"); // DEBUG
         unlock_dataproxy_registry(registry);
         return ERROR_MEMORY_ALLOCATION;
     }
@@ -743,5 +770,7 @@ error_t unregister_dropped_dataproxies(dataproxy_registry_t *registry) {
 
     unlock_dataproxy_registry(registry);
 
+    printf("[XPRC] [dataproxy] unregister_dropped_dataproxies: done\n"); // DEBUG
+    
     return out_err;
 }
