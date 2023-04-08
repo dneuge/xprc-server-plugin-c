@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <XPLMDataAccess.h>
+#include <XPLMPlugin.h>
 
 #include "arrays.h"
 #include "dataproxy.h"
@@ -18,6 +19,9 @@
 typedef uint8_t drci_echo_mode_t;
 
 #define DRCI_REGISTRATION_PHASE TASK_SCHEDULE_BEFORE_FLIGHT_MODEL
+
+#define PLUGIN_ID_DATAREFEDITOR "xplanesdk.examples.DataRefEditor"
+#define DATAREFEDITOR_MSG_ADD_DATAREF 0x01000000
 
 // TODO: range & range fit
 // TODO: step & step fit
@@ -118,6 +122,15 @@ static error_t drci_terminate(void *command_ref) {
     return ERROR_NONE;
 }
 
+static void notify_datarefeditor(command_drci_t *command) {
+    XPLMPluginID plugin_id = XPLMFindPluginBySignature(PLUGIN_ID_DATAREFEDITOR);
+    if (plugin_id == XPLM_NO_PLUGIN_ID) {
+        return;
+    }
+
+    XPLMSendMessageToPlugin(plugin_id, DATAREFEDITOR_MSG_ADD_DATAREF, command->dataref_name);
+}
+
 static void drci_process_flightloop(command_drci_t *command) {
     if (command->failed || command->registered) {
         return;
@@ -138,6 +151,8 @@ static void drci_process_flightloop(command_drci_t *command) {
         printf("[XPRC] [DRCI] failed to send confirmation for %s (error %d)\n", command->dataref_name, err);
         command->failed = true;
     }
+
+    notify_datarefeditor(command);
 }
 
 /*
