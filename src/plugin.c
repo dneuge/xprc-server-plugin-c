@@ -43,13 +43,14 @@ bool shutdown_post_processing = false;
 bool fatal_error = false;
 bool plugin_initialized = false;
 
+int cycles_until_dataproxy_maintenance = DATAPROXY_MAINTENANCE_INTERVAL;
+
 int run_post_processing_thread(void *arg) {
     error_t err = ERROR_NONE;
     bool has_lock = false;
     
     int cycles_until_schedule_cleaning = SCHEDULE_CLEANING_INTERVAL;
     int cycles_until_server_maintenance = SERVER_MAINTENANCE_INTERVAL;
-    int cycles_until_dataproxy_maintenance = DATAPROXY_MAINTENANCE_INTERVAL;
     
     err = lock_schedule(task_schedule);
     if (err != ERROR_NONE) {
@@ -99,27 +100,6 @@ int run_post_processing_thread(void *arg) {
             }
             has_lock = true;
         }
-
-        // TODO: dataproxy maintenance should be time-based (once every 2 seconds)
-        cycles_until_dataproxy_maintenance--;
-        if (cycles_until_dataproxy_maintenance <= 0) {
-            cycles_until_dataproxy_maintenance = DATAPROXY_MAINTENANCE_INTERVAL;
-            
-            unlock_schedule(task_schedule);
-            has_lock = false;
-            
-            err = unregister_dropped_dataproxies(dataproxy_registry);
-            if (err != ERROR_NONE) {
-                printf("[XPRC] error %d while unregistering dropped dataproxies (maintenance)\n", err);
-            }
-            
-            err = lock_schedule(task_schedule);
-            if (err != ERROR_NONE) {
-                printf("[XPRC] failed to regain lock on task schedule after dataproxy maintenance: %d\n", err);
-                break;
-            }
-            has_lock = true;
-        }
     }
 
     if (has_lock) {
@@ -150,6 +130,17 @@ static float process_flight_loop_after_flight_model(float inElapsedSinceLastCall
     }
 
     run_tasks(task_schedule, TASK_SCHEDULE_AFTER_FLIGHT_MODEL);
+
+    // TODO: dataproxy maintenance should be time-based (once every 2 seconds)
+    cycles_until_dataproxy_maintenance--;
+    if (cycles_until_dataproxy_maintenance <= 0) {
+        cycles_until_dataproxy_maintenance = DATAPROXY_MAINTENANCE_INTERVAL;
+
+        error_t err = unregister_dropped_dataproxies(dataproxy_registry);
+        if (err != ERROR_NONE) {
+            printf("[XPRC] error %d while unregistering dropped dataproxies (maintenance)\n", err);
+        }
+    }
 
     cnd_broadcast(&post_processing_wait);
     
@@ -248,6 +239,8 @@ PLUGIN_API int XPluginEnable() {
         return 1;
     }
     server_config.dataproxy_registry = dataproxy_registry;
+
+    cycles_until_dataproxy_maintenance = DATAPROXY_MAINTENANCE_INTERVAL;
     
     err = create_task_schedule(&task_schedule);
     if (err != ERROR_NONE) {
