@@ -5,6 +5,8 @@
 
 #include "utils.h"
 
+#define ESCAPE_CHAR '\\'
+
 char* dynamic_sprintf(char *format, ...) {
     va_list args;
     va_start(args, format);
@@ -51,7 +53,28 @@ bool ends_with(char *haystack, char *needle) {
     return !strncmp(&haystack[haystack_len-needle_len], needle, needle_len);
 }
 
-int strpos(char *haystack, char *needle, int start) {
+static bool is_escaped(char *s, int pos) {
+    bool is_escaped = false;
+
+    if (pos < 1) {
+        return false;
+    }
+
+    // stop one character before the queried position
+    for (int i=0; i<pos; i++) {
+        if (is_escaped) {
+            // this character was escaped, the next one will not be
+            is_escaped = false;
+        } else if (s[i] == ESCAPE_CHAR) {
+            // this character was not escaped but it is the escape character, the next char will be escaped
+            is_escaped = true;
+        }
+    }
+
+    return is_escaped;
+}
+
+static int _strpos(char *haystack, char *needle, int start, bool skip_escapes) {
     if (!haystack || !needle) {
         return -1;
     }
@@ -75,11 +98,31 @@ int strpos(char *haystack, char *needle, int start) {
     int max_offset = haystack_len - needle_len;
     for (int i=start; i<max_offset; i++) {
         if (!strncmp(&haystack[i], needle, needle_len)) {
+            if (skip_escapes && is_escaped(haystack, i)) {
+                continue;
+            }
             return i;
         }
     }
 
     return -1;
+}
+
+int strpos(char *haystack, char *needle, int start) {
+    return _strpos(haystack, needle, start, false);
+}
+
+int strpos_unescaped(char *haystack, char *needle, int start) {
+    // NOTE: search on potentially escaped strings is currently only supported for
+    //       - a single character needle...
+    //       - ... which is *NOT* the escape character
+    //       unsupported cases *MUST NOT* be called, even though they are
+    //       blocked by returning -1 which may lead to misinterpretation
+    if ((strlen(needle) != 1) || (needle[0] == ESCAPE_CHAR)) {
+        return -2;
+    }
+    
+    return _strpos(haystack, needle, start, true);
 }
 
 void* zalloc(size_t size) {
@@ -108,6 +151,48 @@ char* copy_string(char *s) {
     }
 
     return copy_partial_string(s, strlen(s));
+}
+
+char* copy_partial_unescaped_string(char *s, int max_length) {
+    char *copy = zalloc(max_length + 1);
+    if (!copy) {
+        return NULL;
+    }
+
+    bool previous_was_escaped = false;
+    int pos = 0;
+    for (int i=0; i<max_length; i++) {
+        char ch = s[i];
+
+        if (previous_was_escaped) {
+            // this character should be copied i.e. be "unescaped"
+            previous_was_escaped = false;
+        } else if (ch == ESCAPE_CHAR) {
+            // this is an unescaped escape character, i.e. it starts an escape... don't copy it
+            previous_was_escaped = true;
+            continue;
+        }
+
+        copy[pos] = ch;
+        pos++;
+    }
+
+    if (previous_was_escaped) {
+        // escape character is left open, i.e. this is an uninterpretable string
+        // don't return it at all, just void it
+        free(copy);
+        return NULL;
+    }
+
+    return copy;
+}
+
+char* copy_unescaped_string(char *s) {
+    if (!s) {
+        return NULL;
+    }
+
+    return copy_partial_unescaped_string(s, strlen(s));
 }
 
 int num_digits(int value) {
