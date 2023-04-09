@@ -52,6 +52,9 @@ typedef struct {
     xpint_t value_int;
     xpfloat_t value_float;
     xpdouble_t value_double;
+    dynamic_array_t *values_int;
+    dynamic_array_t *values_float;
+    dynamic_array_t *blob;
     
     task_t *registration_task;
     bool registered;
@@ -72,6 +75,21 @@ static error_t drci_destroy(void *command_ref) {
     if (command->dataref_name) {
         free(command->dataref_name);
         command->dataref_name = NULL;
+    }
+
+    if (command->values_int) {
+        destroy_dynamic_array(command->values_int);
+        command->values_int = NULL;
+    }
+    
+    if (command->values_float) {
+        destroy_dynamic_array(command->values_float);
+        command->values_float = NULL;
+    }
+    
+    if (command->blob) {
+        destroy_dynamic_array(command->blob);
+        command->blob = NULL;
     }
     
     printf("[XPRC] [DRCI] destroy: freeing command\n"); // DEBUG
@@ -244,16 +262,6 @@ static bool parse_echo_mode(drci_echo_mode_t *echo_mode, char *s) {
     return false;
 }
 
-const XPLMDataTypeID supported_types = xplmType_Int | xplmType_Float | xplmType_Double | xplmType_IntArray | xplmType_FloatArray | xplmType_Data;
-
-static bool is_supported_type_combination(XPLMDataTypeID types) {
-    if (types == xplmType_Unknown) {
-        return false;
-    }
-
-    return (types & ~supported_types) == 0;
-}
-
 static bool parse_intconv_mode(drci_intconv_mode_t *intconv_mode, char *s) {
     if (!s) {
         *intconv_mode = DRCI_INTCONV_NOT_SET;
@@ -271,6 +279,11 @@ static bool parse_intconv_mode(drci_intconv_mode_t *intconv_mode, char *s) {
 
     return false;
 }
+
+
+const XPLMDataTypeID simple_types = xplmType_Int | xplmType_Float | xplmType_Double;
+const XPLMDataTypeID array_types = xplmType_IntArray | xplmType_FloatArray | xplmType_Data;
+const XPLMDataTypeID supported_types = simple_types | array_types;
 
 static error_t drci_create(void **command_ref, session_t *session, request_t *request) {
     error_t err = ERROR_NONE;
@@ -338,29 +351,50 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "exactly one dataref has to be defined");
         goto error;
     }
-    
-    int offset_type_separator = strpos(parameter->parameter, ":", 0);
+
+    // offset_type_separator separates types and name (mandatory)
+    int offset_type_separator = strpos_unescaped(parameter->parameter, ":", 0);
     if (offset_type_separator < 1) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "dataref type must be specified");
         goto error;
     }
 
-    int name_length = strlen(parameter->parameter) - offset_type_separator - 1;
-    if (name_length < 1) {
-        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "dataref name is missing");
-        goto error;
-    }
+    // offset_name_separator separates name and array length (optional)
+    int offset_name_separator = strpos_unescaped(parameter->parameter, ":", offset_type_separator + 1);
+    int arrlen_length = (offset_name_separator >= 0)
+        ? strlen(parameter->parameter) - offset_name_separator - 1 // array length goes to end of param
+        : -1; // array length not found
+    int escaped_name_length = (offset_name_separator < 0)
+        ? strlen(parameter->parameter) - offset_type_separator - 1 // name goes to end of param
+        : offset_name_separator - offset_type_separator - 1; // name goes only to length separator
 
     command->types = xprc_parse_types(parameter->parameter, offset_type_separator);
     printf("[XPRC] [DRCI] parsed types %d\n", command->types); // DEBUG
-    if (!is_supported_type_combination(command->types)) {
-        printf("[XPRC] [DRCI] unsupported types\n"); // DEBUG
+
+    bool has_simple_type = ((command->types & simple_types) != 0);
+    bool has_array_type = ((command->types & array_types) != 0);
+    if (has_simple_type && has_array_type) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "combination of simple and array types is not supported");
+        goto error;
+    } else if (command->types == xplmType_Unknown || (command->types & ~supported_types) != 0) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unknown or unsupported types");
+        goto error;
+    } else if (has_array_type && arrlen_length < 1) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "undefined array length");
+        goto error;
+    } else if ((command->types & xplmType_Data) != 0 && (command->types & ~xplmType_Data) != 0) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "blob cannot be combined with other types");
+        goto error;
+    }
+
+    int array_length = (arrlen_length > 0) ? atoi(&parameter->parameter[offset_name_separator+1]) : -1;
+    if (has_array_type && array_length < 0) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "invalid array length");
         goto error;
     }
 
     printf("[XPRC] [DRCI] copy name\n"); // DEBUG
-    command->dataref_name = copy_string(&parameter->parameter[offset_type_separator+1]);
+    command->dataref_name = copy_partial_unescaped_string(&parameter->parameter[offset_type_separator+1], escaped_name_length);
     if (!command->dataref_name) {
         printf("[XPRC] [DRCI] copy failed\n"); // DEBUG
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "dataref name could not be copied");
@@ -369,40 +403,35 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     }
     printf("[XPRC] [DRCI] copy succeeded\n"); // DEBUG
 
-    // TODO: allocate buffers
+    printf("[XPRC] [DRCI] array length: %d\n", array_length); // DEBUG
     
-    /*
-        // allocate buffers
-        if (wanted_type == xplmType_Int || wanted_type == xplmType_Float || wanted_type == xplmType_Double) {
-            // single value: exact size is already known by type
-            dataref->value_buffer_size = (wanted_type == xplmType_Double) ? SIZE_XPLM_DOUBLE : SIZE_XPLM_INT_FLOAT;
-            dataref->value_buffer = zalloc(dataref->value_buffer_size);
-            if (!dataref->value_buffer) {
-                error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "internal dataref direct value buffer could not be allocated");
-                out_error = ERROR_MEMORY_ALLOCATION;
-                goto error;
-            }
-        } else if (wanted_type == xplmType_IntArray || wanted_type == xplmType_FloatArray || wanted_type == xplmType_Data) {
-            // array types: create only dynamic array, length and capacity are determined during data retrieval
-            size_t item_size = (wanted_type == xplmType_Data) ? 1 : SIZE_XPLM_INT_FLOAT;
-            dataref->value_buffer = create_dynamic_array(item_size, 0);
-            if (!dataref->value_buffer) {
-                error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "internal dataref dynamic array value buffer could not be allocated");
-                out_error = ERROR_MEMORY_ALLOCATION;
-                goto error;
-            }
-        } else {
-            // unsupported type
-            error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "dataref type is not handled");
-            out_error = ERROR_UNSPECIFIC;
+    if ((command->types & xplmType_IntArray) != 0) {
+        command->values_int = create_dynamic_array(SIZE_XPLM_INT, array_length);
+        if (!command->values_int || !dynamic_array_set_length(command->values_int, array_length)) {
+            error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "failed to allocate int[]");
+            out_error = ERROR_MEMORY_ALLOCATION;
             goto error;
         }
-
-        parameter = parameter->next;
-        dataref_ref = &dataref->next;
     }
-    */
-
+    
+    if ((command->types & xplmType_FloatArray) != 0) {
+        command->values_float = create_dynamic_array(SIZE_XPLM_FLOAT, array_length);
+        if (!command->values_float || !dynamic_array_set_length(command->values_float, array_length)) {
+            error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "failed to allocate float[]");
+            out_error = ERROR_MEMORY_ALLOCATION;
+            goto error;
+        }
+    }
+    
+    if ((command->types & xplmType_Data) != 0) {
+        command->blob = create_dynamic_array(1, array_length);
+        if (!command->blob || !dynamic_array_set_length(command->blob, array_length)) {
+            error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "failed to allocate blob array");
+            out_error = ERROR_MEMORY_ALLOCATION;
+            goto error;
+        }
+    }
+    
     printf("[XPRC] [DRCI] reserving proxy\n"); // DEBUG
     command->proxy = reserve_dataproxy(session->server->config.dataproxy_registry, command->dataref_name, command->types, write_permission, command, session, drci_dataproxy_operations);
     if (!command->proxy) {
@@ -454,7 +483,20 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
             command->proxy = NULL;
         }
 
-        // TODO: free buffers
+        if (command->values_int) {
+            destroy_dynamic_array(command->values_int);
+            command->values_int = NULL;
+        }
+
+        if (command->values_float) {
+            destroy_dynamic_array(command->values_float);
+            command->values_float = NULL;
+        }
+
+        if (command->blob) {
+            destroy_dynamic_array(command->blob);
+            command->blob = NULL;
+        }
 
         if (command->dataref_name) {
             free(command->dataref_name);
@@ -599,6 +641,9 @@ static error_t dump_values(command_drci_t *command) {
     dump_value(list, command, xplmType_Int, &command->value_int, &total_length, &is_first, &should_abort);
     dump_value(list, command, xplmType_Float, &command->value_float, &total_length, &is_first, &should_abort);
     dump_value(list, command, xplmType_Double, &command->value_double, &total_length, &is_first, &should_abort);
+    dump_value(list, command, xplmType_IntArray, &command->values_int, &total_length, &is_first, &should_abort);
+    dump_value(list, command, xplmType_FloatArray, &command->values_float, &total_length, &is_first, &should_abort);
+    dump_value(list, command, xplmType_Data, &command->blob, &total_length, &is_first, &should_abort);
 
     if (should_abort) {
         err = ERROR_UNSPECIFIC;
@@ -655,14 +700,102 @@ static error_t drci_simple_set(void *ref, XPLMDataTypeID type, void *value, sess
 
 static error_t drci_array_get(void *ref, XPLMDataTypeID type, void *dest, int *num_copied, int offset, int count) {
     command_drci_t *command = ref;
-    printf("[XPRC] [DRCI] array_get %d for %s\n", type, command->dataref_name); // DEBUG
-    return ERROR_UNSPECIFIC;
+    error_t out_err = ERROR_NONE;
+
+    if (((command->types & type) == 0) || !dest || !num_copied || offset < 0 || count < 0) {
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (count == 0) {
+        *num_copied = 0;
+        return ERROR_NONE;
+    }
+
+    if (mtx_lock(&command->mutex) != thrd_success) {
+        return ERROR_LOCK_FAILED;
+    }
+
+    dynamic_array_t *arr = NULL;
+    int type_size = SIZE_XPLM_INT_FLOAT;
+    if (type == xplmType_IntArray) {
+        arr = command->values_int;
+    } else if (type == xplmType_FloatArray) {
+        arr = command->values_float;
+    } else if (type == xplmType_Data) {
+        arr = command->blob;
+        type_size = 1;
+    }
+
+    //printf("[XPRC] [DRCI] drci_array_get: arr=%p, type_size=%d\n", arr, type_size); // DEBUG
+
+    if (!arr) {
+        out_err = ERROR_UNSPECIFIC;
+    } else {
+        int available = arr->length - offset;
+        if (available < 0) {
+            // out of bounds
+            out_err = ERROR_UNSPECIFIC;
+        }
+
+        //printf("[XPRC] [DRCI] drci_array_get: arr->length=%d, offset=%d, count=%d, available=%d\n", arr->length, offset, count, available); // DEBUG
+        
+        int actual_count = (available < count) ? available : count;
+        if (actual_count < 0) {
+            // may not be out of bounds - excessive count is allowed
+            actual_count = 0;
+        }
+
+        void *src = dynamic_array_get_pointer(arr, offset);
+        //printf("[XPRC] [DRCI] drci_array_get: src=%p, actual_count=%d\n", src, actual_count); // DEBUG
+        if (src && actual_count > 0) {
+            memcpy(dest, src, actual_count * type_size);
+            *num_copied = actual_count;
+        } else {
+            *num_copied = 0;
+        }
+    }
+    
+    mtx_unlock(&command->mutex);
+    
+    //printf("[XPRC] [DRCI] drci_array_get: out_err=%d, num_copied=%d\n", out_err, *num_copied); // DEBUG
+    
+    return out_err;
 }
 
 static error_t drci_array_length(void *ref, XPLMDataTypeID type, int *length) {
     command_drci_t *command = ref;
-    printf("[XPRC] [DRCI] array_length %d for %s\n", type, command->dataref_name); // DEBUG
-    return ERROR_UNSPECIFIC;
+    error_t out_err = ERROR_NONE;
+
+    printf("[XPRC] [DRCI] drci_array_length\n"); // DEBUG
+    
+    if (((command->types & type) == 0) || !length) {
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (mtx_lock(&command->mutex) != thrd_success) {
+        return ERROR_LOCK_FAILED;
+    }
+
+    dynamic_array_t *arr = NULL;
+    if (type == xplmType_IntArray) {
+        arr = command->values_int;
+    } else if (type == xplmType_FloatArray) {
+        arr = command->values_float;
+    } else if (type == xplmType_Data) {
+        arr = command->blob;
+    }
+
+    if (!arr) {
+        printf("[XPRC] [DRCI] drci_array_length: no array\n"); // DEBUG
+        out_err = ERROR_UNSPECIFIC;
+    } else {
+        printf("[XPRC] [DRCI] drci_array_length: %d\n", arr->length); // DEBUG
+        *length = arr->length;
+    }
+    
+    mtx_unlock(&command->mutex);
+    
+    return out_err;
 }
 
 static error_t drci_array_update(void *ref, XPLMDataTypeID type, void *values, int offset, int count, session_t *source_session) {
