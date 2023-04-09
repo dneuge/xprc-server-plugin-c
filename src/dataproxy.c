@@ -319,13 +319,19 @@ static int dataproxy_xp_get_data_array(void *inRefcon, XPLMDataTypeID type, void
     error_t err = ERROR_NONE;
 
     int out = 0;
+
+    //printf("[XPRC] [dataproxy] dataproxy_xp_get_data_array type=%d, outValues=%p, inOffset=%d, inMax=%d\n", type, outValues, inOffset, inMax);
     
     if (outValues) {
+        //printf("[XPRC] [dataproxy] dataproxy_xp_get_data_array => dataproxy_array_get\n");
         err = dataproxy_array_get(proxy, type, outValues, &out, inOffset, inMax);
     } else {
+        //printf("[XPRC] [dataproxy] dataproxy_xp_get_data_array => dataproxy_array_length\n");
         err = dataproxy_array_length(proxy, type, &out);
     }
-
+    
+    //printf("[XPRC] [dataproxy] dataproxy_xp_get_data_array: out=%d, err=%d\n", out, err);
+    
     if (err != ERROR_NONE) {
         return 0;
     }
