@@ -43,6 +43,11 @@ XPLMDataTypeID xprc_parse_types(char *s, int count) {
         if (type == xplmType_Unknown) {
             return xplmType_Unknown;
         }
+
+        if ((types & type) != 0) {
+            // duplicate or collision, type was already selected
+            return xplmType_Unknown;
+        }
         
         types = types | type;
 
