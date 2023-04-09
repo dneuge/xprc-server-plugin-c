@@ -1,8 +1,10 @@
 #include "command_drci.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
 #include <XPLMDataAccess.h>
 #include <XPLMPlugin.h>
@@ -12,11 +14,18 @@
 #include "protocol.h"
 #include "session.h"
 #include "utils.h"
+#include "xptypes.h"
 
 #define DRCI_ECHO_NONE 0
 #define DRCI_ECHO_OTHER 1
 #define DRCI_ECHO_ALL 2
 typedef uint8_t drci_echo_mode_t;
+
+#define DRCI_INTCONV_NOT_SET 0
+#define DRCI_INTCONV_ROUND 1
+#define DRCI_INTCONV_FLOOR 2
+#define DRCI_INTCONV_CEIL 3
+typedef uint8_t drci_intconv_mode_t;
 
 #define DRCI_REGISTRATION_PHASE TASK_SCHEDULE_BEFORE_FLIGHT_MODEL
 
@@ -31,12 +40,18 @@ typedef struct {
     session_t *session;
     channel_id_t channel_id;
 
+    mtx_t mutex;
     dataproxy_t *proxy;
     
     char *dataref_name;
     XPLMDataTypeID types;
 
     drci_echo_mode_t echo_mode;
+
+    drci_intconv_mode_t intconv_mode;
+    xpint_t value_int;
+    xpfloat_t value_float;
+    xpdouble_t value_double;
     
     task_t *registration_task;
     bool registered;
@@ -155,15 +170,13 @@ static void drci_process_flightloop(command_drci_t *command) {
     notify_datarefeditor(command);
 }
 
-/*
-static char* encode_dataref_value(drci_dataref_t *dataref) {
-    if (dataref->type == xplmType_IntArray || dataref->type == xplmType_FloatArray || dataref->type == xplmType_Data) {
-        return xprc_encode_array(dataref->type, dataref->value_buffer);
+static char* encode_value(XPLMDataTypeID type, void *value_ref) {
+    if (type == xplmType_IntArray || type == xplmType_FloatArray || type == xplmType_Data) {
+        return xprc_encode_array(type, value_ref);
     } else {
-        return xprc_encode_value(dataref->type, dataref->value_buffer, dataref->value_buffer_size);
+        return xprc_encode_value(type, value_ref, (type == xplmType_Double) ? SIZE_XPLM_DOUBLE : SIZE_XPLM_INT_FLOAT);
     }
 }
-*/
 
 static void drci_process_post(command_drci_t *command) {
     if (command->failed) {
@@ -241,6 +254,24 @@ static bool is_supported_type_combination(XPLMDataTypeID types) {
     return (types & ~supported_types) == 0;
 }
 
+static bool parse_intconv_mode(drci_intconv_mode_t *intconv_mode, char *s) {
+    if (!s) {
+        *intconv_mode = DRCI_INTCONV_NOT_SET;
+        return true;
+    } else if (!strcmp(s, "round")) {
+        *intconv_mode = DRCI_INTCONV_ROUND;
+        return true;
+    } else if (!strcmp(s, "floor")) {
+        *intconv_mode = DRCI_INTCONV_FLOOR;
+        return true;
+    } else if (!strcmp(s, "ceil")) {
+        *intconv_mode = DRCI_INTCONV_CEIL;
+        return true;
+    }
+
+    return false;
+}
+
 static error_t drci_create(void **command_ref, session_t *session, request_t *request) {
     error_t err = ERROR_NONE;
     error_t out_error = ERROR_NONE;
@@ -250,6 +281,11 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     command_drci_t *command = zalloc(sizeof(command_drci_t));
     if (!command) {
         return ERROR_MEMORY_ALLOCATION;
+    }
+
+    if (mtx_init(&command->mutex, mtx_plain) != thrd_success) {
+        free(command);
+        return ERROR_UNSPECIFIC;
     }
 
     command->session = session;
@@ -265,7 +301,12 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "invalid mode for echo");
         goto error;
     }
-    
+
+    if (!parse_intconv_mode(&command->intconv_mode, request_get_option(request, "intConv", NULL))) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "invalid mode for intConv");
+        goto error;
+    }
+
     if (request_get_option(request, "range", NULL)) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "range option is not supported yet");
         goto error;
@@ -275,7 +316,7 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "rangeFit option is not supported yet");
         goto error;
     }
-    
+
     if (request_get_option(request, "step", NULL)) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "step option is not supported yet");
         goto error;
@@ -284,6 +325,12 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     if (request_get_option(request, "stepFit", NULL)) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "stepFit option is not supported yet");
         goto error;
+    }
+    
+    // TODO: mutual exclusion of intConv and step options
+
+    if (command->intconv_mode == DRCI_INTCONV_NOT_SET) {
+        command->intconv_mode = DRCI_INTCONV_ROUND;
     }
     
     command_parameter_t *parameter = request->parameters;
@@ -413,7 +460,9 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
             free(command->dataref_name);
             command->dataref_name = NULL;
         }
-        
+
+        mtx_destroy(&command->mutex);
+
         free(command);
     }
     return (out_error != ERROR_NONE) ? out_error : ERROR_UNSPECIFIC;
@@ -421,14 +470,187 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
 
 static error_t drci_simple_get(void *ref, XPLMDataTypeID type, void *dest) {
     command_drci_t *command = ref;
-    printf("[XPRC] [DRCI] simple_get %d for %s\n", type, command->dataref_name); // DEBUG
-    return ERROR_UNSPECIFIC;
+    error_t out_err = ERROR_NONE;
+
+    if (((command->types & type) == 0) || !dest) {
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (mtx_lock(&command->mutex) != thrd_success) {
+        return ERROR_LOCK_FAILED;
+    }
+    
+    if (type == xplmType_Int) {
+        *((xpint_t*)dest) = command->value_int;
+    } else if (type == xplmType_Float) {
+        *((xpfloat_t*)dest) = command->value_float;
+    } else if (type == xplmType_Double) {
+        *((xpdouble_t*)dest) = command->value_double;
+    } else {
+        out_err = ERROR_UNSPECIFIC;
+    }
+
+    mtx_unlock(&command->mutex);
+    
+    return out_err;
+}
+
+static xpint_t float2int(float value, drci_intconv_mode_t mode) {
+    if (mode == DRCI_INTCONV_FLOOR) {
+        value = floorf(value);
+    } else if (mode == DRCI_INTCONV_CEIL) {
+        value = ceilf(value);
+    }
+
+    return (xpint_t) lroundf(value);
+}
+
+static xpint_t double2int(double value, drci_intconv_mode_t mode) {
+    if (mode == DRCI_INTCONV_FLOOR) {
+        value = floor(value);
+    } else if (mode == DRCI_INTCONV_CEIL) {
+        value = ceil(value);
+    }
+
+    return (xpint_t) lround(value);
+}
+
+static bool should_echo(command_drci_t *command, session_t *source_session) {
+    if (command->echo_mode == DRCI_ECHO_OTHER) {
+        return (source_session != command->session);
+    }
+
+    return (command->echo_mode == DRCI_ECHO_ALL);
+}
+
+static inline void dump_value(prealloc_list_t *list, command_drci_t *command, XPLMDataTypeID type, void *value_ref, int *total_length, bool *is_first, bool *should_abort) {
+    if (*should_abort) {
+        return;
+    }
+
+    if ((command->types & type) == 0) {
+        return;
+    }
+    
+    if (*is_first) {
+        *is_first = false;
+    } else {
+        char *copy_separator = copy_string(";");
+        if (!copy_separator) {
+            goto error;
+        }
+
+        if (!prealloc_list_append(list, copy_separator)) {
+            goto error;
+        }
+            
+        *total_length = (*total_length) + 1;
+    }
+        
+    char *encoded_value = encode_value(type, value_ref);
+    if (!encoded_value) {
+        goto error;
+    }
+        
+    if (!prealloc_list_append(list, encoded_value)) {
+        goto error;
+    }
+ 
+    *total_length = (*total_length) + strlen(encoded_value);
+
+    return;
+
+ error:
+    *should_abort = true;
+    return;
+}
+
+static char* concat(prealloc_list_t *list, int total_length) {
+    if (total_length <= 0) {
+        return NULL;
+    }
+
+    char *out = zalloc(total_length + 1);
+    char *write = out;
+    prealloc_list_item_t *item = list->first_in_use_item;
+    while (item) {
+        int len = strlen(item->value);
+        memcpy(write, item->value, len);
+        write += len;
+
+        item = item->next_in_use;
+    }
+    
+    return out;
+}
+
+static error_t dump_values(command_drci_t *command) {
+    error_t err = ERROR_NONE;
+    
+    prealloc_list_t *list = create_preallocated_list();
+    if (!list) {
+        return ERROR_MEMORY_ALLOCATION;
+    }
+
+    bool is_first = true;
+    bool should_abort = false;
+    int total_length = 0;
+
+    dump_value(list, command, xplmType_Int, &command->value_int, &total_length, &is_first, &should_abort);
+    dump_value(list, command, xplmType_Float, &command->value_float, &total_length, &is_first, &should_abort);
+    dump_value(list, command, xplmType_Double, &command->value_double, &total_length, &is_first, &should_abort);
+
+    if (should_abort) {
+        err = ERROR_UNSPECIFIC;
+    } else {
+        char *s = concat(list, total_length);
+        if (s) {
+            err = continue_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, s);
+        } else {
+            err = ERROR_UNSPECIFIC;
+        }
+    }
+    
+    destroy_preallocated_list(list, free, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS);
+
+    return err;
 }
 
 static error_t drci_simple_set(void *ref, XPLMDataTypeID type, void *value, session_t *source_session) {
     command_drci_t *command = ref;
-    printf("[XPRC] [DRCI] simple_set %d for %s\n", type, command->dataref_name); // DEBUG
-    return ERROR_UNSPECIFIC;
+    error_t out_err = ERROR_NONE;
+
+    if (((command->types & type) == 0) || !value) {
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (mtx_lock(&command->mutex) != thrd_success) {
+        return ERROR_LOCK_FAILED;
+    }
+    
+    if (type == xplmType_Int) {
+        command->value_int = *((xpint_t*)value);
+        command->value_float = command->value_int;
+        command->value_double = command->value_double;
+    } else if (type == xplmType_Float) {
+        command->value_float = *((xpfloat_t*)value);
+        command->value_double = command->value_float;
+        command->value_int = float2int(command->value_float, command->intconv_mode);
+    } else if (type == xplmType_Double) {
+        command->value_double = *((xpdouble_t*)value);
+        command->value_float = command->value_double;
+        command->value_int = double2int(command->value_double, command->intconv_mode);
+    } else {
+        out_err = ERROR_UNSPECIFIC;
+    }
+
+    if (out_err == ERROR_NONE && should_echo(command, source_session)) {
+        dump_values(command);
+    }
+    
+    mtx_unlock(&command->mutex);
+    
+    return out_err;
 }
 
 static error_t drci_array_get(void *ref, XPLMDataTypeID type, void *dest, int *num_copied, int offset, int count) {
