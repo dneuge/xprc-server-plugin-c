@@ -52,6 +52,7 @@ typedef struct {
     xpint_t value_int;
     xpfloat_t value_float;
     xpdouble_t value_double;
+    int array_length;
     dynamic_array_t *values_int;
     dynamic_array_t *values_float;
     dynamic_array_t *blob;
@@ -387,8 +388,8 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
         goto error;
     }
 
-    int array_length = (arrlen_length > 0) ? atoi(&parameter->parameter[offset_name_separator+1]) : -1;
-    if (has_array_type && array_length < 0) {
+    command->array_length = (arrlen_length > 0) ? atoi(&parameter->parameter[offset_name_separator+1]) : -1;
+    if (has_array_type && command->array_length < 0) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "invalid array length");
         goto error;
     }
@@ -403,11 +404,11 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     }
     printf("[XPRC] [DRCI] copy succeeded\n"); // DEBUG
 
-    printf("[XPRC] [DRCI] array length: %d\n", array_length); // DEBUG
+    printf("[XPRC] [DRCI] array length: %d\n", command->array_length); // DEBUG
     
     if ((command->types & xplmType_IntArray) != 0) {
-        command->values_int = create_dynamic_array(SIZE_XPLM_INT, array_length);
-        if (!command->values_int || !dynamic_array_set_length(command->values_int, array_length)) {
+        command->values_int = create_dynamic_array(SIZE_XPLM_INT, command->array_length);
+        if (!command->values_int || !dynamic_array_set_length(command->values_int, command->array_length)) {
             error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "failed to allocate int[]");
             out_error = ERROR_MEMORY_ALLOCATION;
             goto error;
@@ -415,8 +416,8 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     }
     
     if ((command->types & xplmType_FloatArray) != 0) {
-        command->values_float = create_dynamic_array(SIZE_XPLM_FLOAT, array_length);
-        if (!command->values_float || !dynamic_array_set_length(command->values_float, array_length)) {
+        command->values_float = create_dynamic_array(SIZE_XPLM_FLOAT, command->array_length);
+        if (!command->values_float || !dynamic_array_set_length(command->values_float, command->array_length)) {
             error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "failed to allocate float[]");
             out_error = ERROR_MEMORY_ALLOCATION;
             goto error;
@@ -424,8 +425,8 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     }
     
     if ((command->types & xplmType_Data) != 0) {
-        command->blob = create_dynamic_array(1, array_length);
-        if (!command->blob || !dynamic_array_set_length(command->blob, array_length)) {
+        command->blob = create_dynamic_array(1, command->array_length);
+        if (!command->blob || !dynamic_array_set_length(command->blob, command->array_length)) {
             error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "failed to allocate blob array");
             out_error = ERROR_MEMORY_ALLOCATION;
             goto error;
@@ -641,9 +642,9 @@ static error_t dump_values(command_drci_t *command) {
     dump_value(list, command, xplmType_Int, &command->value_int, &total_length, &is_first, &should_abort);
     dump_value(list, command, xplmType_Float, &command->value_float, &total_length, &is_first, &should_abort);
     dump_value(list, command, xplmType_Double, &command->value_double, &total_length, &is_first, &should_abort);
-    dump_value(list, command, xplmType_IntArray, &command->values_int, &total_length, &is_first, &should_abort);
-    dump_value(list, command, xplmType_FloatArray, &command->values_float, &total_length, &is_first, &should_abort);
-    dump_value(list, command, xplmType_Data, &command->blob, &total_length, &is_first, &should_abort);
+    dump_value(list, command, xplmType_IntArray, command->values_int, &total_length, &is_first, &should_abort);
+    dump_value(list, command, xplmType_FloatArray, command->values_float, &total_length, &is_first, &should_abort);
+    dump_value(list, command, xplmType_Data, command->blob, &total_length, &is_first, &should_abort);
 
     if (should_abort) {
         err = ERROR_UNSPECIFIC;
@@ -661,40 +662,80 @@ static error_t dump_values(command_drci_t *command) {
     return err;
 }
 
+static void apply_value(XPLMDataTypeID type, void *value, xpint_t *stored_int, xpfloat_t *stored_float, xpdouble_t *stored_double, drci_intconv_mode_t intconv_mode) {
+    if (type == xplmType_Int) {
+        xpint_t int_val = *((xpint_t*)value);
+        if (stored_int) {
+            *stored_int = int_val;
+        }
+        if (stored_float) {
+            *stored_float = int_val;
+        }
+        if (stored_double) {
+            *stored_double = int_val;
+        }
+    } else if (type == xplmType_Float) {
+        xpfloat_t float_val = *((xpfloat_t*)value);
+        if (stored_int) {
+            *stored_int = float2int(float_val, intconv_mode);
+        }
+        if (stored_float) {
+            *stored_float = float_val;
+        }
+        if (stored_double) {
+            *stored_double = float_val;
+        }
+    } else if (type == xplmType_Double) {
+        xpdouble_t double_val = *((xpdouble_t*)value);
+        if (stored_int) {
+            *stored_int = double2int(double_val, intconv_mode);
+        }
+        if (stored_float) {
+            *stored_float = double_val;
+        }
+        if (stored_double) {
+            *stored_double = double_val;
+        }
+    }
+}
+
 static error_t drci_simple_set(void *ref, XPLMDataTypeID type, void *value, session_t *source_session) {
     command_drci_t *command = ref;
-    error_t out_err = ERROR_NONE;
 
-    if (((command->types & type) == 0) || !value) {
+    if (((command->types & type) == 0) || (type & ~simple_types) != 0 || !value) {
         return ERROR_UNSPECIFIC;
     }
 
     if (mtx_lock(&command->mutex) != thrd_success) {
         return ERROR_LOCK_FAILED;
     }
+
+    apply_value(type, value, &command->value_int, &command->value_float, &command->value_double, command->intconv_mode);
+
+    if (should_echo(command, source_session)) {
+        dump_values(command);
+    }
+
+    mtx_unlock(&command->mutex);
     
-    if (type == xplmType_Int) {
-        command->value_int = *((xpint_t*)value);
-        command->value_float = command->value_int;
-        command->value_double = command->value_double;
-    } else if (type == xplmType_Float) {
-        command->value_float = *((xpfloat_t*)value);
-        command->value_double = command->value_float;
-        command->value_int = float2int(command->value_float, command->intconv_mode);
-    } else if (type == xplmType_Double) {
-        command->value_double = *((xpdouble_t*)value);
-        command->value_float = command->value_double;
-        command->value_int = double2int(command->value_double, command->intconv_mode);
-    } else {
+    return ERROR_NONE;
+}
+
+static error_t get_actual_count(int *actual_count, int length, int offset, int count) {
+    error_t out_err = ERROR_NONE;
+    
+    int available = length - offset;
+    if (available < 0) {
+        // out of bounds
         out_err = ERROR_UNSPECIFIC;
     }
 
-    if (out_err == ERROR_NONE && should_echo(command, source_session)) {
-        dump_values(command);
+    *actual_count = (available < count) ? available : count;
+    if (*actual_count < 0) {
+        // may not be out of bounds - excessive count is allowed
+        *actual_count = 0;
     }
-    
-    mtx_unlock(&command->mutex);
-    
+
     return out_err;
 }
 
@@ -731,23 +772,12 @@ static error_t drci_array_get(void *ref, XPLMDataTypeID type, void *dest, int *n
     if (!arr) {
         out_err = ERROR_UNSPECIFIC;
     } else {
-        int available = arr->length - offset;
-        if (available < 0) {
-            // out of bounds
-            out_err = ERROR_UNSPECIFIC;
-        }
-
-        //printf("[XPRC] [DRCI] drci_array_get: arr->length=%d, offset=%d, count=%d, available=%d\n", arr->length, offset, count, available); // DEBUG
+        int actual_count = 0;
+        out_err = get_actual_count(&actual_count, arr->length, offset, count);
         
-        int actual_count = (available < count) ? available : count;
-        if (actual_count < 0) {
-            // may not be out of bounds - excessive count is allowed
-            actual_count = 0;
-        }
-
         void *src = dynamic_array_get_pointer(arr, offset);
         //printf("[XPRC] [DRCI] drci_array_get: src=%p, actual_count=%d\n", src, actual_count); // DEBUG
-        if (src && actual_count > 0) {
+        if ((out_err == ERROR_NONE) && src && (actual_count > 0)) {
             memcpy(dest, src, actual_count * type_size);
             *num_copied = actual_count;
         } else {
@@ -800,8 +830,68 @@ static error_t drci_array_length(void *ref, XPLMDataTypeID type, int *length) {
 
 static error_t drci_array_update(void *ref, XPLMDataTypeID type, void *values, int offset, int count, session_t *source_session) {
     command_drci_t *command = ref;
-    printf("[XPRC] [DRCI] array_update %d for %s\n", type, command->dataref_name); // DEBUG
-    return ERROR_UNSPECIFIC;
+    error_t out_err = ERROR_NONE;
+
+    //printf("[XPRC] [DRCI] drci_array_update: type=%d, values=%p, offset=%d, count=%d, source_session=%p\n", type, values, offset, count, source_session); // DEBUG
+    
+    if (((command->types & type) == 0) || (command->array_length < 0) || !values || offset < 0 || count < 0) {
+        //printf("[XPRC] [DRCI] drci_array_update: bad precondition\n"); // DEBUG
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (count == 0) {
+        //printf("[XPRC] [DRCI] drci_array_update: count 0\n"); // DEBUG
+        return ERROR_NONE;
+    }
+
+    if (mtx_lock(&command->mutex) != thrd_success) {
+        //printf("[XPRC] [DRCI] drci_array_update: lock failed\n"); // DEBUG
+        return ERROR_LOCK_FAILED;
+    }
+
+    int actual_count = 0;
+    out_err = get_actual_count(&actual_count, command->array_length, offset, count);
+
+    //printf("[XPRC] [DRCI] drci_array_update: out_err=%d, actual_count=%d\n", out_err, actual_count); // DEBUG
+    
+    if ((out_err != ERROR_NONE) || (actual_count <= 0)) {
+        //printf("[XPRC] [DRCI] drci_array_update: early quit\n"); // DEBUG
+        mtx_unlock(&command->mutex);
+        return out_err;
+    }
+    
+    if (type == xplmType_Data) {
+        // blobs do not support any type of value conversion and are mutually exclusive to other types
+        // so the data can be copied directly
+        void *dest = dynamic_array_get_pointer(command->blob, offset);
+        //printf("[XPRC] [DRCI] drci_array_update: copy blob to %p\n", dest); // DEBUG
+        memcpy(dest, values, actual_count);
+    } else {
+        int end = offset + actual_count;
+        void *src = values;
+        XPLMDataTypeID src_type = (type == xplmType_FloatArray) ? xplmType_Float : xplmType_Int;
+        //printf("[XPRC] [DRCI] drci_array_update: copy values from src=%p, end=%d, src_type=%d\n", src, end, src_type); // DEBUG
+        for (int i=offset; i<end; i++) {
+            void *dest_int = command->values_int ? dynamic_array_get_pointer(command->values_int, i) : NULL;
+            void *dest_float = command->values_float ? dynamic_array_get_pointer(command->values_float, i) : NULL;
+            //printf("[XPRC] [DRCI] drci_array_update: copy value from src=%p (i=%d) to dest_int=%p, dest_float=%p\n", src, i, dest_int, dest_float); // DEBUG
+            apply_value(src_type, src, dest_int, dest_float, NULL, command->intconv_mode);
+            src += SIZE_XPLM_INT_FLOAT;
+        }
+    }
+    
+    //printf("[XPRC] [DRCI] drci_array_update: copy complete\n"); // DEBUG
+
+    if (should_echo(command, source_session)) {
+        //printf("[XPRC] [DRCI] drci_array_update: dumping\n"); // DEBUG
+        dump_values(command);
+    }
+    
+    mtx_unlock(&command->mutex);
+    
+    //printf("[XPRC] [DRCI] drci_array_update: done\n"); // DEBUG
+    
+    return out_err;
 }
 
 static const dataproxy_operations_t drci_dataproxy_operations = {
