@@ -221,3 +221,22 @@ int64_t millis_of_timespec(struct timespec *ts) {
     
     return ((int64_t) ts->tv_sec * 1000) + (ts->tv_nsec / 1000000);
 }
+
+int count_chars(char *s, char needle, int length) {
+    if (length <= 0) {
+        return 0;
+    }
+    
+    int count = 0;
+    
+    while (length && s && *s) {
+        if (*s == needle) {
+            count++;
+        }
+        
+        s++;
+        length--;
+    }
+
+    return count;
+}

@@ -17,6 +17,7 @@ int num_digits(int value);
 int64_t millis_of_timespec(struct timespec *ts);
 int strpos(char *haystack, char *needle, int start);
 int strpos_unescaped(char *haystack, char *needle, int start); // searches for a single-byte needle that has not been escaped; returns -2 in unsupported cases
+int count_chars(char *s, char needle, int length);
 void* zalloc(size_t size);
 
 #endif
