@@ -96,7 +96,7 @@ static int _strpos(char *haystack, char *needle, int start, bool skip_escapes) {
     }
 
     int max_offset = haystack_len - needle_len;
-    for (int i=start; i<max_offset; i++) {
+    for (int i=start; i<=max_offset; i++) {
         if (!strncmp(&haystack[i], needle, needle_len)) {
             if (skip_escapes && is_escaped(haystack, i)) {
                 continue;
