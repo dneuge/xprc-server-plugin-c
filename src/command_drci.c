@@ -27,14 +27,52 @@ typedef uint8_t drci_echo_mode_t;
 #define DRCI_INTCONV_CEIL 3
 typedef uint8_t drci_intconv_mode_t;
 
+#define DRCI_RANGEFIT_UNSUPPORTED 0
+#define DRCI_RANGEFIT_LIMIT 1
+#define DRCI_RANGEFIT_REJECT 2
+#define DRCI_RANGEFIT_WRAP 3
+typedef uint8_t drci_rangefit_mode_t;
+
+#define DRCI_STEPFIT_UNSUPPORTED 0
+#define DRCI_STEPFIT_CLOSEST 1
+#define DRCI_STEPFIT_REJECT 2
+#define DRCI_STEPFIT_LOWER 3
+#define DRCI_STEPFIT_UPPER 4
+typedef uint8_t drci_stepfit_mode_t;
+
 #define DRCI_REGISTRATION_PHASE TASK_SCHEDULE_BEFORE_FLIGHT_MODEL
 
 #define PLUGIN_ID_DATAREFEDITOR "xplanesdk.examples.DataRefEditor"
 #define DATAREFEDITOR_MSG_ADD_DATAREF 0x01000000
 
-// TODO: range & range fit
-// TODO: step & step fit
+#define DRCI_ITEM_SEPARATOR ","
+#define DRCI_SUBITEM_SEPARATOR ":"
+
 // TODO: mutex TERM + post-proc registration task
+
+typedef struct {
+    XPLMDataTypeID type;
+    union {
+        xpint_t int_value;
+        xpfloat_t float_value;
+        xpdouble_t double_value;
+    };
+} drci_vartype_t;
+
+typedef struct {
+    drci_stepfit_mode_t fit_mode;
+    drci_vartype_t minimum;
+    drci_vartype_t step;
+    drci_vartype_t maximum;
+} drci_step_t;
+
+typedef struct {
+    drci_rangefit_mode_t fit_mode;
+    bool minimum_bound;
+    drci_vartype_t minimum;
+    bool maximum_bound;
+    drci_vartype_t maximum;
+} drci_range_t;
 
 typedef struct {
     session_t *session;
@@ -47,6 +85,8 @@ typedef struct {
     XPLMDataTypeID types;
 
     drci_echo_mode_t echo_mode;
+    dynamic_array_t *ranges;
+    dynamic_array_t *steps;
 
     drci_intconv_mode_t intconv_mode;
     xpint_t value_int;
@@ -56,7 +96,7 @@ typedef struct {
     dynamic_array_t *values_int;
     dynamic_array_t *values_float;
     dynamic_array_t *blob;
-    
+
     task_t *registration_task;
     bool registered;
     bool failed;
@@ -91,6 +131,16 @@ static error_t drci_destroy(void *command_ref) {
     if (command->blob) {
         destroy_dynamic_array(command->blob);
         command->blob = NULL;
+    }
+    
+    if (command->steps) {
+        destroy_dynamic_array(command->steps);
+        command->steps = NULL;
+    }
+    
+    if (command->ranges) {
+        destroy_dynamic_array(command->ranges);
+        command->ranges = NULL;
     }
     
     printf("[XPRC] [DRCI] destroy: freeing command\n"); // DEBUG
@@ -286,6 +336,194 @@ const XPLMDataTypeID simple_types = xplmType_Int | xplmType_Float | xplmType_Dou
 const XPLMDataTypeID array_types = xplmType_IntArray | xplmType_FloatArray | xplmType_Data;
 const XPLMDataTypeID supported_types = simple_types | array_types;
 
+static drci_rangefit_mode_t parse_rangefit_mode(char *s, int count) {
+    if (count >= 5 && !strncmp(s, "limit", count)) {
+        return DRCI_RANGEFIT_LIMIT;
+    } else if (count >= 6 && !strncmp(s, "reject", count)) {
+        return DRCI_RANGEFIT_REJECT;
+    } else if (count >= 4 && !strncmp(s, "wrap", count)) {
+        return DRCI_RANGEFIT_WRAP;
+    } else {
+        return DRCI_RANGEFIT_UNSUPPORTED;
+    }
+}
+
+static error_t parse_variable_value(drci_vartype_t *var, XPLMDataTypeID type, char *s) {
+    //printf("[XPRC] [DRCI] parse_variable_value \"%s\"\n", s); // DEBUG
+    
+    var->type = type;
+    
+    if (type == xplmType_Int) {
+        var->int_value = atoi(s);
+    } else if (type == xplmType_Float) {
+        var->float_value = atof(s);
+    } else if (type == xplmType_Double) {
+        var->double_value = atof(s); // atof actually returns a double
+    } else {
+        // invalidate
+        var->type = xplmType_Unknown;
+        return ERROR_UNSPECIFIC;
+    }
+
+    return ERROR_NONE;
+}
+
+static error_t parse_range(command_drci_t *command, drci_range_t *range, char *range_option, int count, XPLMDataTypeID *type_carry) {
+    int num_separators = count_chars(range_option, DRCI_SUBITEM_SEPARATOR[0], count);
+    bool has_previous_type = ((*type_carry & simple_types) != 0);
+    bool omits_type = (num_separators == 1);
+    //printf("[XPRC] [DRCI] parse_range range=%p, count=%d, type_carry=%d, range_option: %s\n", range, count, *type_carry, range_option); // DEBUG
+    if (omits_type) {
+        if (!has_previous_type) {
+            error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "range value type must be specified at least once");
+            return ERROR_UNSPECIFIC;
+        }
+    } else if (num_separators != 2) {
+        error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "invalid range syntax");
+        return ERROR_UNSPECIFIC;
+    }
+
+    int min_offset = omits_type ? 0 : strpos(range_option, DRCI_SUBITEM_SEPARATOR, 0) + 1;
+    //printf("[XPRC] [DRCI] parse_range min_offset=%d @ %s\n", min_offset, &range_option[min_offset]); // DEBUG
+    int max_offset = strpos(range_option, DRCI_SUBITEM_SEPARATOR, min_offset) + 1;
+    //printf("[XPRC] [DRCI] parse_range max_offset=%d @ %s\n", max_offset, &range_option[max_offset]); // DEBUG
+    range->minimum_bound = ((max_offset - min_offset) > 1);
+    range->maximum_bound = (max_offset < count);
+
+    XPLMDataTypeID type = *type_carry;
+    if (!omits_type) {
+        int type_length = min_offset - 1;
+        if (type_length < 1) {
+            error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "range value type not specified");
+            return ERROR_UNSPECIFIC;
+        }
+
+        type = xprc_parse_type(range_option, type_length);
+        if ((type & simple_types) == 0) {
+            error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "invalid range value type");
+            return ERROR_UNSPECIFIC;
+        }
+        
+        *type_carry = type;
+    }
+
+    error_t err = ERROR_NONE;
+    
+    if (range->minimum_bound) {
+        // copy is needed for zero termination (otherwise number parsing could continue outside of current option)
+        char *tmp = copy_partial_string(range_option + min_offset, max_offset - min_offset - 1);
+        if (!tmp) {
+            return ERROR_MEMORY_ALLOCATION;
+        }
+        
+        err = parse_variable_value(&range->minimum, type, tmp);
+        free(tmp);
+        
+        if (err != ERROR_NONE) {
+            error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "failed to parse minimum range value");
+            return err;
+        }
+    }
+    
+    if (range->maximum_bound) {
+        // copy is needed for zero termination (otherwise number parsing could continue outside of current option)
+        char *tmp = copy_partial_string(range_option + max_offset, count - max_offset);
+        if (!tmp) {
+            return ERROR_MEMORY_ALLOCATION;
+        }
+        
+        err = parse_variable_value(&range->maximum, type, tmp);
+        free(tmp);
+        
+        if (err != ERROR_NONE) {
+            error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "failed to parse maximum range value");
+            return err;
+        }
+    }
+
+    return ERROR_NONE;
+}
+     
+static error_t parse_ranges(command_drci_t *command, char *range_option, char *rangefit_option) {
+    if (!range_option) {
+        return ERROR_NONE;
+    }
+    
+    int num_ranges = count_chars(range_option, DRCI_ITEM_SEPARATOR[0], strlen(range_option)) + 1;
+    int num_fitmodes = rangefit_option ? count_chars(rangefit_option, DRCI_ITEM_SEPARATOR[0], strlen(rangefit_option)) + 1 : 0;
+
+    bool multiple_fitmodes = num_fitmodes > 1;
+
+    if (multiple_fitmodes && (num_ranges != num_fitmodes)) {
+        error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "number of range and rangeFit must match if multiple rangeFit options are specified");
+        return ERROR_UNSPECIFIC;
+    }
+
+    command->ranges = create_dynamic_array(sizeof(drci_range_t), num_ranges); // will be freed by caller on error
+    if (!command->ranges || !dynamic_array_set_length(command->ranges, num_ranges)) {
+        error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "failed to allocate range definitions");
+        return ERROR_MEMORY_ALLOCATION;
+    }
+
+    drci_rangefit_mode_t rangefit_mode = DRCI_RANGEFIT_LIMIT;
+    int rangefit_separator = 0;
+    XPLMDataTypeID range_value_type = xplmType_Unknown;
+    for (int i=0; i<num_ranges; i++) {
+        drci_range_t *range = dynamic_array_get_pointer(command->ranges, i);
+        if (!range) {
+            return ERROR_UNSPECIFIC;
+        }
+        
+        if (i < num_fitmodes) { // runs once (single option) or for each (all set)
+            rangefit_separator = strpos(rangefit_option, DRCI_ITEM_SEPARATOR, 0);
+            if (rangefit_separator < 0) {
+                // use full remaining string if separator was not found
+                rangefit_separator = strlen(rangefit_option);
+            }
+            
+            rangefit_mode = parse_rangefit_mode(rangefit_option, rangefit_separator);
+            if (rangefit_mode == DRCI_RANGEFIT_UNSUPPORTED) {
+                error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "unsupported rangeFit mode");
+                return ERROR_UNSPECIFIC;
+            }
+
+            if (rangefit_separator > 0) {
+                rangefit_option += rangefit_separator + 1;
+            }
+        }
+
+        range->fit_mode = rangefit_mode;
+
+        int range_separator = strpos(range_option, DRCI_ITEM_SEPARATOR, 0);
+        if (range_separator < 0) {
+            range_separator = strlen(range_option);
+        }
+        
+        error_t err = parse_range(command, range, range_option, range_separator, &range_value_type);
+        if (err != ERROR_NONE) {
+            return err;
+        }
+
+        range_option += range_separator + 1;
+    }
+
+    /*
+    // DEBUG
+    printf("[XPRC] [DRCI] parsed %d ranges\n", num_ranges);
+    for (int i=0; i<num_ranges; i++) {
+        drci_range_t *range = dynamic_array_get_pointer(command->ranges, i);
+        printf("[XPRC] [DRCI] range #%d: fit_mode=%d, min_bound=%d, minimum=[type=%d, int:%d, float:%f, double:%f], max_bound=%d, maximum=[type=%d, int:%d, float:%f, double:%f])\n", i, range->fit_mode, range->minimum_bound, range->minimum.type, range->minimum.int_value, range->minimum.float_value, range->minimum.double_value, range->maximum_bound, range->maximum.type, range->maximum.int_value, range->maximum.float_value, range->maximum.double_value);
+    }
+    */
+
+    return ERROR_NONE;
+}
+
+static error_t parse_steps(command_drci_t *command, char *step_option, char *stepfit_option) {
+    // TODO: implement
+    return ERROR_NONE;
+}
+
 static error_t drci_create(void **command_ref, session_t *session, request_t *request) {
     error_t err = ERROR_NONE;
     error_t out_error = ERROR_NONE;
@@ -321,27 +559,19 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
         goto error;
     }
 
-    if (request_get_option(request, "range", NULL)) {
-        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "range option is not supported yet");
+    err = parse_ranges(command, request_get_option(request, "range", NULL), request_get_option(request, "rangeFit", NULL));
+    if (err != ERROR_NONE) {
         goto error;
     }
     
-    if (request_get_option(request, "rangeFit", NULL)) {
-        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "rangeFit option is not supported yet");
-        goto error;
-    }
-
-    if (request_get_option(request, "step", NULL)) {
-        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "step option is not supported yet");
-        goto error;
-    }
-    
-    if (request_get_option(request, "stepFit", NULL)) {
-        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "stepFit option is not supported yet");
+    err = parse_steps(command, request_get_option(request, "step", NULL), request_get_option(request, "stepFit", NULL));
+    if (err != ERROR_NONE) {
         goto error;
     }
     
     // TODO: mutual exclusion of intConv and step options
+    // TODO: length of array (or 1), ranges and steps has to match
+    // TODO: check if intConv with range leads to valid results
 
     if (command->intconv_mode == DRCI_INTCONV_NOT_SET) {
         command->intconv_mode = DRCI_INTCONV_ROUND;
@@ -499,6 +729,16 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
             command->blob = NULL;
         }
 
+        if (command->steps) {
+            destroy_dynamic_array(command->steps);
+            command->steps = NULL;
+        }
+    
+        if (command->ranges) {
+            destroy_dynamic_array(command->ranges);
+            command->ranges = NULL;
+        }
+        
         if (command->dataref_name) {
             free(command->dataref_name);
             command->dataref_name = NULL;
@@ -663,6 +903,9 @@ static error_t dump_values(command_drci_t *command) {
 }
 
 static void apply_value(XPLMDataTypeID type, void *value, xpint_t *stored_int, xpfloat_t *stored_float, xpdouble_t *stored_double, drci_intconv_mode_t intconv_mode) {
+    // TODO: support range
+    // TODO: support step
+    
     if (type == xplmType_Int) {
         xpint_t int_val = *((xpint_t*)value);
         if (stored_int) {
