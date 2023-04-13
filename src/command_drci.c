@@ -714,11 +714,12 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     if (err != ERROR_NONE) {
         goto error;
     }
-    
-    // TODO: mutual exclusion of intConv and step options
-    // TODO: length of array (or 1), ranges and steps has to match
-    // TODO: check if intConv with range leads to valid results
 
+    if (command->steps && (command->intconv_mode != DRCI_INTCONV_NOT_SET)) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "intConv and step are mutually exclusive");
+        goto error;
+    }
+    
     if (command->intconv_mode == DRCI_INTCONV_NOT_SET) {
         command->intconv_mode = DRCI_INTCONV_ROUND;
     }
@@ -769,6 +770,20 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "invalid array length");
         goto error;
     }
+
+    bool valid_steps_length = !command->steps || (command->steps->length == 1) || (command->steps->length == command->array_length);
+    if (!valid_steps_length) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "number of steps must be equal to array length, 1 or omitted");
+        goto error;
+    }
+    
+    bool valid_ranges_length = !command->ranges || (command->ranges->length == 1) || (command->ranges->length == command->array_length);
+    if (!valid_ranges_length) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "number of ranges must be equal to array length, 1 or omitted");
+        goto error;
+    }
+    
+    // TODO: check if intConv with range leads to valid results
 
     printf("[XPRC] [DRCI] copy name\n"); // DEBUG
     command->dataref_name = copy_partial_unescaped_string(&parameter->parameter[offset_type_separator+1], escaped_name_length);
