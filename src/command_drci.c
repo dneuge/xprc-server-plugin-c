@@ -337,11 +337,11 @@ const XPLMDataTypeID array_types = xplmType_IntArray | xplmType_FloatArray | xpl
 const XPLMDataTypeID supported_types = simple_types | array_types;
 
 static drci_rangefit_mode_t parse_rangefit_mode(char *s, int count) {
-    if (count >= 5 && !strncmp(s, "limit", count)) {
+    if (count == 5 && !strncmp(s, "limit", count)) {
         return DRCI_RANGEFIT_LIMIT;
-    } else if (count >= 6 && !strncmp(s, "reject", count)) {
+    } else if (count == 6 && !strncmp(s, "reject", count)) {
         return DRCI_RANGEFIT_REJECT;
-    } else if (count >= 4 && !strncmp(s, "wrap", count)) {
+    } else if (count == 4 && !strncmp(s, "wrap", count)) {
         return DRCI_RANGEFIT_WRAP;
     } else {
         return DRCI_RANGEFIT_UNSUPPORTED;
