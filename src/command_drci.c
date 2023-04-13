@@ -106,7 +106,7 @@ typedef struct {
 static const dataproxy_operations_t drci_dataproxy_operations;
 
 static error_t drci_destroy(void *command_ref) {
-    printf("[XPRC] [DRCI] destroy\n"); // DEBUG
+    //printf("[XPRC] [DRCI] destroy\n"); // DEBUG
     
     if (!command_ref) {
         return ERROR_UNSPECIFIC;
@@ -144,16 +144,16 @@ static error_t drci_destroy(void *command_ref) {
         command->ranges = NULL;
     }
     
-    printf("[XPRC] [DRCI] destroy: freeing command\n"); // DEBUG
+    //printf("[XPRC] [DRCI] destroy: freeing command\n"); // DEBUG
     free(command);
     
-    printf("[XPRC] [DRCI] destroy: done\n"); // DEBUG
+    //printf("[XPRC] [DRCI] destroy: done\n"); // DEBUG
 
     return ERROR_NONE;
 }
 
 static error_t drci_terminate(void *command_ref) {
-    printf("[XPRC] [DRCI] terminate\n"); // DEBUG
+    //printf("[XPRC] [DRCI] terminate\n"); // DEBUG
     
     if (!command_ref) {
         return ERROR_UNSPECIFIC;
@@ -166,7 +166,7 @@ static error_t drci_terminate(void *command_ref) {
     finish_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, NULL);
 
     if (command->registration_task) {
-        printf("[XPRC] [DRCI] terminate: have registration task, unscheduling\n"); // DEBUG
+        //printf("[XPRC] [DRCI] terminate: have registration task, unscheduling\n"); // DEBUG
         task_schedule_t *task_schedule = command->session->server->config.task_schedule;
         
         err = lock_schedule(task_schedule);
@@ -176,11 +176,11 @@ static error_t drci_terminate(void *command_ref) {
         }
         
         if (err != ERROR_NONE) {
-            printf("[XPRC] [DRCI] terminate failed to unschedule registration task: %d\n", err); // DEBUG
+            printf("[XPRC] [DRCI] terminate failed to unschedule registration task: %d\n", err);
             return err;
         }
         
-        printf("[XPRC] [DRCI] terminate: freeing registration task\n"); // DEBUG
+        //printf("[XPRC] [DRCI] terminate: freeing registration task\n"); // DEBUG
         free(command->registration_task);
         command->registration_task = NULL;
     }
@@ -199,7 +199,7 @@ static error_t drci_terminate(void *command_ref) {
 
     channel_id_t channel_id = command->channel_id;
     
-    printf("[XPRC] [DRCI] terminate: poisoning channel ID\n"); // DEBUG
+    //printf("[XPRC] [DRCI] terminate: poisoning channel ID\n"); // DEBUG
     command->channel_id = BAD_CHANNEL_ID;
     
     request_channel_destruction(command->session->channels, channel_id);
@@ -747,7 +747,7 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
         : offset_name_separator - offset_type_separator - 1; // name goes only to length separator
 
     command->types = xprc_parse_types(parameter->parameter, offset_type_separator);
-    printf("[XPRC] [DRCI] parsed types %d\n", command->types); // DEBUG
+    //printf("[XPRC] [DRCI] parsed types %d\n", command->types); // DEBUG
 
     bool has_simple_type = ((command->types & simple_types) != 0);
     bool has_array_type = ((command->types & array_types) != 0);
@@ -785,17 +785,17 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     
     // TODO: check if intConv with range leads to valid results
 
-    printf("[XPRC] [DRCI] copy name\n"); // DEBUG
+    //printf("[XPRC] [DRCI] copy name\n"); // DEBUG
     command->dataref_name = copy_partial_unescaped_string(&parameter->parameter[offset_type_separator+1], escaped_name_length);
     if (!command->dataref_name) {
-        printf("[XPRC] [DRCI] copy failed\n"); // DEBUG
+        //printf("[XPRC] [DRCI] copy failed\n"); // DEBUG
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "dataref name could not be copied");
         out_error = ERROR_MEMORY_ALLOCATION;
         goto error;
     }
-    printf("[XPRC] [DRCI] copy succeeded\n"); // DEBUG
+    //printf("[XPRC] [DRCI] copy succeeded\n"); // DEBUG
 
-    printf("[XPRC] [DRCI] array length: %d\n", command->array_length); // DEBUG
+    //printf("[XPRC] [DRCI] array length: %d\n", command->array_length); // DEBUG
     
     if ((command->types & xplmType_IntArray) != 0) {
         command->values_int = create_dynamic_array(SIZE_XPLM_INT, command->array_length);
@@ -824,14 +824,14 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
         }
     }
     
-    printf("[XPRC] [DRCI] reserving proxy\n"); // DEBUG
+    //printf("[XPRC] [DRCI] reserving proxy\n"); // DEBUG
     command->proxy = reserve_dataproxy(session->server->config.dataproxy_registry, command->dataref_name, command->types, write_permission, command, session, drci_dataproxy_operations);
     if (!command->proxy) {
-        printf("[XPRC] [DRCI] failed to reserve proxy\n"); // DEBUG
+        //printf("[XPRC] [DRCI] failed to reserve proxy\n"); // DEBUG
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "dataproxy could not be reserved (is the dataref already claimed?)");
         goto error;
     }
-    printf("[XPRC] [DRCI] proxy reserved\n"); // DEBUG
+    //printf("[XPRC] [DRCI] proxy reserved\n"); // DEBUG
     
     task_t *task = zalloc(sizeof(task_t));
     if (!task) {
@@ -841,7 +841,7 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     task->on_processing = drci_process;
     task->reference = command;
 
-    printf("[XPRC] [DRCI] scheduling task\n"); // DEBUG
+    //printf("[XPRC] [DRCI] scheduling task\n"); // DEBUG
 
     err = lock_schedule(session->server->config.task_schedule);
     if (err == ERROR_NONE) {
@@ -860,12 +860,12 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
 
     *command_ref = command;
     
-    printf("[XPRC] [DRCI] create done\n"); // DEBUG
+    //printf("[XPRC] [DRCI] create done\n"); // DEBUG
     
     return ERROR_NONE;
 
  error:
-    printf("[XPRC] [DRCI] create error handling\n"); // DEBUG
+    //printf("[XPRC] [DRCI] create error handling\n"); // DEBUG
     if (command) {
         if (command->proxy) {
             err = release_dataproxy(command->proxy);
@@ -1200,7 +1200,7 @@ static error_t drci_array_length(void *ref, XPLMDataTypeID type, int *length) {
     command_drci_t *command = ref;
     error_t out_err = ERROR_NONE;
 
-    printf("[XPRC] [DRCI] drci_array_length\n"); // DEBUG
+    //printf("[XPRC] [DRCI] drci_array_length\n"); // DEBUG
     
     if (((command->types & type) == 0) || !length) {
         return ERROR_UNSPECIFIC;
@@ -1220,10 +1220,10 @@ static error_t drci_array_length(void *ref, XPLMDataTypeID type, int *length) {
     }
 
     if (!arr) {
-        printf("[XPRC] [DRCI] drci_array_length: no array\n"); // DEBUG
+        //printf("[XPRC] [DRCI] drci_array_length: no array\n"); // DEBUG
         out_err = ERROR_UNSPECIFIC;
     } else {
-        printf("[XPRC] [DRCI] drci_array_length: %d\n", arr->length); // DEBUG
+        //printf("[XPRC] [DRCI] drci_array_length: %d\n", arr->length); // DEBUG
         *length = arr->length;
     }
     
