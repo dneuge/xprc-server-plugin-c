@@ -720,10 +720,6 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
         goto error;
     }
     
-    if (command->intconv_mode == DRCI_INTCONV_NOT_SET) {
-        command->intconv_mode = DRCI_INTCONV_ROUND;
-    }
-    
     command_parameter_t *parameter = request->parameters;
     if (!parameter || parameter->next) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "exactly one dataref has to be defined");
@@ -751,6 +747,7 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
 
     bool has_simple_type = ((command->types & simple_types) != 0);
     bool has_array_type = ((command->types & array_types) != 0);
+    bool has_blob_type = ((command->types & xplmType_Data) != 0);
     if (has_simple_type && has_array_type) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "combination of simple and array types is not supported");
         goto error;
@@ -760,7 +757,7 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     } else if (has_array_type && arrlen_length < 1) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "undefined array length");
         goto error;
-    } else if ((command->types & xplmType_Data) != 0 && (command->types & ~xplmType_Data) != 0) {
+    } else if (has_blob_type && (command->types & ~xplmType_Data) != 0) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "blob cannot be combined with other types");
         goto error;
     }
@@ -781,6 +778,27 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     if (!valid_ranges_length) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "number of ranges must be equal to array length, 1 or omitted");
         goto error;
+    }
+
+    if (has_blob_type) {
+        if (command->intconv_mode != DRCI_INTCONV_NOT_SET) {
+            error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "intConv option is not allowed on blobs");
+            goto error;
+        }
+    
+        if (command->ranges) {
+            error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "range option is not allowed on blobs");
+            goto error;
+        }
+    
+        if (command->steps) {
+            error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "step option is not allowed on blobs");
+            goto error;
+        }
+    }
+    
+    if (command->intconv_mode == DRCI_INTCONV_NOT_SET) {
+        command->intconv_mode = DRCI_INTCONV_ROUND;
     }
     
     // TODO: check if intConv with range leads to valid results
