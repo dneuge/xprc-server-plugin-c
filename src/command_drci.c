@@ -442,6 +442,17 @@ static error_t parse_range(command_drci_t *command, drci_range_t *range, char *r
         }
     }
 
+    if (range->minimum_bound && range->maximum_bound) {
+        xpdouble_t minimum = 0.0;
+        vartype_to_xpdouble(&range->minimum, &minimum);
+        xpdouble_t maximum = 0.0;
+        vartype_to_xpdouble(&range->maximum, &maximum);
+        if (minimum > maximum) {
+            error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "range maximum must not be larger than minimum");
+            return ERROR_UNSPECIFIC;
+        }
+    }
+
     return ERROR_NONE;
 }
      
