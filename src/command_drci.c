@@ -516,6 +516,11 @@ static error_t parse_ranges(command_drci_t *command, char *range_option, char *r
             return err;
         }
 
+        if ((range->fit_mode == DRCI_RANGEFIT_WRAP) && !(range->minimum_bound && range->maximum_bound)) {
+            error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "rangeFit=wrap requires minimum and maximum value to be defined");
+            return ERROR_UNSPECIFIC;
+        }
+
         range_option += range_separator + 1;
     }
 
