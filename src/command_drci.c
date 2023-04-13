@@ -757,6 +757,9 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     } else if (has_array_type && arrlen_length < 1) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "undefined array length");
         goto error;
+    } else if (!has_array_type && arrlen_length > 0) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "length can only be specified for array types");
+        goto error;
     } else if (has_blob_type && (command->types & ~xplmType_Data) != 0) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "blob cannot be combined with other types");
         goto error;
