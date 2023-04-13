@@ -48,6 +48,8 @@ typedef uint8_t drci_stepfit_mode_t;
 #define DRCI_ITEM_SEPARATOR ","
 #define DRCI_SUBITEM_SEPARATOR ":"
 
+#define DRCI_STEP_DISABLE "*"
+
 // TODO: mutex TERM + post-proc registration task
 
 typedef struct {
@@ -60,10 +62,9 @@ typedef struct {
 } drci_vartype_t;
 
 typedef struct {
+    bool enabled;
     drci_stepfit_mode_t fit_mode;
-    drci_vartype_t minimum;
-    drci_vartype_t step;
-    drci_vartype_t maximum;
+    drci_vartype_t interval;
 } drci_step_t;
 
 typedef struct {
@@ -519,8 +520,153 @@ static error_t parse_ranges(command_drci_t *command, char *range_option, char *r
     return ERROR_NONE;
 }
 
+static drci_stepfit_mode_t parse_stepfit_mode(char *s, int count) {
+    if (count == 6 && !strncmp(s, "reject", count)) {
+        return DRCI_STEPFIT_REJECT;
+    } else if (count == 7 && !strncmp(s, "closest", count)) {
+        return DRCI_STEPFIT_CLOSEST;
+    } else if (count == 5 && !strncmp(s, "lower", count)) {
+        return DRCI_STEPFIT_LOWER;
+    } else if (count == 5 && !strncmp(s, "upper", count)) {
+        return DRCI_STEPFIT_UPPER;
+    } else {
+        return DRCI_STEPFIT_UNSUPPORTED;
+    }
+}
+
+static error_t parse_step(command_drci_t *command, drci_step_t *step, char *step_option, int count, XPLMDataTypeID *type_carry) {
+    bool disable_step = (count == 1) && !strncmp(step_option, DRCI_STEP_DISABLE, count);
+    if (disable_step) {
+        //printf("[XPRC] [DRCI] parse_step disabled, step_option: %s\n", step_option); // DEBUG
+        return ERROR_NONE;
+    }
+    step->enabled = true;
+    
+    int num_separators = count_chars(step_option, DRCI_SUBITEM_SEPARATOR[0], count);
+    bool has_previous_type = ((*type_carry & simple_types) != 0);
+    bool omits_type = (num_separators == 0);
+    //printf("[XPRC] [DRCI] parse_step step=%p, count=%d, type_carry=%d, step_option: %s\n", step, count, *type_carry, step_option); // DEBUG
+    
+    if (omits_type) {
+        if (!has_previous_type) {
+            error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "step value type must be specified at least once");
+            return ERROR_UNSPECIFIC;
+        }
+    } else if (num_separators != 1) {
+        error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "invalid step syntax");
+        return ERROR_UNSPECIFIC;
+    }
+
+    int step_offset = omits_type ? 0 : strpos(step_option, DRCI_SUBITEM_SEPARATOR, 0) + 1;
+
+    XPLMDataTypeID type = *type_carry;
+    if (!omits_type) {
+        int type_length = step_offset - 1;
+        if (type_length < 1) {
+            error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "step value type not specified");
+            return ERROR_UNSPECIFIC;
+        }
+
+        type = xprc_parse_type(step_option, type_length);
+        if ((type & simple_types) == 0) {
+            error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "invalid step value type");
+            return ERROR_UNSPECIFIC;
+        }
+        
+        *type_carry = type;
+    }
+
+    error_t err = ERROR_NONE;
+    
+    // copy is needed for zero termination (otherwise number parsing could continue outside of current option)
+    char *tmp = copy_partial_string(step_option + step_offset, count - step_offset);
+    if (!tmp) {
+        return ERROR_MEMORY_ALLOCATION;
+    }
+        
+    err = parse_variable_value(&step->interval, type, tmp);
+    free(tmp);
+        
+    if (err != ERROR_NONE) {
+        error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "failed to parse step value");
+        return err;
+    }
+
+    return ERROR_NONE;
+}
+
 static error_t parse_steps(command_drci_t *command, char *step_option, char *stepfit_option) {
-    // TODO: implement
+    if (!step_option) {
+        return ERROR_NONE;
+    }
+    
+    int num_steps = count_chars(step_option, DRCI_ITEM_SEPARATOR[0], strlen(step_option)) + 1;
+    int num_fitmodes = stepfit_option ? count_chars(stepfit_option, DRCI_ITEM_SEPARATOR[0], strlen(stepfit_option)) + 1 : 0;
+
+    bool multiple_fitmodes = num_fitmodes > 1;
+    
+    if (multiple_fitmodes && (num_steps != num_fitmodes)) {
+        error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "number of step and stepFit must match if multiple stepFit options are specified");
+        return ERROR_UNSPECIFIC;
+    }
+
+    command->steps = create_dynamic_array(sizeof(drci_step_t), num_steps); // will be freed by caller on error
+    if (!command->steps || !dynamic_array_set_length(command->steps, num_steps)) {
+        error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "failed to allocate step definitions");
+        return ERROR_MEMORY_ALLOCATION;
+    }
+
+    drci_stepfit_mode_t stepfit_mode = DRCI_STEPFIT_CLOSEST;
+    int stepfit_separator = 0;
+    XPLMDataTypeID step_value_type = xplmType_Unknown;
+    for (int i=0; i<num_steps; i++) {
+        drci_step_t *step = dynamic_array_get_pointer(command->steps, i);
+        if (!step) {
+            return ERROR_UNSPECIFIC;
+        }
+        
+        if (i < num_fitmodes) { // runs once (single option) or for each (all set)
+            stepfit_separator = strpos(stepfit_option, DRCI_ITEM_SEPARATOR, 0);
+            if (stepfit_separator < 0) {
+                // use full remaining string if separator was not found
+                stepfit_separator = strlen(stepfit_option);
+            }
+            
+            stepfit_mode = parse_stepfit_mode(stepfit_option, stepfit_separator);
+            if (stepfit_mode == DRCI_STEPFIT_UNSUPPORTED) {
+                error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "unsupported stepFit mode");
+                return ERROR_UNSPECIFIC;
+            }
+
+            if (stepfit_separator > 0) {
+                stepfit_option += stepfit_separator + 1;
+            }
+        }
+
+        step->fit_mode = stepfit_mode;
+
+        int step_separator = strpos(step_option, DRCI_ITEM_SEPARATOR, 0);
+        if (step_separator < 0) {
+            step_separator = strlen(step_option);
+        }
+        
+        error_t err = parse_step(command, step, step_option, step_separator, &step_value_type);
+        if (err != ERROR_NONE) {
+            return err;
+        }
+
+        step_option += step_separator + 1;
+    }
+
+    /*
+    // DEBUG
+    printf("[XPRC] [DRCI] parsed %d steps\n", num_steps);
+    for (int i=0; i<num_steps; i++) {
+        drci_step_t *step = dynamic_array_get_pointer(command->steps, i);
+        printf("[XPRC] [DRCI] step #%d: enabled=%d, fit_mode=%d, step=[type=%d, int:%d, float:%f, double:%f]\n", i, step->enabled, step->fit_mode, step->interval.type, step->interval.int_value, step->interval.float_value, step->interval.double_value);
+    }
+    */
+    
     return ERROR_NONE;
 }
 
