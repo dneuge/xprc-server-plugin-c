@@ -369,6 +369,16 @@ static error_t parse_variable_value(drci_vartype_t *var, XPLMDataTypeID type, ch
     return ERROR_NONE;
 }
 
+static void vartype_to_xpdouble(drci_vartype_t *var, xpdouble_t *dest) {
+    if (var->type == xplmType_Int) {
+        *dest = var->int_value;
+    } else if (var->type == xplmType_Float) {
+        *dest = var->float_value;
+    } else if (var->type == xplmType_Double) {
+        *dest = var->double_value;
+    }
+}
+
 static error_t parse_range(command_drci_t *command, drci_range_t *range, char *range_option, int count, XPLMDataTypeID *type_carry) {
     int num_separators = count_chars(range_option, DRCI_SUBITEM_SEPARATOR[0], count);
     bool has_previous_type = ((*type_carry & simple_types) != 0);
