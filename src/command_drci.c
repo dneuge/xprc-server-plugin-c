@@ -705,6 +705,30 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     command->session = session;
     command->channel_id = channel_id;
 
+    #ifndef ENABLE_DRCI_RANGE
+    if (request_get_option(request, "range", NULL)) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "range option is currently not supported");
+        goto error;
+    }
+    
+    if (request_get_option(request, "rangeFit", NULL)) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "rangeFit option is currently not supported");
+        goto error;
+    }
+    #endif
+
+    #ifndef ENABLE_DRCI_STEP
+    if (request_get_option(request, "step", NULL)) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "step option is currently not supported");
+        goto error;
+    }
+    
+    if (request_get_option(request, "stepFit", NULL)) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "stepFit option is currently not supported");
+        goto error;
+    }
+    #endif
+    
     dataproxy_permission_t write_permission = DATAPROXY_PERMISSION_SESSION;
     if (!parse_permission(&write_permission, request_get_option(request, "writable", "all"))) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "invalid mode for writable");
