@@ -12,17 +12,17 @@
 #endif
 
 XPLMDataTypeID xprc_parse_type(char *s, int count) {
-    if (!strncmp("int", s, count)) {
+    if ((count == 3) && !strncmp("int", s, count)) {
         return xplmType_Int;
-    } else if (!strncmp("float", s, count)) {
+    } else if ((count == 5) && !strncmp("float", s, count)) {
         return xplmType_Float;
-    } else if (!strncmp("double", s, count)) {
+    } else if ((count == 6) && !strncmp("double", s, count)) {
         return xplmType_Double;
-    } else if (!strncmp("int[]", s, count)) {
+    } else if ((count == 5) && !strncmp("int[]", s, count)) {
         return xplmType_IntArray;
-    } else if (!strncmp("float[]", s, count)) {
+    } else if ((count == 7) && !strncmp("float[]", s, count)) {
         return xplmType_FloatArray;
-    } else if (!strncmp("blob", s, count)) {
+    } else if ((count == 4) && !strncmp("blob", s, count)) {
         return xplmType_Data;
     } else {
         return xplmType_Unknown;
