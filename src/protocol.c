@@ -211,9 +211,9 @@ char* xprc_encode_types(XPLMDataTypeID types) {
     return out;
 }
 
-static const simple_types = xplmType_Int | xplmType_Float | xplmType_Double;
-static const array_types = xplmType_IntArray | xplmType_FloatArray | xplmType_Data;
-static const supported_types = simple_types | array_types;
+static const XPLMDataTypeID simple_types = xplmType_Int | xplmType_Float | xplmType_Double;
+static const XPLMDataTypeID array_types = xplmType_IntArray | xplmType_FloatArray | xplmType_Data;
+static const XPLMDataTypeID supported_types = simple_types | array_types;
 
 bool xprc_parse_value(char *s, int count, XPLMDataTypeID type, void *value, size_t value_size) {
     if (!s || !value || (count < 1)) {
