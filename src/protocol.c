@@ -2,6 +2,7 @@
 
 #include "lists.h"
 #include "utils.h"
+#include "xptypes.h"
 
 #include "protocol.h"
 
@@ -139,11 +140,11 @@ char* xprc_encode_value(XPLMDataTypeID type, void *value, size_t value_size) {
     }
 
     char *out = NULL;
-    if (type == xplmType_Int && value_size == 4) {
+    if (type == xplmType_Int && value_size == SIZE_XPLM_INT) {
         out = dynamic_sprintf("%d", *((int32_t*) value));
-    } else if (type == xplmType_Float && value_size == 4) {
+    } else if (type == xplmType_Float && value_size == SIZE_XPLM_FLOAT) {
         out = dynamic_sprintf("%f", *((float*) value));
-    } else if (type == xplmType_Double && value_size == 8) {
+    } else if (type == xplmType_Double && value_size == SIZE_XPLM_DOUBLE) {
         out = dynamic_sprintf("%f", *((double*) value));
     }
 
