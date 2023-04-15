@@ -89,7 +89,7 @@ char* xprc_encode_array(XPLMDataTypeID type, dynamic_array_t *arr) {
 
     // all encoded array types are prefixed by array length
     // int[] and float[] separate each value by comma as part of value encoding but not blob
-    char *format = (type == xplmType_Data) ? "%ld," : "%ld";
+    char *format = (type == xplmType_Data) ? "%ld" XPRC_ARRAY_ITEM_SEPARATOR : "%ld";
     s = dynamic_sprintf(format, arr->length);
     if (!s || !prealloc_list_append(list, s)) {
         destroy_preallocated_list(list, free, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS);
@@ -100,9 +100,9 @@ char* xprc_encode_array(XPLMDataTypeID type, dynamic_array_t *arr) {
     // encode all values
     for (int i=0; i < arr->length; i++) {
         if (type == xplmType_IntArray) {
-            s = dynamic_sprintf(",%d", dynamic_array_get_item(int32_t, arr, i));
+            s = dynamic_sprintf(XPRC_ARRAY_ITEM_SEPARATOR "%d", dynamic_array_get_item(int32_t, arr, i));
         } else if (type == xplmType_FloatArray) {
-            s = dynamic_sprintf(",%f", dynamic_array_get_item(float, arr, i));
+            s = dynamic_sprintf(XPRC_ARRAY_ITEM_SEPARATOR "%f", dynamic_array_get_item(float, arr, i));
         } else {
             s = dynamic_sprintf("%02X", dynamic_array_get_item(uint8_t, arr, i));
         }

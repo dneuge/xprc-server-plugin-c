@@ -23,6 +23,8 @@
 #define XPRC_TYPE_SEPARATOR ","
 #define XPRC_TYPE_SEPARATOR_LENGTH 1
 
+#define XPRC_ARRAY_ITEM_SEPARATOR ","
+
 XPLMDataTypeID xprc_parse_type(char *s, int count);
 XPLMDataTypeID xprc_parse_types(char *s, int count);
 char* xprc_encode_array(XPLMDataTypeID type, dynamic_array_t *arr);
