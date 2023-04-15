@@ -43,7 +43,7 @@ typedef struct {
     bool failed;
 
     drqv_dataref_t *datarefs;
-    int64_t timestamp; // last flightloop, 0 if we data was not updated since it has last been sent
+    int64_t timestamp; // last flightloop, 0 if data was not updated since it has last been sent
 } command_drqv_t;
 
 static error_t drqv_destroy(void *command_ref) {
@@ -56,6 +56,7 @@ static error_t drqv_destroy(void *command_ref) {
     command_drqv_t *command = command_ref;
     
     drqv_dataref_t *dataref = command->datarefs;
+    command->datarefs = NULL;
     while (dataref) {
         drqv_dataref_t *next_dataref = dataref->next;
         
@@ -569,6 +570,7 @@ static error_t drqv_create(void **command_ref, session_t *session, request_t *re
     
     if (err != ERROR_NONE) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "failed to schedule task");
+        free(task);
         out_error = err;
         goto error;
     }
@@ -578,25 +580,7 @@ static error_t drqv_create(void **command_ref, session_t *session, request_t *re
     return ERROR_NONE;
 
  error:
-    if (command) {
-        drqv_dataref_t *dataref = command->datarefs;
-        while (dataref) {
-            drqv_dataref_t *next_dataref = dataref->next;
-            
-            if (dataref->name) {
-                free(dataref->name);
-            }
-            
-            if (dataref->value_buffer) {
-                free(dataref->value_buffer);
-            }
-            
-            free(dataref);
-            dataref = next_dataref;
-        }
-        
-        free(command);
-    }
+    drqv_destroy(command);
     return (out_error != ERROR_NONE) ? out_error : ERROR_UNSPECIFIC;
 }
 
