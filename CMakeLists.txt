@@ -23,6 +23,7 @@ SET(XPRC_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/command_drls_specific.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/command_drls_unspecific.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/command_drqv.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/command_drmu.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/plugin.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/server.c
