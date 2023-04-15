@@ -462,14 +462,14 @@ dataproxy_t* find_registered_dataproxy(dataproxy_registry_t *registry, char *dat
     if (!dataref_name) {
         return NULL;
     }
-    
+
     err = lock_dataproxy_registry(registry);
     if (err != ERROR_NONE) {
         return NULL;
     }
 
     dataproxy_t *proxy = hashmap_get(registry->by_dataref_name, dataref_name);
-    if (proxy->state != DATAPROXY_STATE_REGISTERED) {
+    if (proxy && (proxy->state != DATAPROXY_STATE_REGISTERED)) {
         proxy = NULL;
     }
 
