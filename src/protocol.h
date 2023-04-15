@@ -30,5 +30,7 @@ XPLMDataTypeID xprc_parse_types(char *s, int count);
 char* xprc_encode_array(XPLMDataTypeID type, dynamic_array_t *arr);
 char* xprc_encode_value(XPLMDataTypeID type, void *value, size_t value_size);
 char* xprc_encode_types(XPLMDataTypeID types);
+bool xprc_parse_value(char *s, int count, XPLMDataTypeID type, void *value, size_t value_size);
+dynamic_array_t* xprc_parse_array(char *s, int count, XPLMDataTypeID type);
 
 #endif

@@ -210,3 +210,154 @@ char* xprc_encode_types(XPLMDataTypeID types) {
     
     return out;
 }
+
+static const simple_types = xplmType_Int | xplmType_Float | xplmType_Double;
+static const array_types = xplmType_IntArray | xplmType_FloatArray | xplmType_Data;
+static const supported_types = simple_types | array_types;
+
+bool xprc_parse_value(char *s, int count, XPLMDataTypeID type, void *value, size_t value_size) {
+    if (!s || !value || (count < 1)) {
+        return false;
+    }
+
+    if ((type & ~supported_types) != 0) {
+        return false;
+    }
+
+    if (((type == xplmType_Int) || (type == xplmType_IntArray)) && (value_size >= SIZE_XPLM_INT)) {
+        char *tmp = copy_partial_string(s, count);
+        if (!tmp) {
+            return false;
+        }
+        
+        *((xpint_t*)value) = atoi(value);
+        free(tmp);
+
+        return true;
+    } else if (((type == xplmType_Float) || (type == xplmType_FloatArray)) && (value_size >= SIZE_XPLM_FLOAT)) {
+        char *tmp = copy_partial_string(s, count);
+        if (!tmp) {
+            return false;
+        }
+        
+        *((xpfloat_t*)value) = atof(value);
+        free(tmp);
+
+        return true;
+    } else if ((type == xplmType_Double) && (value_size >= SIZE_XPLM_DOUBLE)) {
+        char *tmp = copy_partial_string(s, count);
+        if (!tmp) {
+            return false;
+        }
+        
+        *((xpdouble_t*)value) = atof(value);
+        free(tmp);
+
+        return true;
+    } else if ((type == xplmType_Data) && (value_size >= 1) && (count == 2)) {
+        uint8_t out = 0;
+        for (int i=0; i<2; i++) {
+            uint8_t nibble = 0;
+            char ch = s[i];
+            if ((ch >= '0') && (ch <= '9')) {
+                nibble = (ch - '0');
+            } else if ((ch >= 'A') && (ch <= 'F')) {
+                nibble = 10 + (ch - 'A');
+            } else if ((ch >= 'a') && (ch <= 'f')) {
+                nibble = 10 + (ch - 'a');
+            } else {
+                return false;
+            }
+            
+            if (i == 0) {
+                out = nibble;
+            } else {
+                out = out << 4;
+                out += nibble;
+            }
+        }
+
+        *((uint8_t*)value) = out;
+        
+        return true;
+    }
+
+    return false;
+}
+
+dynamic_array_t* xprc_parse_array(char *s, int count, XPLMDataTypeID type) {
+    if (!s || (count < 1)) {
+        return NULL;
+    }
+
+    if ((type & ~array_types) != 0) {
+        return NULL;
+    }
+
+    size_t item_size = (type == xplmType_Data) ? 1 : SIZE_XPLM_INT_FLOAT;
+    int num_separators = count_chars(s, XPRC_ARRAY_ITEM_SEPARATOR[0], count);
+    if (num_separators < 0) {
+        return NULL;
+    }
+
+    int offset_separator = strpos(s, XPRC_ARRAY_ITEM_SEPARATOR, 0);
+    if ((offset_separator == 0) || (offset_separator > count)) {
+        return NULL;
+    }
+
+    int arr_length = 0;
+    int item_length = ((offset_separator > 0) ? offset_separator : count) - 1;
+    char *tmp = copy_partial_string(s, item_length);
+    if (!tmp) {
+        return NULL;
+    }
+
+    arr_length = atoi(tmp);
+    free(tmp);
+
+    if ((arr_length < 0) || ((type != xplmType_Data) && (arr_length != num_separators))) {
+        return NULL;
+    }
+
+    dynamic_array_t *arr = create_dynamic_array(item_size, arr_length);
+    if (!arr) {
+        return NULL;
+    }
+    if (!dynamic_array_set_length(arr, arr_length)) {
+        destroy_dynamic_array(arr);
+        return NULL;
+    }
+
+    int i = 0;
+    int next_offset_separator = 0;
+    while (offset_separator + 1 < count) {
+        if (type == xplmType_Data) {
+            next_offset_separator += 2;
+            if (next_offset_separator + 1 >= count) {
+                next_offset_separator = -1;
+            }
+        } else {
+            next_offset_separator = strpos(s, XPRC_ARRAY_ITEM_SEPARATOR, offset_separator + 1);
+        }
+        item_length = ((next_offset_separator > offset_separator) ? next_offset_separator : count) - offset_separator - 1;
+        if (item_length < 1) {
+            destroy_dynamic_array(arr);
+            return NULL;
+        }
+        
+        void *value = dynamic_array_get_pointer(arr, i++);
+        if (!value || !xprc_parse_value(&(s[offset_separator + 1]), item_length, type, value, arr->item_size)) {
+            destroy_dynamic_array(arr);
+            return NULL;
+        }
+
+        offset_separator = next_offset_separator;
+    }
+    
+    if (i != arr_length) {
+        destroy_dynamic_array(arr);
+        return NULL;
+    }
+    
+    return arr;
+}
