@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 
 #include "lists.h"
@@ -216,11 +217,15 @@ static const XPLMDataTypeID array_types = xplmType_IntArray | xplmType_FloatArra
 static const XPLMDataTypeID supported_types = simple_types | array_types;
 
 bool xprc_parse_value(char *s, int count, XPLMDataTypeID type, void *value, size_t value_size) {
+    //printf("[XPRC] xprc_parse_value s=\"%s\", count=%d, type=%d, value=%p, value_size=%ld\n", s, count, type, value, value_size); // DEBUG
+        
     if (!s || !value || (count < 1)) {
+        //printf("[XPRC] xprc_parse_value pre-condition failed\n"); // DEBUG
         return false;
     }
 
     if ((type & ~supported_types) != 0) {
+        //printf("[XPRC] xprc_parse_value unsupported type\n"); // DEBUG
         return false;
     }
 
@@ -230,7 +235,8 @@ bool xprc_parse_value(char *s, int count, XPLMDataTypeID type, void *value, size
             return false;
         }
         
-        *((xpint_t*)value) = atoi(value);
+        *((xpint_t*)value) = atoi(tmp);
+        //printf("[XPRC] xprc_parse_value int \"%s\" => %d\n", tmp, *((xpint_t*)value)); // DEBUG
         free(tmp);
 
         return true;
@@ -240,7 +246,8 @@ bool xprc_parse_value(char *s, int count, XPLMDataTypeID type, void *value, size
             return false;
         }
         
-        *((xpfloat_t*)value) = atof(value);
+        *((xpfloat_t*)value) = atof(tmp);
+        //printf("[XPRC] xprc_parse_value float \"%s\" => %f\n", tmp, *((xpfloat_t*)value)); // DEBUG
         free(tmp);
 
         return true;
@@ -250,7 +257,8 @@ bool xprc_parse_value(char *s, int count, XPLMDataTypeID type, void *value, size
             return false;
         }
         
-        *((xpdouble_t*)value) = atof(value);
+        *((xpdouble_t*)value) = atof(tmp);
+        //printf("[XPRC] xprc_parse_value double \"%s\" => %f\n", tmp, *((xpdouble_t*)value)); // DEBUG
         free(tmp);
 
         return true;
@@ -278,75 +286,108 @@ bool xprc_parse_value(char *s, int count, XPLMDataTypeID type, void *value, size
         }
 
         *((uint8_t*)value) = out;
+        //printf("[XPRC] xprc_parse_value byte %c%c => %02X\n", s[0], s[1], out); // DEBUG
         
         return true;
     }
-
+    
+    //printf("[XPRC] xprc_parse_value unhandled\n"); // DEBUG
+ 
     return false;
 }
 
 dynamic_array_t* xprc_parse_array(char *s, int count, XPLMDataTypeID type) {
+    //printf("[XPRC] xprc_parse_array s=\"%s\", count=%d, type=%d\n", s, count, type); // DEBUG
+    
     if (!s || (count < 1)) {
+        //printf("[XPRC] xprc_parse_array pre-condition failed\n"); // DEBUG
         return NULL;
     }
 
     if ((type & ~array_types) != 0) {
+        //printf("[XPRC] xprc_parse_array unsupported type\n"); // DEBUG
         return NULL;
     }
 
     size_t item_size = (type == xplmType_Data) ? 1 : SIZE_XPLM_INT_FLOAT;
     int num_separators = count_chars(s, XPRC_ARRAY_ITEM_SEPARATOR[0], count);
+    //printf("[XPRC] xprc_parse_array item_size=%ld, num_separators=%d\n", item_size, num_separators); // DEBUG
     if (num_separators < 0) {
         return NULL;
     }
 
     int offset_separator = strpos(s, XPRC_ARRAY_ITEM_SEPARATOR, 0);
+    //printf("[XPRC] xprc_parse_array offset_separator=%d\n", offset_separator); // DEBUG
     if ((offset_separator == 0) || (offset_separator > count)) {
         return NULL;
     }
 
     int arr_length = 0;
-    int item_length = ((offset_separator > 0) ? offset_separator : count) - 1;
+    int item_length = (offset_separator > 0) ? offset_separator : count;
+    //printf("[XPRC] xprc_parse_array item_length=%d\n", item_length); // DEBUG
     char *tmp = copy_partial_string(s, item_length);
     if (!tmp) {
         return NULL;
     }
 
     arr_length = atoi(tmp);
+    //printf("[XPRC] xprc_parse_array arr_length=%d parsed from \"%s\"\n", arr_length, tmp); // DEBUG
     free(tmp);
 
-    if ((arr_length < 0) || ((type != xplmType_Data) && (arr_length != num_separators))) {
+    if (type == xplmType_Data) {
+        int blob_strlen = count - offset_separator - 1;
+        int blob_length = blob_strlen / 2;
+        if ((blob_length != arr_length) || (blob_strlen % 2)) {
+            //printf("[XPRC] xprc_parse_array bad array length for blob: strlen=%d, len=%d, rem=%d\n", blob_strlen, blob_length, (blob_strlen % 2)); // DEBUG
+            return NULL;
+        }
+    } else if ((arr_length < 0) || ((arr_length != 0) && (arr_length != num_separators)) || ((arr_length == 0) && ((num_separators > 1) || (count > 2)))) {
+        //printf("[XPRC] xprc_parse_array bad array length for non-blob\n"); // DEBUG
         return NULL;
     }
 
     dynamic_array_t *arr = create_dynamic_array(item_size, arr_length);
     if (!arr) {
+        //printf("[XPRC] xprc_parse_array array allocation failed\n"); // DEBUG
         return NULL;
     }
     if (!dynamic_array_set_length(arr, arr_length)) {
+        //printf("[XPRC] xprc_parse_array failed to set array length\n"); // DEBUG
         destroy_dynamic_array(arr);
         return NULL;
     }
 
+    if (arr_length == 0) {
+        //printf("[XPRC] xprc_parse_array succeeded with empty array\n"); // DEBUG
+        return arr;
+    }
+
     int i = 0;
     int next_offset_separator = 0;
-    while (offset_separator + 1 < count) {
+    if (type == xplmType_Data) {
+        item_length = 2;
+    }
+    while ((offset_separator + 1 < count) && (next_offset_separator >= 0)) {
         if (type == xplmType_Data) {
-            next_offset_separator += 2;
+            next_offset_separator = offset_separator + 2;
             if (next_offset_separator + 1 >= count) {
                 next_offset_separator = -1;
             }
         } else {
             next_offset_separator = strpos(s, XPRC_ARRAY_ITEM_SEPARATOR, offset_separator + 1);
+            item_length = ((next_offset_separator > offset_separator) ? next_offset_separator : count) - offset_separator - 1;
+            if (item_length < 1) {
+                //printf("[XPRC] xprc_parse_array bad item_length: offset_separator=%d, next_offset_separator=%d, item_length=%d\n", offset_separator, next_offset_separator, item_length); // DEBUG
+                destroy_dynamic_array(arr);
+                return NULL;
+            }
         }
-        item_length = ((next_offset_separator > offset_separator) ? next_offset_separator : count) - offset_separator - 1;
-        if (item_length < 1) {
-            destroy_dynamic_array(arr);
-            return NULL;
-        }
+        
+        //printf("[XPRC] xprc_parse_array offset_separator=%d, next_offset_separator=%d, item_length=%d\n", offset_separator, next_offset_separator, item_length); // DEBUG
         
         void *value = dynamic_array_get_pointer(arr, i++);
         if (!value || !xprc_parse_value(&(s[offset_separator + 1]), item_length, type, value, arr->item_size)) {
+            //printf("[XPRC] xprc_parse_array failed to parse\n"); // DEBUG
             destroy_dynamic_array(arr);
             return NULL;
         }
@@ -355,9 +396,12 @@ dynamic_array_t* xprc_parse_array(char *s, int count, XPLMDataTypeID type) {
     }
     
     if (i != arr_length) {
+        //printf("[XPRC] xprc_parse_array bad total length: i=%d, expected to match arr_length=%d\n", i, arr_length); // DEBUG
         destroy_dynamic_array(arr);
         return NULL;
     }
+    
+    //printf("[XPRC] xprc_parse_array succeeded\n"); // DEBUG
     
     return arr;
 }
