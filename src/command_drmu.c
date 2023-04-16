@@ -33,8 +33,10 @@ typedef struct _drmu_dataref_t {
     dynamic_array_t *target_values;
     int target_array_offset;
 
-    // monitor = values to be returned for monitoring (last set or actual DataRef)
-    dynamic_array_t *monitor_values;
+    // buffer = pre-allocated array holding values to be set per iteration
+    // also used for monitoring values - unmodified if monitoring=set, will be
+    // overridden by retrieval if monitoring=get
+    dynamic_array_t *buffer_values;
     
     char *name;
     XPLMDataTypeID type;
@@ -94,9 +96,9 @@ static error_t drmu_destroy(void *command_ref) {
             dataref->target_values = NULL;
         }
         
-        if (dataref->monitor_values) {
-            destroy_dynamic_array(dataref->monitor_values);
-            dataref->monitor_values = NULL;
+        if (dataref->buffer_values) {
+            destroy_dynamic_array(dataref->buffer_values);
+            dataref->buffer_values = NULL;
         }
         
         if (dataref->name) {
@@ -746,13 +748,11 @@ static error_t drmu_create(void **command_ref, session_t *session, request_t *re
 
         //debug_dump("[XPRC] [DRMU] create, dataref target_values", dataref->type, dataref->target_values); // DEBUG
 
-        if (command->monitor_mode != DRMU_MONITOR_NONE) {
-            dataref->monitor_values = create_dynamic_array(type_size, dataref->target_values->length);
-            if (!dataref->monitor_values || !dynamic_array_set_length(dataref->monitor_values, dataref->target_values->length)) {
-                error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "failed to allocate monitor values");
-                out_error = ERROR_MEMORY_ALLOCATION;
-                goto error;
-            }
+        dataref->buffer_values = create_dynamic_array(type_size, dataref->target_values->length);
+        if (!dataref->buffer_values || !dynamic_array_set_length(dataref->buffer_values, dataref->target_values->length)) {
+            error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "failed to allocate buffer values");
+            out_error = ERROR_MEMORY_ALLOCATION;
+            goto error;
         }
 
         if (defines_base_values) {
