@@ -780,9 +780,22 @@ static error_t drmu_create(void **command_ref, session_t *session, request_t *re
         //debug_dump("[XPRC] [DRMU] create, dataref base_values", dataref->type, dataref->base_values); // DEBUG
 
         dataref->proxy = find_registered_dataproxy(session->server->config.dataproxy_registry, dataref->name);
-        if (dataref->proxy && !dataproxy_can_write(dataref->proxy, session)) {
-            error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "XPRC-internal dataref is write-protected");
-            goto error;
+        if (dataref->proxy) {
+            if (!dataproxy_can_write(dataref->proxy, session)) {
+                error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "XPRC-internal dataref is write-protected");
+                goto error;
+            }
+
+            XPLMDataTypeID available_types = xplmType_Unknown;
+            if (dataproxy_get_types(dataref->proxy, &available_types) != ERROR_NONE) {
+                error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "XPRC-internal dataref failed to indicate available types");
+                goto error;
+            }
+
+            if ((available_types & dataref->type) == 0) {
+                error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "XPRC-internal dataref does not support requested type");
+                goto error;
+            }
         }
         has_only_internal_datarefs &= (dataref->proxy != NULL);
 
