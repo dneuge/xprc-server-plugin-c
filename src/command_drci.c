@@ -1200,7 +1200,7 @@ static error_t get_actual_count(int *actual_count, int length, int offset, int c
     error_t out_err = ERROR_NONE;
     
     int available = length - offset;
-    if (available < 0) {
+    if (available < 1) {
         // out of bounds
         out_err = ERROR_UNSPECIFIC;
     }
