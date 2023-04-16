@@ -103,3 +103,45 @@ bool dynamic_array_set_from_pointer(dynamic_array_t *arr, int index, void *data)
 
     return true;
 }
+
+bool dynamic_array_copy_from_other(dynamic_array_t *dest_arr, int dest_index, dynamic_array_t *src_arr, int src_index, int count, bool allow_capacity_change, bool allow_length_change) {
+    if (!dest_arr || !src_arr || (dest_index < 0) || (src_index < 0) || (dest_arr->item_size != src_arr->item_size)) {
+        return false;
+    }
+
+    if (count == DYNAMIC_ARRAY_COPY_ALL) {
+        count = src_arr->length - src_index;
+    }
+
+    if (count < 0) {
+        return false;
+    } else if (count == 0) {
+        return true;
+    }
+
+    int available_dest_length = dest_arr->length - dest_index;
+    if ((available_dest_length < count) && (DYNAMIC_ARRAY_DENY_LENGTH_CHANGE == allow_length_change)) {
+        return false;
+    }
+
+    int available_dest_capacity = dest_arr->capacity - dest_index;
+    if ((available_dest_capacity < count) && (DYNAMIC_ARRAY_DENY_CAPACITY_CHANGE == allow_capacity_change)) {
+        return false;
+    }
+
+    if (available_dest_length < count) {
+        if (!dynamic_array_set_length(dest_arr, dest_index + count)) {
+            return false;
+        }
+    }
+
+    void *dest_ptr = dynamic_array_get_pointer(dest_arr, dest_index);
+    void *src_ptr = dynamic_array_get_pointer(src_arr, src_index);
+    if (!dest_ptr || !src_ptr) {
+        return false;
+    }
+
+    memcpy(dest_ptr, src_ptr, count * dest_arr->item_size);
+
+    return true;
+}
