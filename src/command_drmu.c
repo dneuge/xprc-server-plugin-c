@@ -483,6 +483,7 @@ static void drmu_process_flightloop(command_drmu_t *command) {
             command->interval_remaining_frames--;
             if (command->interval_remaining_frames <= 0) {
                 command->interval_remaining_frames = command->interval;
+                command->base_time_millis = now;
                 restart = true;
             }
         } else {
@@ -490,12 +491,6 @@ static void drmu_process_flightloop(command_drmu_t *command) {
                 command->base_time_millis += command->interval;
                 millis_since_base = now - command->base_time_millis;
                 restart = true;
-            }
-
-            if (millis_since_base < 0) {
-                // this *really* should not happen
-                printf("[XPRC] [DRMU] negative millis_since_base while resetting: interval=%d, base_time_millis=%ld, now=%ld, millis_since_base=%ld\n", command->interval, command->base_time_millis, now, millis_since_base);
-                millis_since_base = 0;
             }
         }
     }
@@ -509,6 +504,15 @@ static void drmu_process_flightloop(command_drmu_t *command) {
         command->cycle_complete = false;
         command->duration_frames = 0; // TODO: 0 or -1? will increment below
         command->update_base_values = command->has_fetch_based_datarefs;
+
+        // interval can be frame-based while duration is time-based, so we need to
+        // recalculate the time again
+        millis_since_base = now - command->base_time_millis;
+        if (millis_since_base < 0) {
+            // this *really* should not happen
+            printf("[XPRC] [DRMU] negative millis_since_base while resetting: interval=%d, base_time_millis=%ld, now=%ld, millis_since_base=%ld\n", command->interval, command->base_time_millis, now, millis_since_base);
+            millis_since_base = 0;
+        }
     }
     
     double progress = 1.0;
