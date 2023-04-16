@@ -684,6 +684,17 @@ static error_t drmu_create(void **command_ref, session_t *session, request_t *re
             goto error;
         }
 
+        bool is_array_type = ((array_types & wanted_type) != 0);
+        if (!is_array_type && (array_offset >= 0)) {
+            // array values are needed for array access; reasons:
+            // - type may be incompatible (e.g. double is not possible and blob wants raw bytes)
+            // - retrieval (monitor=get) may end with zero length return value if out of bounds,
+            //   there is no way to give any reasonable response on protocol unless array types are used
+            //   (will have zero length)
+            error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "array offset is only permitted for array types");
+            goto error;
+        }
+
         size_t type_size = SIZE_XPLM_INT_FLOAT;
         if (wanted_type == xplmType_Double) {
             type_size = SIZE_XPLM_DOUBLE;
