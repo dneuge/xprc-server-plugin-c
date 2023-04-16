@@ -1,5 +1,6 @@
 #include "command_drmu.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,6 +24,7 @@ typedef uint8_t drmu_method_t;
 #define DRMU_MONITOR_SET 3
 typedef uint8_t drmu_monitor_mode_t;
 
+#define DRMU_WILL_CONTINUE true
 #define DRMU_WILL_NOT_CONTINUE false
 
 typedef struct _drmu_dataref_t drmu_dataref_t;
@@ -65,14 +67,18 @@ typedef struct {
     bool is_interval_frames;
     
     int32_t duration;
-    int32_t duration_remaining_frames;
+    int32_t duration_frames;
     bool is_duration_frames;
 
     bool initialized;
     bool failed;
+    bool update_base_values;
+    bool cycle_complete;
     bool done;
-
+    
     drmu_dataref_t *datarefs;
+    bool has_proxied_datarefs;
+    bool has_fetch_based_datarefs;
     int64_t timestamp; // last flightloop, 0 if data was not updated since it has last been sent
 } command_drmu_t;
 
@@ -158,16 +164,12 @@ static error_t drmu_terminate(void *command_ref) {
 }
 
 static bool drmu_initialize(command_drmu_t *command) {
-    // TODO: implement or remove
-    /*
+    // Scheduled DRMU commands may continue to run after internal datarefs
+    // have already been unregistered from X-Plane and before they get re-registered,
+    // so we need to retrieve the XP dataref as fallback for those as well.
+    
     drmu_dataref_t *dataref = command->datarefs;
     while (dataref) {
-        if (!dataref->value_buffer) {
-            error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "internal error preparing dataref buffer");
-            command->failed = true;
-            return false;
-        }
-        
         dataref->xp_ref = XPLMFindDataRef(dataref->name);
         if (!dataref->xp_ref) {
             printf("[XPRC] [DRMU] XP did not find dataref: \"%s\"\n", dataref->name); // DEBUG
@@ -186,7 +188,6 @@ static bool drmu_initialize(command_drmu_t *command) {
         
         dataref = dataref->next;
     }
-    */
     
     command->initialized = true;
     
@@ -195,52 +196,236 @@ static bool drmu_initialize(command_drmu_t *command) {
 
 typedef int (*xplm_dataref_array_getter_f)(XPLMDataRef, void*, int, int); // 2nd argument void* matches for blob, otherwise int* or float*
 
-/*
-static bool copy_xplm_dataref_array(command_drmu_t *command, drmu_dataref_t *dataref, xplm_dataref_array_getter_f xplm_getter) {
-    int length = xplm_getter(dataref->xp_ref, NULL, 0, 0);
-    if (length < 0) {
-        error_channel(command->session, command->channel_id, command->timestamp, "negative length received for dataref array");
+typedef void (*xplm_dataref_array_setter_f)(XPLMDataRef, void*, int, int); // 2nd argument void* matches for blob, otherwise int* or float*
+
+static bool read_xplm_dataref_array(drmu_dataref_t *dataref, dynamic_array_t *dest_arr, xplm_dataref_array_getter_f xplm_getter) {
+    void *dest = dynamic_array_get_pointer(dest_arr, 0);
+    if (!dest) {
         return false;
     }
     
-    if (!dynamic_array_set_length(dataref->value_buffer, length)) {
-        error_channel(command->session, command->channel_id, command->timestamp, "failed to resize internal array");
+    int length = xplm_getter(dataref->xp_ref, dest, dataref->target_array_offset, dest_arr->capacity);
+    
+    return dynamic_array_set_length(dest_arr, length);
+}
+
+static bool write_xplm_dataref_array(drmu_dataref_t *dataref, dynamic_array_t *src_arr, xplm_dataref_array_setter_f xplm_setter) {
+    void *src = dynamic_array_get_pointer(src_arr, 0);
+    if (!src) {
+        return false;
+    }
+
+    xplm_setter(dataref->xp_ref, src, dataref->target_array_offset, src_arr->length);
+    
+    return true;
+}
+
+static bool read_dataref(drmu_dataref_t *dataref, dynamic_array_t *dest_arr) {
+    bool success = true;
+    error_t err = ERROR_NONE;
+
+    printf("[XPRC] [DRMU] read_dataref dataref=%p, type=%d, dest_arr=%p\n", dataref, dataref->type, dest_arr); // DEBUG
+
+    bool is_simple_type = ((simple_types & dataref->type) != 0);
+    
+    void *dest = dynamic_array_get_pointer(dest_arr, 0);
+    if (!dest) {
+        printf("[XPRC] [DRMU] read_dataref no dest\n"); // DEBUG
         return false;
     }
     
-    void *dest = dynamic_array_get_pointer(dataref->value_buffer, 0);
-    int actual = xplm_getter(dataref->xp_ref, dest, 0, length);
-    if (actual != length) {
-        error_channel(command->session, command->channel_id, command->timestamp, "dataref returned inconsistent number of items");
+    printf("[XPRC] [DRMU] read_dataref dest_arr[length=%d, capacity=%d, item_size=%ld]\n", dest_arr->length, dest_arr->capacity, dest_arr->item_size); // DEBUG
+
+    // retrieve internally if available
+    if (dataref->proxy) {
+        printf("[XPRC] [DRMU] read_dataref read via proxy\n"); // DEBUG
+        if (is_simple_type) {
+            printf("[XPRC] [DRMU] read_dataref simple via proxy\n"); // DEBUG
+            err = dataproxy_simple_get(dataref->proxy, dataref->type, dest);
+        } else {
+            printf("[XPRC] [DRMU] read_dataref array via proxy\n"); // DEBUG
+            int num_copied = 0;
+            err = dataproxy_array_get(dataref->proxy, dataref->type, dest, &num_copied, dataref->target_array_offset, dest_arr->length);
+            if ((err == ERROR_NONE) && (num_copied != dest_arr->length)) {
+                printf("[XPRC] [DRMU] read_dataref setting length\n"); // DEBUG
+                if (!dynamic_array_set_length(dest_arr, num_copied)) {
+                    // this error cannot be recovered from by retrying through X-Plane
+                    printf("[XPRC] [DRMU] read_dataref failed to change array size to %d (dest_arr->length: %d)\n", num_copied, dest_arr->length);
+                    return false;
+                }
+            }
+        }
+        printf("[XPRC] [DRMU] read_dataref retrieved via proxy\n"); // DEBUG
+
+        if (err == ERROR_NONE) {
+            return true;
+        }
+
+        // in case we failed to retrieve the value directly from the proxy we will retry through X-Plane
+        printf("[XPRC] [DRMU] read_dataref fallback to X-Plane API for %s (proxy error: %d)\n", dataref->name, err); // DEBUG
+
+        return false; // DEBUG
+    }
+
+    // FIXME: accessing a proxied dataref through X-Plane may deadlock
+
+    // retrieve via X-Plane API
+    printf("[XPRC] [DRMU] read_dataref read via X-Plane\n"); // DEBUG
+    if (dataref->type == xplmType_Int) {
+        *((xpint_t*) dest) = XPLMGetDatai(dataref->xp_ref);
+    } else if (dataref->type == xplmType_Float) {
+        *((xpfloat_t*) dest) = XPLMGetDataf(dataref->xp_ref);
+    } else if (dataref->type == xplmType_Double) {
+        *((xpdouble_t*) dest) = XPLMGetDatad(dataref->xp_ref);
+    } else if (dataref->type == xplmType_IntArray) {
+        success = read_xplm_dataref_array(dataref, dest, (xplm_dataref_array_getter_f) XPLMGetDatavi);
+    } else if (dataref->type == xplmType_FloatArray) {
+        success = read_xplm_dataref_array(dataref, dest, (xplm_dataref_array_getter_f) XPLMGetDatavf);
+    } else if (dataref->type == xplmType_Data) {
+        success = read_xplm_dataref_array(dataref, dest, (xplm_dataref_array_getter_f) XPLMGetDatab);
+    } else {
+        printf("[XPRC] [DRMU] read_dataref called with unsupported type %d\n", dataref->type);
+        return false;
+    }
+
+    printf("[XPRC] [DRMU] read_dataref done\n"); // DEBUG
+    return success;
+}
+
+static bool write_dataref(command_drmu_t *command, drmu_dataref_t *dataref, dynamic_array_t *values) {
+    bool success = true;
+    error_t err = ERROR_NONE;
+    bool is_simple_type = ((simple_types & dataref->type) != 0);
+    
+    void *src = dynamic_array_get_pointer(values, 0);
+    if (!src) {
+        return false;
+    }
+
+    // set internally if available
+    if (dataref->proxy) {
+        if (is_simple_type) {
+            err = dataproxy_simple_set(dataref->proxy, dataref->type, src, command->session);
+        } else {
+            err = dataproxy_array_update(dataref->proxy, dataref->type, src, dataref->target_array_offset, values->length, command->session);
+        }
+
+        if (err == ERROR_NONE) {
+            return true;
+        }
+
+        // in case we failed to write the value directly to the proxy we will retry through X-Plane
+        printf("[XPRC] [DRMU] write_dataref fallback to X-Plane API for %s (proxy error: %d)\n", dataref->name, err); // DEBUG
+
+        return false; // DEBUG
+    }
+    
+    // FIXME: accessing a proxied dataref through X-Plane may deadlock
+
+    // write to X-Plane API
+    if (dataref->type == xplmType_Int) {
+        XPLMSetDatai(dataref->xp_ref, *((xpint_t*) src));
+    } else if (dataref->type == xplmType_Float) {
+        XPLMSetDataf(dataref->xp_ref, *((xpfloat_t*) src));
+    } else if (dataref->type == xplmType_Double) {
+        XPLMSetDatad(dataref->xp_ref, *((xpdouble_t*) src));
+    } else if (dataref->type == xplmType_IntArray) {
+        success = write_xplm_dataref_array(dataref, values, (xplm_dataref_array_setter_f) XPLMSetDatavi);
+    } else if (dataref->type == xplmType_FloatArray) {
+        success = write_xplm_dataref_array(dataref, values, (xplm_dataref_array_setter_f) XPLMSetDatavf);
+    } else if (dataref->type == xplmType_Data) {
+        success = write_xplm_dataref_array(dataref, values, (xplm_dataref_array_setter_f) XPLMSetDatab);
+    } else {
+        printf("[XPRC] [DRMU] write_dataref called with unsupported type %d\n", dataref->type);
+        return false;
+    }
+
+    return success;
+}
+
+static double get_dataref_arr_value_as_double(drmu_dataref_t *dataref, dynamic_array_t *arr, int i) {
+    void *data = dynamic_array_get_pointer(arr, i);
+    if (!data) {
+        return nan("");
+    }
+
+    if ((dataref->type == xplmType_Int) || (dataref->type == xplmType_IntArray)) {
+        return *((xpint_t*) data);
+    } else if ((dataref->type == xplmType_Float) || (dataref->type == xplmType_FloatArray)) {
+        return *((xpfloat_t*) data);
+    } else if (dataref->type == xplmType_Double) {
+        return *((xpdouble_t*) data);
+    } else {
+        return nan("");
+    }
+}
+
+static bool set_dataref_arr_value_from_double(drmu_dataref_t *dataref, dynamic_array_t *arr, int i, double value) {
+    if (isnan(value)) {
+        return false;
+    }
+    
+    void *data = dynamic_array_get_pointer(arr, i);
+    if (!data) {
+        return false;
+    }
+
+    if ((dataref->type == xplmType_Int) || (dataref->type == xplmType_IntArray)) {
+        *((xpint_t*) data) = (xpint_t) lrint(value);
+    } else if ((dataref->type == xplmType_Float) || (dataref->type == xplmType_FloatArray)) {
+        *((xpfloat_t*) data) = value;
+    } else if (dataref->type == xplmType_Double) {
+        *((xpdouble_t*) data) = value;
+    } else {
         return false;
     }
 
     return true;
 }
-*/
+
+static bool calculate_linear_values(drmu_dataref_t *dataref, double progress) {
+    if (progress < 0.0) {
+        progress = 0.0;
+    }
+    
+    for (int i=0; i < dataref->buffer_values->length; i++) {
+        double base = get_dataref_arr_value_as_double(dataref, dataref->base_values, i);
+        double target = get_dataref_arr_value_as_double(dataref, dataref->target_values, i);
+        double diff = target - base;
+        double value = base + (progress * diff);
+
+        if (!set_dataref_arr_value_from_double(dataref, dataref->buffer_values, i, value)) {
+            return false;
+        }
+    }
+
+    return true;
+}
 
 static void drmu_process_flightloop(command_drmu_t *command) {
-    /*
-    if (command->failed) {
+    error_t err = ERROR_NONE;
+    bool locked_proxy_registry = false;
+    
+    if (command->failed || command->done) {
         return;
     }
 
-    int64_t now = millis_since_reference(command->session);
-    if (now < 0) {
-        return;
-    }
-
-    bool should_run = false;
+    bool should_run = true; // TODO: default should be false if we actually decide that, see below
     if (!command->initialized) {
         if (!drmu_initialize(command)) {
-            command->failed = true;
-            return;
+            goto error;
         }
-        confirm_channel(command->session, command->channel_id, now, NULL);
+        confirm_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, NULL);
 
         // we always run immediately after initialization
         should_run = true;
-    } else {
+
+        // base values always need to be updated on init unless all were provided
+        command->update_base_values = command->has_fetch_based_datarefs;
+    }
+
+    // TODO: should_run would be determined through methodFreq
+    /* else {
         // check interval
         if (!command->is_interval_frames) {
             // ... based on time
@@ -275,56 +460,185 @@ static void drmu_process_flightloop(command_drmu_t *command) {
     } else if (command->times_remaining != INFINITE_REPETITION) {
         return;
     }
+    */
 
-    // timestamp data
-    command->timestamp = now;
+    // TODO: avoid calculating timestamp while command->cycle_complete for frame-based interval
+    
+    int64_t now = millis_since_reference(command->session);
+    if (now < 0) {
+        goto error;
+    }
+    
+    int64_t millis_since_base = now - command->base_time_millis;
+    if (millis_since_base < 0) {
+        // TODO: we may want to skip this iteration?
+        printf("[XPRC] [DRMU] time has moved backwards? base_time_millis=%ld, now=%ld, diff=%ld\n", command->base_time_millis, now, millis_since_base);
+        millis_since_base = 0;
+    }
+
+    // check if next cycle is due
+    bool restart = false;
+    if (command->interval > 0) {
+        if (command->is_interval_frames) {
+            command->interval_remaining_frames--;
+            if (command->interval_remaining_frames <= 0) {
+                command->interval_remaining_frames = command->interval;
+                restart = true;
+            }
+        } else {
+            while (millis_since_base >= command->interval) {
+                command->base_time_millis += command->interval;
+                millis_since_base = now - command->base_time_millis;
+                restart = true;
+            }
+
+            if (millis_since_base < 0) {
+                // this *really* should not happen
+                printf("[XPRC] [DRMU] negative millis_since_base while resetting: interval=%d, base_time_millis=%ld, now=%ld, millis_since_base=%ld\n", command->interval, command->base_time_millis, now, millis_since_base);
+                millis_since_base = 0;
+            }
+        }
+    }
+
+    if (command->cycle_complete && !restart) {
+        goto exit;
+    }
+
+    if (restart) {
+        printf("[XPRC] [DRMU] restart\n"); // DEBUG
+        command->cycle_complete = false;
+        command->duration_frames = 0; // TODO: 0 or -1? will increment below
+        command->update_base_values = command->has_fetch_based_datarefs;
+    }
+    
+    double progress = 1.0;
+    if (command->method != DRMU_METHOD_IMMEDIATE) {
+        if (!command->is_duration_frames) {
+            progress = ((double) millis_since_base) / ((double) command->duration);
+        } else {
+            // TODO: duration_frames still needs to be updated if should_run/methodFreq is supported
+            command->duration_frames++;
+            progress = ((double) command->duration_frames) / ((double) command->duration);
+        }
+
+        if (progress < 0.0) {
+            // this shouldn't really be possible but it's better to protect from that case nevertheless
+            printf("[XPRC] [DRMU] limiting progress=%f to zero\n", progress);
+            progress = 0.0;
+        }
+    }
+    
+    if (command->has_proxied_datarefs) {
+        printf("[XPRC] [DRMU] locking dataproxy registry\n"); // DEBUG
+        err = lock_dataproxy_registry(command->session->server->config.dataproxy_registry);
+        if (err != ERROR_NONE) {
+            error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "failed to lock dataproxy registry");
+            goto error;
+        }
+        locked_proxy_registry = true;
+        printf("[XPRC] [DRMU] locked dataproxy registry\n"); // DEBUG
+    }
 
     // update data
+    command->timestamp = now;
     drmu_dataref_t *dataref = command->datarefs;
+    bool all_success = true; // continue with all datarefs before stopping after an error occurred
     while (dataref) {
-        switch (dataref->type) {
-        case xplmType_Int:
-            *((int32_t*) dataref->value_buffer) = XPLMGetDatai(dataref->xp_ref);
-            break;
+        bool success = true;
+
+        printf("[XPRC] [DRMU] dataref name=\"%s\", proxy=%p, xp_ref=%p\n", dataref->name, dataref->proxy, dataref->xp_ref); // DEBUG
+        
+        if (success && command->update_base_values && dataref->base_on_dataref) {
+            printf("[XPRC] [DRMU] updating base values\n"); // DEBUG
+
+            if (success && !read_dataref(dataref, dataref->base_values)) {
+                printf("[XPRC] [DRMU] failed to update base values for %s (type %d, offset %d)\n", dataref->name, dataref->type, dataref->target_array_offset);
+                success = false;
+            }
+
+            if (success && (dataref->base_values->length != dataref->target_values->length)) {
+                printf("[XPRC] [DRMU] base values length mismatch for %s (type %d, offset %d): expected %d, got %d\n", dataref->name, dataref->type, dataref->target_array_offset, dataref->target_values->length, dataref->base_values->length);
+                success = false;
+            }
             
-        case xplmType_Float:
-            *((float*) dataref->value_buffer) = XPLMGetDataf(dataref->xp_ref);
-            break;
-            
-        case xplmType_Double:
-            *((double*) dataref->value_buffer) = XPLMGetDatad(dataref->xp_ref);
-            break;
+            printf("[XPRC] [DRMU] base values updated\n"); // DEBUG
+        }
 
-        case xplmType_IntArray:
-            if (!copy_xplm_dataref_array(command, dataref, (xplm_dataref_array_getter_f) XPLMGetDatavi)) {
-                command->failed = true;
-                return;
+        dynamic_array_t *submit_values = dataref->buffer_values;
+        bool monitor_copy_success = true;
+        if (success) {
+            if ((command->method == DRMU_METHOD_IMMEDIATE) || (progress >= 1.0)) {
+                // we are done and can simply submit the target values
+                submit_values = dataref->target_values;
+                command->cycle_complete = true;
+                command->done = (command->interval <= 0);
+
+                printf("[XPRC] [DRMU] immediate or done, progress=%f\n", progress); // DEBUG
+                
+                if (command->monitor_mode != DRMU_MONITOR_NONE) {
+                    // monitor values will still be read from buffer_values so we need to copy them
+                    monitor_copy_success = dynamic_array_copy_from_other(
+                                                                         dataref->buffer_values, 0,
+                                                                         dataref->target_values, 0,
+                                                                         DYNAMIC_ARRAY_COPY_ALL,
+                                                                         DYNAMIC_ARRAY_DENY_CAPACITY_CHANGE,
+                                                                         DYNAMIC_ARRAY_ALLOW_LENGTH_CHANGE
+                                                                        );
+                    if (!monitor_copy_success) {
+                        printf("[XPRC] [DRMU] failed to copy target to monitor data\n");
+                    }
+                }
+            } else if (command->method == DRMU_METHOD_LINEAR) {
+                printf("[XPRC] [DRMU] linear, progress=%f\n", progress); // DEBUG
+                if (!calculate_linear_values(dataref, progress)) {
+                    printf("[XPRC] [DRMU] failed to calculate linear values: progress=%f, type=%d\n", progress, dataref->type);
+                    success = false;
+                }
+            } else {
+                // ... this shouldn't ever happen but we need to abort in that case
+                printf("[XPRC] [DRMU] unsupported method %d during computation\n", command->method);
+                success = false;
             }
-            break;
+        }
+        
+        printf("[XPRC] [DRMU] writing results\n"); // DEBUG
+        if (success && !write_dataref(command, dataref, submit_values)) {
+            printf("[XPRC] [DRMU] failed to update %s (type %d, offset %d)\n", dataref->name, dataref->type, dataref->target_array_offset);
+            success = false;
+        }
 
-        case xplmType_FloatArray:
-            if (!copy_xplm_dataref_array(command, dataref, (xplm_dataref_array_getter_f) XPLMGetDatavf)) {
-                command->failed = true;
-                return;
+        if (success && (command->monitor_mode == DRMU_MONITOR_GET)) {
+            printf("[XPRC] [DRMU] updating monitor values\n"); // DEBUG
+            if (!read_dataref(dataref, dataref->buffer_values)) {
+                printf("[XPRC] [DRMU] failed to read monitor values for %s (type %d, offset %d)\n", dataref->name, dataref->type, dataref->target_array_offset);
+                success = false;
             }
-            break;
-
-        case xplmType_Data:
-            if (!copy_xplm_dataref_array(command, dataref, (xplm_dataref_array_getter_f) XPLMGetDatab)) {
-                command->failed = true;
-                return;
-            }
-            break;
-
-        default:
-            error_channel(command->session, command->channel_id, command->timestamp, "unsupported type");
-            command->failed = true;
-            return;
         }
         
         dataref = dataref->next;
+        all_success &= success && monitor_copy_success;
+        
+        printf("[XPRC] [DRMU] dataref complete (all_success=%d, success=%d, monitor_copy_success=%d)\n", all_success, success, monitor_copy_success); // DEBUG
     }
-    */
+
+    if (!all_success) {
+        error_channel(command->session, command->channel_id, command->timestamp, "error during update");
+        goto error;
+    }
+
+    command->update_base_values = false;
+
+ exit:
+    if (locked_proxy_registry) {
+        printf("[XPRC] [DRMU] unlocking dataproxy registry\n"); // DEBUG
+        unlock_dataproxy_registry(command->session->server->config.dataproxy_registry);
+    }
+
+    return;
+    
+ error:
+    command->failed = true;
+    goto exit;
 }
 
 static char* encode_dataref_value(drmu_dataref_t *dataref) {
@@ -338,30 +652,6 @@ static char* encode_dataref_value(drmu_dataref_t *dataref) {
         }
         return xprc_encode_value(dataref->type, value, dataref->buffer_values->item_size);
     }
-}
-
-static void drmu_process_post(command_drmu_t *command) {
-    printf("[XPRC] [DRMU] post-processing\n"); // DEBUG
-
-    drmu_terminate(command);
-    
-    /*
-    if (command->failed) {
-        drmu_terminate(command);
-        return;
-    }
-    
-    if (!command->initialized) {
-        return;
-    }
-
-    if (command->timestamp <= 0) {
-        // no data since last run
-        return;
-    }
-
-    // TODO: optimize: avoid concatenation if only a single dataref is handled
-    */
 }
 
 static void submit_monitor_data(command_drmu_t *command, bool will_continue) {
@@ -453,6 +743,29 @@ static void submit_monitor_data(command_drmu_t *command, bool will_continue) {
     }
     
     command->timestamp = 0;
+}
+
+static void drmu_process_post(command_drmu_t *command) {
+    if (!command->failed) {
+        if (!command->initialized && !command->done) {
+            return;
+        }
+
+        if (command->timestamp > 0) {
+            submit_monitor_data(command, command->done ? DRMU_WILL_NOT_CONTINUE : DRMU_WILL_CONTINUE);
+        }
+    }
+    
+    if (command->failed) {
+        // we probably have already sent an error message but should make sure that
+        // we are really closing the channel as -ERR
+        error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, NULL);
+        command->done = true;
+    }
+    
+    if (command->done) {
+        drmu_terminate(command);
+    }
 }
 
 static void drmu_process(task_t *task, task_schedule_phase_t phase) {
@@ -911,12 +1224,24 @@ static error_t drmu_create(void **command_ref, session_t *session, request_t *re
                 error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "number of base and target values does not match");
                 goto error;
             }
+        } else if (command->method != DRMU_METHOD_IMMEDIATE) {
+            // no base values provided but method requires them - fetch from dataref on initialization
+            dataref->base_on_dataref = true;
+            command->has_fetch_based_datarefs = true;
+            
+            dataref->base_values = create_dynamic_array(type_size, dataref->target_values->length);
+            if (!dataref->base_values || !dynamic_array_set_length(dataref->base_values, dataref->target_values->length)) {
+                error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "failed to allocate base values");
+                goto error;
+            }
         }
 
         //debug_dump("[XPRC] [DRMU] create, dataref base_values", dataref->type, dataref->base_values); // DEBUG
 
         dataref->proxy = find_registered_dataproxy(session->server->config.dataproxy_registry, dataref->name);
         if (dataref->proxy) {
+            command->has_proxied_datarefs = true;
+            
             if (!dataproxy_can_write(dataref->proxy, session)) {
                 error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "XPRC-internal dataref is write-protected");
                 goto error;
