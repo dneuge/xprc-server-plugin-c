@@ -23,6 +23,8 @@ typedef uint8_t drmu_method_t;
 #define DRMU_MONITOR_SET 3
 typedef uint8_t drmu_monitor_mode_t;
 
+#define DRMU_WILL_NOT_CONTINUE false
+
 typedef struct _drmu_dataref_t drmu_dataref_t;
 typedef struct _drmu_dataref_t {
     // base = start/original values to compute values to be set from
@@ -73,6 +75,9 @@ typedef struct {
     drmu_dataref_t *datarefs;
     int64_t timestamp; // last flightloop, 0 if data was not updated since it has last been sent
 } command_drmu_t;
+
+static const XPLMDataTypeID simple_types = xplmType_Int | xplmType_Float | xplmType_Double;
+static const XPLMDataTypeID array_types = xplmType_IntArray | xplmType_FloatArray | xplmType_Data;
 
 static error_t drmu_destroy(void *command_ref) {
     if (!command_ref) {
@@ -322,15 +327,18 @@ static void drmu_process_flightloop(command_drmu_t *command) {
     */
 }
 
-/*
 static char* encode_dataref_value(drmu_dataref_t *dataref) {
-    if (dataref->type == xplmType_IntArray || dataref->type == xplmType_FloatArray || dataref->type == xplmType_Data) {
-        return xprc_encode_array(dataref->type, dataref->value_buffer);
+    bool is_array_type = ((array_types & dataref->type) != 0);
+    if (is_array_type) {
+        return xprc_encode_array(dataref->type, dataref->buffer_values);
     } else {
-        return xprc_encode_value(dataref->type, dataref->value_buffer, dataref->value_buffer_size);
+        void *value = dynamic_array_get_pointer(dataref->buffer_values, 0);
+        if (!value) {
+            return NULL;
+        }
+        return xprc_encode_value(dataref->type, value, dataref->buffer_values->item_size);
     }
 }
-*/
 
 static void drmu_process_post(command_drmu_t *command) {
     printf("[XPRC] [DRMU] post-processing\n"); // DEBUG
@@ -353,6 +361,13 @@ static void drmu_process_post(command_drmu_t *command) {
     }
 
     // TODO: optimize: avoid concatenation if only a single dataref is handled
+    */
+}
+
+static void submit_monitor_data(command_drmu_t *command, bool will_continue) {
+    if (command->monitor_mode == DRMU_MONITOR_NONE) {
+        return;
+    }
     
     prealloc_list_t *list = create_preallocated_list();
     if (!list) {
@@ -423,15 +438,11 @@ static void drmu_process_post(command_drmu_t *command) {
     
     destroy_preallocated_list(list, free, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS);
 
-    bool will_continue = (command->times_remaining > 0) || (command->times_remaining == INFINITE_REPETITION);
     error_t err = ERROR_NONE;
     if (will_continue) {
         err = continue_channel(command->session, command->channel_id, command->timestamp, out);
     } else {
-        finish_channel(command->session, command->channel_id, command->timestamp, out);
-        free(out);
-        drmu_terminate(command);
-        return;
+        err = finish_channel(command->session, command->channel_id, command->timestamp, out);
     }
     
     free(out);
@@ -442,7 +453,6 @@ static void drmu_process_post(command_drmu_t *command) {
     }
     
     command->timestamp = 0;
-    */
 }
 
 static void drmu_process(task_t *task, task_schedule_phase_t phase) {
@@ -456,9 +466,121 @@ static void drmu_process(task_t *task, task_schedule_phase_t phase) {
 }
 
 static error_t complete_without_schedule(command_drmu_t *command) {
-    // TODO: implement
-    printf("[XPRC] [DRMU] completable without schedule\n"); // DEBUG
+    // all datarefs are XPRC-internal and can be manipulated in a single run without
+    // any timing behaviour; types have also been checked before
 
+    error_t err = ERROR_NONE;
+    bool locked = false;
+    
+    err = lock_dataproxy_registry(command->session->server->config.dataproxy_registry);
+    if (err != ERROR_NONE) {
+        error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "XPRC-internal: failed to lock dataproxy registry");
+        goto error;
+    }
+    locked = true;
+
+    command->timestamp = millis_since_reference(command->session);
+    if (command->timestamp < 0) {
+        error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "failed to get session timestamp");
+        goto error;
+    }
+
+    bool success = true;
+    drmu_dataref_t *dataref = command->datarefs;
+    while (dataref) {
+        bool is_simple_type = ((simple_types & dataref->type) != 0);
+        
+        if (!dataref->proxy) {
+            goto error;
+        }
+        
+        if (!is_simple_type && !dynamic_array_set_length(dataref->buffer_values, dataref->target_values->length)) {
+            error_channel(command->session, command->channel_id, command->timestamp, "XPRC-internal: failed to reset buffer array size");
+            goto error;
+        }
+
+        void *src = dynamic_array_get_pointer(dataref->target_values, 0);
+        if (!src) {
+            goto error;
+        }
+
+        if (is_simple_type) {
+            err = dataproxy_simple_set(dataref->proxy, dataref->type, src, command->session);
+        } else {
+            err = dataproxy_array_update(dataref->proxy, dataref->type, src, dataref->target_array_offset, dataref->target_values->length, command->session);
+        }
+
+        if (err != ERROR_NONE) {
+            // in case setting failed we still want to continue with the remaining datarefs
+            success = false;
+            printf("[XPRC] [DRMU] complete_without_schedule setting value failed (type %d, offset %d, error %d): %s\n", dataref->type, dataref->target_array_offset, err, dataref->name);
+        }
+        
+        if (success) {
+            if (command->monitor_mode == DRMU_MONITOR_SET) {
+                // on error still continue trying to set other datarefs; monitor will be skipped
+                success = dynamic_array_copy_from_other(
+                                                        dataref->buffer_values, 0,
+                                                        dataref->target_values, 0,
+                                                        DYNAMIC_ARRAY_COPY_ALL,
+                                                        DYNAMIC_ARRAY_DENY_CAPACITY_CHANGE,
+                                                        DYNAMIC_ARRAY_ALLOW_LENGTH_CHANGE
+                                                       );
+                if (!success) {
+                    printf("[XPRC] [DRMU] complete_without_schedule failed to copy target to monitor data\n");
+                }
+            } else if (command->monitor_mode == DRMU_MONITOR_GET) {
+                void *dest = dynamic_array_get_pointer(dataref->buffer_values, 0);
+                if (!dest) {
+                    goto error;
+                }
+            
+                if (is_simple_type) {
+                    err = dataproxy_simple_get(dataref->proxy, dataref->type, dest);
+                } else {
+                    int num_copied = 0;
+                    err = dataproxy_array_get(dataref->proxy, dataref->type, dest, &num_copied, dataref->target_array_offset, dataref->target_values->length);
+                
+                    if (num_copied < dataref->buffer_values->length) {
+                        if (!dynamic_array_set_length(dataref->buffer_values, num_copied)) {
+                            // still continue trying to set other datarefs; monitor will be skipped
+                            success = false;
+                            printf("[XPRC] [DRMU] complete_without_schedule failed to reduce monitor array size to %d (target length: %d)\n", num_copied, dataref->target_values->length);
+                        }
+                    }
+                }
+                
+                if (err != ERROR_NONE) {
+                    // still continue trying to set other datarefs; monitor will be skipped
+                    success = false;
+                    printf("[XPRC] [DRMU] complete_without_schedule failed to get monitor data (type %d, offset %d, error %d): %s\n", dataref->type, dataref->target_array_offset, err, dataref->name);
+                }
+            }
+        }
+
+        dataref = dataref->next;
+    }
+
+    if (!success) {
+        goto error;
+    }
+    
+    unlock_dataproxy_registry(command->session->server->config.dataproxy_registry);
+    locked = false;
+
+    submit_monitor_data(command, DRMU_WILL_NOT_CONTINUE);
+    
+    goto terminate;
+
+ error:
+    error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, NULL);
+    goto terminate;
+ 
+ terminate:
+    if (locked) {
+        unlock_dataproxy_registry(command->session->server->config.dataproxy_registry);
+    }
+    
     return drmu_terminate(command);
 }
 
@@ -498,8 +620,6 @@ static drmu_monitor_mode_t parse_monitor_mode(char *s) {
         return DRMU_MONITOR_UNSUPPORTED;
     }
 }
-
-static const XPLMDataTypeID array_types = xplmType_IntArray | xplmType_FloatArray | xplmType_Data;
 
 /*
 static void debug_dump(char *prefix, XPLMDataTypeID type, dynamic_array_t *arr) {
