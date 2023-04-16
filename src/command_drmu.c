@@ -685,6 +685,11 @@ static error_t drmu_create(void **command_ref, session_t *session, request_t *re
         }
 
         bool is_array_type = ((array_types & wanted_type) != 0);
+        if (is_array_type && (array_offset < 0)) {
+            // by default, array types always write to 0 offset
+            array_offset = 0;
+        }
+
         if (!is_array_type && (array_offset >= 0)) {
             // array values are needed for array access; reasons:
             // - type may be incompatible (e.g. double is not possible and blob wants raw bytes)
