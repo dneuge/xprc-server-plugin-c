@@ -14,11 +14,12 @@
 #include "lists.h"
 #include "server.h"
 #include "task_schedule.h"
+#include "xpcommands.h"
 
 #define CALL_ON_NEXT_FRAME -1.0f
 #define SCHEDULE_CLEANING_INTERVAL 500
 #define SERVER_MAINTENANCE_INTERVAL 120
-#define DATAPROXY_MAINTENANCE_INTERVAL 600
+#define XPREF_MAINTENANCE_INTERVAL 600
 
 XPLMFlightLoopID flight_loop_before_flight_model_id = {0};
 XPLMFlightLoopID flight_loop_after_flight_model_id = {0};
@@ -31,6 +32,7 @@ server_config_t server_config = {0};
 bool server_started = false;
 
 dataproxy_registry_t *dataproxy_registry = NULL;
+xpcommand_registry_t *xpcommand_registry = NULL;
 
 task_schedule_t *task_schedule = NULL;
 bool flight_loop_locked_task_schedule = false;
@@ -43,7 +45,7 @@ bool shutdown_post_processing = false;
 bool fatal_error = false;
 bool plugin_initialized = false;
 
-int cycles_until_dataproxy_maintenance = DATAPROXY_MAINTENANCE_INTERVAL;
+int cycles_until_xpref_maintenance = XPREF_MAINTENANCE_INTERVAL;
 
 int run_post_processing_thread(void *arg) {
     error_t err = ERROR_NONE;
@@ -125,20 +127,27 @@ static float process_flight_loop_before_flight_model(float inElapsedSinceLastCal
 }
 
 static float process_flight_loop_after_flight_model(float inElapsedSinceLastCall, float inElapsedTimeSinceLastFlightLoop, int inCounter, void *inRefcon) {
+    error_t err = ERROR_NONE;
+    
     if (!flight_loop_locked_task_schedule) {
         return CALL_ON_NEXT_FRAME;
     }
 
     run_tasks(task_schedule, TASK_SCHEDULE_AFTER_FLIGHT_MODEL);
 
-    // TODO: dataproxy maintenance should be time-based (once every 2 seconds)
-    cycles_until_dataproxy_maintenance--;
-    if (cycles_until_dataproxy_maintenance <= 0) {
-        cycles_until_dataproxy_maintenance = DATAPROXY_MAINTENANCE_INTERVAL;
+    // TODO: X-Plane reference maintenance should be time-based (once every 2 seconds)
+    cycles_until_xpref_maintenance--;
+    if (cycles_until_xpref_maintenance <= 0) {
+        cycles_until_xpref_maintenance = XPREF_MAINTENANCE_INTERVAL;
 
-        error_t err = unregister_dropped_dataproxies(dataproxy_registry);
+        err = unregister_dropped_dataproxies(dataproxy_registry);
         if (err != ERROR_NONE) {
             printf("[XPRC] error %d while unregistering dropped dataproxies (maintenance)\n", err);
+        }
+
+        err = unregister_dropped_xpcommands(xpcommand_registry);
+        if (err != ERROR_NONE) {
+            printf("[XPRC] error %d while unregistering dropped XP commands (maintenance)\n", err);
         }
     }
 
@@ -233,6 +242,12 @@ PLUGIN_API int XPluginEnable() {
         return 1;
     }
 
+    if (xpcommand_registry) {
+        printf("[XPRC] XP command registry already exists; did you install the plugin twice? simulator restart required\n");
+        fatal_error = true;
+        return 1;
+    }
+
     err = create_dataproxy_registry(&dataproxy_registry);
     if (err != ERROR_NONE) {
         printf("[XPRC] failed to create dataproxy registry: %d\n", err);
@@ -240,7 +255,14 @@ PLUGIN_API int XPluginEnable() {
     }
     server_config.dataproxy_registry = dataproxy_registry;
 
-    cycles_until_dataproxy_maintenance = DATAPROXY_MAINTENANCE_INTERVAL;
+    err = create_xpcommand_registry(&xpcommand_registry);
+    if (err != ERROR_NONE) {
+        printf("[XPRC] failed to create XP command registry: %d\n", err);
+        return 1;
+    }
+    server_config.xpcommand_registry = xpcommand_registry;
+
+    cycles_until_xpref_maintenance = XPREF_MAINTENANCE_INTERVAL;
     
     err = create_task_schedule(&task_schedule);
     if (err != ERROR_NONE) {
@@ -360,6 +382,23 @@ PLUGIN_API void XPluginDisable() {
             return;
         }
         task_schedule = NULL;
+    }
+
+    if (xpcommand_registry) {
+        err = unregister_dropped_xpcommands(xpcommand_registry);
+        if (err != ERROR_NONE) {
+            printf("[XPRC] dropped XP commands could not be unregistered (error %d); plugin shutdown is not possible\n", err);
+            fatal_error = true;
+            return;
+        }
+        
+        err = destroy_xpcommand_registry(xpcommand_registry);
+        if (err != ERROR_NONE) {
+            printf("[XPRC] XP command registry could not be destroyed (error %d); plugin shutdown is not possible\n", err);
+            fatal_error = true;
+            return;
+        }
+        xpcommand_registry = NULL;
     }
 
     if (dataproxy_registry) {

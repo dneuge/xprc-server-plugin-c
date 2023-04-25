@@ -18,6 +18,7 @@ SET(COMMON_SOURCES
 
 SET(XPRC_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/commands.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/command_cmrg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/command_drci.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/command_drls.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/command_drls_specific.c
@@ -28,6 +29,7 @@ SET(XPRC_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/server.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/dataproxy.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/xpcommands.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/session.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/task_schedule.c
     ${COMMON_SOURCES}
