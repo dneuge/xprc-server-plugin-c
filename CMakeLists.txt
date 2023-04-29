@@ -18,6 +18,7 @@ SET(COMMON_SOURCES
 
 SET(XPRC_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/commands.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/command_cmhd.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/command_cmrg.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/command_drci.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/command_drls.c
