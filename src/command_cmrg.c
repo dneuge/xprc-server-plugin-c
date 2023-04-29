@@ -18,11 +18,18 @@
 
 // TODO: protect termination from concurrent event calls
 
+#define CMRG_MONITOR_TRIGGER      (1 << 0)
+#define CMRG_MONITOR_HOLD_RELEASE (1 << 1)
+#define CMRG_MONITOR_ALL          (CMRG_MONITOR_TRIGGER | CMRG_MONITOR_HOLD_RELEASE)
+typedef uint8_t cmrg_monitor_t;
+
 typedef struct {
     session_t *session;
     channel_id_t channel_id;
     task_t *task;
 
+    cmrg_monitor_t monitor;
+    
     xpcommand_t *xpcmd;
     
     bool initialized;
@@ -135,21 +142,44 @@ static void cmrg_handle_event(void *ref, XPLMCommandPhase xp_phase) {
     }
 
     char *msg = NULL;
-    switch (xp_phase) {
-    case xplm_CommandBegin: msg = "HOLD"; break;
-    case xplm_CommandContinue: msg = "TRIGGER"; break;
-    case xplm_CommandEnd: msg = "RELEASE"; break;
-    default: break;
-    }
-
-    if (!msg) {
+    if (xp_phase == xplm_CommandContinue) {
+        if ((command->monitor & CMRG_MONITOR_TRIGGER) != 0) {
+            msg = "TRIGGER";
+        }
+    } else if ((xp_phase == xplm_CommandBegin) || (xp_phase == xplm_CommandEnd)) {
+        if ((command->monitor & CMRG_MONITOR_HOLD_RELEASE) != 0) {
+            msg = (xp_phase == xplm_CommandBegin) ? "HOLD" : "RELEASE";
+        }
+    } else {
         printf("[CMRG] unhandled XPLMCommandPhase %d: %s\n", xp_phase, command->xpcmd->name);
         command->failed = true;
-    } else if (continue_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, msg) != ERROR_NONE) {
+    }
+    
+    if (!msg) {
+        return;
+    }
+    
+    if (continue_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, msg) != ERROR_NONE) {
         printf("[CMRG] failed to notify: %s\n", command->xpcmd->name);
         error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, NULL);
         command->failed = true;
     }
+}
+
+static cmrg_monitor_t parse_monitor(char *s) {
+    if (!s) {
+        return CMRG_INVALID;
+    }
+
+    if (!strcmp(s, "all")) {
+        return CMRG_MONITOR_ALL;
+    } else if (!strcmp(s, "trigger")) {
+        return CMRG_MONITOR_TRIGGER;
+    } else if (!strcmp(s, "holdRelease")) {
+        return CMRG_MONITOR_HOLD_RELEASE;
+    }
+
+    return CMRG_INVALID;
 }
 
 static xpcommand_propagation_t parse_propagation(char *s) {
@@ -196,6 +226,12 @@ static error_t cmrg_create(void **command_ref, session_t *session, request_t *re
     command->session = session;
     command->channel_id = channel_id;
 
+    command->monitor = parse_monitor(request_get_option(request, "monitor", "all"));
+    if (command->monitor == CMRG_INVALID) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unsupported monitor option");
+        goto error;
+    }
+    
     xpcommand_phase_t phase = parse_phase(request_get_option(request, "phase", "before"));
     if (phase == CMRG_INVALID) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unsupported phase");
