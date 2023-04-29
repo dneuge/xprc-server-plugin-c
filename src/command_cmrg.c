@@ -137,7 +137,7 @@ static void cmrg_handle_event(void *ref, XPLMCommandPhase xp_phase) {
     char *msg = NULL;
     switch (xp_phase) {
     case xplm_CommandBegin: msg = "HOLD"; break;
-    case xplm_CommandContinue: msg = "RETRIGGER"; break;
+    case xplm_CommandContinue: msg = "TRIGGER"; break;
     case xplm_CommandEnd: msg = "RELEASE"; break;
     default: break;
     }
