@@ -14,12 +14,14 @@ typedef struct _server_t server_t;
 #ifdef BUILD_PLUGIN
 #include "dataproxy.h"
 #include "xpcommands.h"
+#include "xpqueue.h"
 #else
 // in case we are not building the plugin (but test code/utils)
 // we need to stub unused type definitions instead of importing
 // plugin code to break compile-time dependency on those files
 typedef struct {} dataproxy_registry_t;
 typedef struct {} xpcommand_registry_t;
+typedef struct {} xpqueue_t;
 #endif
 
 typedef struct {
@@ -29,6 +31,7 @@ typedef struct {
     command_factory_t *command_factory;
     dataproxy_registry_t *dataproxy_registry;
     xpcommand_registry_t *xpcommand_registry;
+    xpqueue_t *xpqueue;
 } server_config_t;
 
 typedef struct _server_t {

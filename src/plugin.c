@@ -33,6 +33,7 @@ bool server_started = false;
 
 dataproxy_registry_t *dataproxy_registry = NULL;
 xpcommand_registry_t *xpcommand_registry = NULL;
+xpqueue_t *xpqueue = NULL;
 
 task_schedule_t *task_schedule = NULL;
 bool flight_loop_locked_task_schedule = false;
@@ -134,6 +135,12 @@ static float process_flight_loop_after_flight_model(float inElapsedSinceLastCall
     }
 
     run_tasks(task_schedule, TASK_SCHEDULE_AFTER_FLIGHT_MODEL);
+    
+    err = flush_xpqueue(xpqueue);
+    if (err != ERROR_NONE) {
+        // FIXME: if this happens it's unlikely that the issue will fix by itself next iteration; silence warning after first occurrence (in a row) or even mark server as failed?
+        printf("[XPRC] error %d while flushing XP queue\n", err);
+    }
 
     // TODO: X-Plane reference maintenance should be time-based (once every 2 seconds)
     cycles_until_xpref_maintenance--;
@@ -236,6 +243,19 @@ PLUGIN_API int XPluginEnable() {
         return 1;
     }
     
+    if (xpqueue) {
+        printf("[XPRC] XP queue already exists; did you install the plugin twice? simulator restart required\n");
+        fatal_error = true;
+        return 1;
+    }
+
+    err = create_xpqueue(&xpqueue);
+    if (err != ERROR_NONE) {
+        printf("[XPRC] failed to create XP queue: %d\n", err);
+        return 1;
+    }
+    server_config.xpqueue = xpqueue;
+
     if (dataproxy_registry) {
         printf("[XPRC] dataproxy registry already exists; did you install the plugin twice? simulator restart required\n");
         fatal_error = true;
@@ -416,6 +436,23 @@ PLUGIN_API void XPluginDisable() {
             return;
         }
         dataproxy_registry = NULL;
+    }
+
+    if (xpqueue) {
+        err = flush_xpqueue(xpqueue);
+        if (err != ERROR_NONE) {
+            printf("[XPRC] failed final flush of XP queue (error %d); plugin shutdown is not possible\n", err);
+            fatal_error = true;
+            return;
+        }
+
+        err = destroy_xpqueue(xpqueue);
+        if (err != ERROR_NONE) {
+            printf("[XPRC] XP queue could not be destroyed (error %d); plugin shutdown is not possible\n", err);
+            fatal_error = true;
+            return;
+        }
+        xpqueue = NULL;
     }
 }
 
