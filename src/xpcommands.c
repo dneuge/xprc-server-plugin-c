@@ -3,6 +3,7 @@
 #include "utils.h"
 
 #include "xpcommands.h"
+#include "xptypes.h"
 
 error_t create_xpcommand_registry(xpcommand_registry_t **registry) {
     *registry = zalloc(sizeof(xpcommand_registry_t));
@@ -231,12 +232,12 @@ error_t register_xpcommand(xpcommand_t *proxy) {
 
     printf("[XPRC] [xpcommands] register_xpcommand will call XPLMFindCommand(%s)\n", proxy->name); // DEBUG
     proxy->xp_ref = XPLMFindCommand(proxy->name);
-    if (proxy->xp_ref != XPCOMMAND_NO_REF) {
+    if (proxy->xp_ref != NO_XP_COMMAND) {
         printf("[XPRC] [xpcommands] register_xpcommand found existing command %p\n", proxy->xp_ref); // DEBUG
     } else {
         printf("[XPRC] [xpcommands] register_xpcommand not found, will call XPLMCreateCommand(%s, %s)\n", proxy->name, proxy->description); // DEBUG
         proxy->xp_ref = XPLMCreateCommand(proxy->name, proxy->description);
-        if (proxy->xp_ref == XPCOMMAND_NO_REF) {
+        if (proxy->xp_ref == NO_XP_COMMAND) {
             printf("[XPRC] [xpcommands] register_xpcommand command creation failed\n"); // DEBUG
             unlock_xpcommand(proxy);
             return ERROR_UNSPECIFIC;
@@ -261,7 +262,7 @@ static error_t _unregister_destroy_xpcommand(xpcommand_t *proxy, list_item_t *it
     }
 
     if ((proxy->state == XPCOMMAND_STATE_REGISTERED) || (proxy->state == XPCOMMAND_STATE_DROPPED)) {
-        if (proxy->xp_ref == XPCOMMAND_NO_REF) {
+        if (proxy->xp_ref == NO_XP_COMMAND) {
             return ERROR_UNSPECIFIC;
         }
         

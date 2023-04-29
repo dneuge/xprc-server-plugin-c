@@ -13,8 +13,6 @@ typedef struct _xpcommand_registry_t xpcommand_registry_t;
 #include "errors.h"
 #include "lists.h"
 
-#define XPCOMMAND_NO_REF NULL
-
 #define XPCOMMAND_STATE_CREATED 0
 #define XPCOMMAND_STATE_REGISTERED 1
 #define XPCOMMAND_STATE_DROPPED 2

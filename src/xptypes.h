@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #define NO_XP_DATAREF (NULL)
+#define NO_XP_COMMAND (NULL)
 
 #define SIZE_XPLM_INT 4
 #define SIZE_XPLM_FLOAT 4
