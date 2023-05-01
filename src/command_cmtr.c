@@ -63,6 +63,14 @@ typedef struct {
     list_t *entries;
 } command_cmtr_t;
 
+static const char *cmtr_supported_options[] = {
+    "hold",
+    "monitor",
+    "repeatFreq",
+    "times",
+    NULL
+};
+
 static void destroy_entry(void *value) {
     cmtr_entry_t *entry = value;
     
@@ -455,6 +463,11 @@ static error_t cmtr_create(void **command_ref, session_t *session, request_t *re
     error_t out_error = ERROR_NONE;
     
     channel_id_t channel_id = request->channel_id;
+
+    if (!request_has_only_options(request, (char**)cmtr_supported_options)) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unsupported options");
+        return ERROR_UNSPECIFIC;
+    }
     
     command_cmtr_t *command = zalloc(sizeof(command_cmtr_t));
     if (!command) {

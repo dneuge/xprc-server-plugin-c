@@ -36,6 +36,13 @@ typedef struct {
     bool failed;
 } command_cmrg_t;
 
+static const char *cmrg_supported_options[] = {
+    "monitor",
+    "phase",
+    "propagate",
+    NULL
+};
+
 static error_t cmrg_destroy(void *command_ref) {
     printf("[XPRC] [CMRG] destroy\n"); // DEBUG
     
@@ -217,6 +224,11 @@ static error_t cmrg_create(void **command_ref, session_t *session, request_t *re
     char *description = NULL;
     
     channel_id_t channel_id = request->channel_id;
+
+    if (!request_has_only_options(request, (char**)cmrg_supported_options)) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unsupported options");
+        return ERROR_UNSPECIFIC;
+    }
     
     command_cmrg_t *command = zalloc(sizeof(command_cmrg_t));
     if (!command) {

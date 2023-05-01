@@ -105,6 +105,17 @@ typedef struct {
 
 static const dataproxy_operations_t drci_dataproxy_operations;
 
+static const char *drci_supported_options[] = {
+    "echo",
+    "intConv",
+    "range",
+    "rangeFit",
+    "step",
+    "stepFit",
+    "writable",
+    NULL
+};
+
 static error_t drci_destroy(void *command_ref) {
     //printf("[XPRC] [DRCI] destroy\n"); // DEBUG
     
@@ -701,6 +712,11 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     error_t out_error = ERROR_NONE;
     
     channel_id_t channel_id = request->channel_id;
+
+    if (!request_has_only_options(request, (char**)drci_supported_options)) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unsupported options");
+        return ERROR_UNSPECIFIC;
+    }
     
     command_drci_t *command = zalloc(sizeof(command_drci_t));
     if (!command) {

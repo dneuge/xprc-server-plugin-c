@@ -85,6 +85,16 @@ typedef struct {
 static const XPLMDataTypeID simple_types = xplmType_Int | xplmType_Float | xplmType_Double;
 static const XPLMDataTypeID array_types = xplmType_IntArray | xplmType_FloatArray | xplmType_Data;
 
+static const char *drmu_supported_options[] = {
+    "duration",
+    "method",
+    "methodFreq",
+    "monitor",
+    "phase",
+    "repeatFreq",
+    NULL
+};
+
 static error_t drmu_destroy(void *command_ref) {
     if (!command_ref) {
         return ERROR_UNSPECIFIC;
@@ -989,6 +999,11 @@ static error_t drmu_create(void **command_ref, session_t *session, request_t *re
     }
     
     channel_id_t channel_id = request->channel_id;
+
+    if (!request_has_only_options(request, (char**)drmu_supported_options)) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unsupported options");
+        return ERROR_UNSPECIFIC;
+    }
     
     command_drmu_t *command = zalloc(sizeof(command_drmu_t));
     if (!command) {

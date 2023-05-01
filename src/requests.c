@@ -29,6 +29,34 @@ bool request_has_option(request_t *request, char *name) {
     return false;
 }
 
+bool request_has_only_options(request_t *request, char **names) {
+    command_option_t *option = request->options;
+
+    // for each option...
+    while (option) {
+        // ... search the null-terminated array of names
+        bool found = false;
+        char **name_ref = names;
+        while (*name_ref) {
+            char *name = *name_ref;
+            if (!strcmp(option->name, name)) {
+                found = true;
+                break;
+            }
+            name_ref++;
+        }
+
+        // ... and abort on first unexpected option
+        if (!found) {
+            return false;
+        }
+        
+        option = option->next;
+    }
+
+    return true;
+}
+
 char* request_get_option(request_t *request, char *name, char *default_value) {
     command_option_t *option = request->options;
     while (option) {

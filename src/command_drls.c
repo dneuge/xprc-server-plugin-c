@@ -12,6 +12,13 @@
 
 #define DRLS_SCHEDULE_PHASE TASK_SCHEDULE_BEFORE_FLIGHT_MODEL
 
+// FIXME: add support for rwCheck
+
+static const char *drls_supported_options[] = {
+    // "rwCheck",
+    NULL
+};
+
 static error_t drls_destroy(void *command_ref) {
     printf("[XPRC] [DRLS] destroy\n"); // DEBUG
     
@@ -125,13 +132,18 @@ static int count_parameters(command_parameter_t *parameter) {
 static error_t drls_create(void **command_ref, session_t *session, request_t *request) {
     error_t err = ERROR_NONE;
     error_t out_error = ERROR_NONE;
-    
+
     int64_t now = millis_since_reference(session);
     if (now < 0) {
         return ERROR_UNSPECIFIC;
     }
     
     channel_id_t channel_id = request->channel_id;
+
+    if (!request_has_only_options(request, (char**)drls_supported_options)) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unsupported options");
+        return ERROR_UNSPECIFIC;
+    }
     
     command_drls_t *command = zalloc(sizeof(command_drls_t));
     if (!command) {

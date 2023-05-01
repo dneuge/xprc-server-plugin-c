@@ -33,6 +33,7 @@ error_t parse_request(request_t **request, char *line, int length);
 void destroy_request(request_t *request);
 
 bool request_has_option(request_t *request, char *name);
+bool request_has_only_options(request_t *request, char **names); // null-terminated array
 char* request_get_option(request_t *request, char *name, char *default_value);
 
 #endif

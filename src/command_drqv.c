@@ -46,6 +46,13 @@ typedef struct {
     int64_t timestamp; // last flightloop, 0 if data was not updated since it has last been sent
 } command_drqv_t;
 
+static const char *drqv_supported_options[] = {
+    "freq",
+    "phase",
+    "times",
+    NULL
+};
+
 static error_t drqv_destroy(void *command_ref) {
     printf("[XPRC] [DRQV] destroy\n"); // DEBUG
     
@@ -437,6 +444,11 @@ static error_t drqv_create(void **command_ref, session_t *session, request_t *re
     }
     
     channel_id_t channel_id = request->channel_id;
+
+    if (!request_has_only_options(request, (char**)drqv_supported_options)) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unsupported options");
+        return ERROR_UNSPECIFIC;
+    }
     
     command_drqv_t *command = zalloc(sizeof(command_drqv_t));
     if (!command) {
