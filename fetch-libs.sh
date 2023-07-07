@@ -197,3 +197,11 @@ function git_unbundle {
 }
 
 download "X-Plane SDK" XPSDK XPSDK401.zip 500613 https://developer.x-plane.com/wp-content/plugins/code-sample-generation/sample_templates/XPSDK401.zip c1104e83d9b54b03d0084c1db52ee6491e5290994503e8dd2d4a0af637e2bdd7 c5445598297a5ffa6efc9760c3f773e6
+download "GLEW" glew glew-2.2.0.zip 329458 https://github.com/nigels-com/glew/archive/refs/tags/glew-2.2.0.zip 8aaa65f4a8c0fe439b28deb2925862fcdc0549943f08af010eead2a37baa6752 f150f61074d049ff0423b09b18cd1ef6
+git_mirror "GLEW glfixes" github.nigels-com.glfixes.bundle https://github.com/nigels-com/glfixes.git glew
+git_mirror "Khronos Group OpenGL Registry" github.KhronosGroup.OpenGL-Registry.main.bundle https://github.com/KhronosGroup/OpenGL-Registry.git main
+git_mirror "Khronos Group EGL Registry" github.KhronosGroup.EGL-Registry.main.bundle https://github.com/KhronosGroup/EGL-Registry.git main
+git_mirror "XSB Public (skiselkov Fork)" github.skiselkov.xsb_public.master.bundle https://github.com/skiselkov/xsb_public.git master
+git_unbundle "XSB Public (skiselkov Fork)" xsb_public_sk github.skiselkov.xsb_public.master.bundle 845522196c4fb8f9c3e3ca427bd9b4a1a7ab0b7b
+download "Dear ImGui" imgui imgui-1.89.5.zip 1729132 https://github.com/ocornut/imgui/archive/refs/tags/v1.89.5.zip 36a4ef22f7bec177a82bdbeac3342d4d10ff74903b571208d415aeeb5e6e1fad 9bab2695ebb78a50353f90ad2771ba61
+download "cimgui" cimgui cimgui-1.89.5.zip 427548 https://github.com/cimgui/cimgui/archive/refs/tags/1.89.5.zip 4a3e3da10c02796f3efda96f5386e6620e0c2eb9b7d2240530a435e1600afe0f 49c80f5b1cea5ba94a8460cdbcc0a0c1

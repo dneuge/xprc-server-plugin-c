@@ -1,0 +1,54 @@
+removes references to acfutils as it is not available in this project
+
+diff --git a/ImgFontAtlas.h b/ImgFontAtlas.h
+index bdcd96e..8beb9d3 100644
+--- a/xsb_public_sk/ImgFontAtlas.h
++++ b/xsb_public_sk/ImgFontAtlas.h
+@@ -35,7 +35,7 @@
+ #ifndef IMGFONTATLAS_H
+ #define IMGFONTATLAS_H
+ 
+-#include <acfutils/glew.h>
++#include <GL/glew.h>
+ #include <imgui.h>
+ 
+ /** Construct an empty font atlas we can use later
+diff --git a/ImgWindow.cpp b/ImgWindow.cpp
+index 7248606..296366e 100644
+--- a/xsb_public_sk/ImgWindow.cpp
++++ b/xsb_public_sk/ImgWindow.cpp
+@@ -40,9 +40,6 @@
+ #include <GL/glew.h>
+ #include "ImgWindow.h"
+ 
+-#include <acfutils/stat.h>
+-#include <acfutils/widget.h>
+-
+ static XPLMDataRef		gVrEnabledRef			= nullptr;
+ static XPLMDataRef		gModelviewMatrixRef		= nullptr;
+ static XPLMDataRef		gViewportRef			= nullptr;
+@@ -639,12 +636,6 @@ ImgWindow::BringToFront()
+ 	XPLMBringWindowToFront(mWindowID);
+ }
+ 
+-void
+-ImgWindow::Center()
+-{
+-	classic_win_center(mWindowID);
+-}
+-
+ void
+ ImgWindow::SetResizingLimits(int minw, int minh, int maxw, int maxh)
+ {
+diff --git a/ImgWindow.h b/ImgWindow.h
+index 4121c22..2e4bada 100644
+--- a/xsb_public_sk/ImgWindow.h
++++ b/xsb_public_sk/ImgWindow.h
+@@ -253,7 +253,6 @@ private:
+ 
+ public:
+ 	void BringToFront(void);
+-	void Center(void);
+ 	void SetResizingLimits(int minw, int minh, int maxw, int maxh);
+ 	bool IsPoppedOut(void);
+ 	void SetPositioningMode(XPLMWindowPositioningMode mode, int monitor);

@@ -1,0 +1,25 @@
+To be able to clone from bundles we need to explicitely define the
+branch to be checked out as the HEAD ref either cannot be bundled or
+is disregarded by a default clone command.
+
+diff -ur a/glew/auto/Makefile b/glew/auto/Makefile
+--- a/glew/auto/Makefile	2020-03-15 12:59:54.000000000 +0100
++++ b/glew/auto/Makefile	2023-01-06 14:16:29.759748307 +0100
+@@ -92,7 +92,7 @@
+ 	@echo "--------------------------------------------------------------------"
+ 	@echo "Downloading OpenGL-Registry"
+ 	@echo "--------------------------------------------------------------------"
+-	git clone $(REPO_OPENGL) OpenGL-Registry
++	git clone --branch main $(REPO_OPENGL) OpenGL-Registry
+ 	git clone --branch glew $(REPO_GLFIXES) glfixes
+ 	touch $@
+ 
+@@ -100,7 +100,7 @@
+ 	@echo "--------------------------------------------------------------------"
+ 	@echo "Downloading EGL-Registry"
+ 	@echo "--------------------------------------------------------------------"
+-	git clone $(REPO_EGL) EGL-Registry
++	git clone --branch main $(REPO_EGL) EGL-Registry
+ 	touch $@
+ 
+ $(EXT)/.dummy: OpenGL-Registry/.dummy EGL-Registry/.dummy
