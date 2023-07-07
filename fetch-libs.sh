@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # FETCHLIBS_DOWNLOAD_ONLY=1 can be set to only download missing dependencies
+# FETCHLIBS_UPDATE_MIRROR=0 can be set to skip updates of existing Git mirror bundles
 
 set -Eeuo pipefail
 
@@ -115,6 +116,11 @@ function git_mirror {
     bundle_file="${script_dir}/lib/_downloads/${filename}"
     mirror_workdir="${script_dir}/lib/_downloads/.git_mirror_work"
     
+    if [[ -e "${bundle_file}" ]] && [[ "${FETCHLIBS_UPDATE_MIRROR:-1}" -eq 0 ]]; then
+	echo "- bundle already exists and updates have been disabled, skipping..."
+        return
+    fi
+
     if [[ -d "${mirror_workdir}" ]]; then
         rm -Rf "${mirror_workdir}" || die "failed to delete git mirror working directory ${mirror_workdir}"
     fi
