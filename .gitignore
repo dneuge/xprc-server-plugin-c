@@ -1,9 +1,12 @@
 __pycache__
+cmake-build-*
 
 *~
 *.kate-swp
 \#*\#
 .\#*
+
+*.bak
 
 *.nocommit
 
