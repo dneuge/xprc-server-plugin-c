@@ -138,6 +138,7 @@ function git_mirror {
     git bundle create "${bundle_file}" --branches --tags || die "archival to ${bundle_file} failed"
     
     rm -Rf "${mirror_workdir}" || die "failed to delete git mirror working directory ${mirror_workdir}"
+    cd "${script_dir}/lib"
 }
 
 download "X-Plane SDK" XPSDK XPSDK401.zip 500613 https://developer.x-plane.com/wp-content/plugins/code-sample-generation/sample_templates/XPSDK401.zip c1104e83d9b54b03d0084c1db52ee6491e5290994503e8dd2d4a0af637e2bdd7 c5445598297a5ffa6efc9760c3f773e6
