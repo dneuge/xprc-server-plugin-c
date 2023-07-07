@@ -147,4 +147,53 @@ function git_mirror {
     cd "${script_dir}/lib"
 }
 
+function git_unbundle {
+    description="$1"
+    extract_dir="$2"
+    filename="$3"
+    ref="$4"
+
+    cd "${script_dir}/lib"
+
+    if [[ -e "${extract_dir}" ]]; then
+        echo "-- ${description} is already unpacked"
+        return
+    fi
+
+    echo "-- ${description} is missing"
+
+    if [[ "${FETCHLIBS_DOWNLOAD_ONLY:-0}" == "1" ]]; then
+        echo "- download only has been requested, skipping extraction..."
+        return
+    fi
+
+    if [[ ! -f "_downloads/${filename}" ]]; then
+        echo "Bundle is missing, Git needs to be mirrored first!"
+	exit 1
+    fi
+
+    echo "- unbundling ${description} into ${extract_dir}"
+    mkdir "${extract_dir}" || die "Directory ${extract_dir} already exists."
+
+    cd "${extract_dir}" || die "Failed to change into ${extract_dir}"
+    git init . || die "Failed to initialize Git repository."
+    git config --local advice.detachedHead false
+    git bundle unbundle "${script_dir}/lib/_downloads/${filename}" || die "git failed to unbundle"
+
+    echo "- switching to ${ref}"
+    git checkout "${ref}" || die "git failed to checkout"
+
+    cd "${script_dir}/lib"
+
+    echo "- applying patches"
+    if ! ls ${extract_dir}-*.patch >/dev/null 2>&1; then
+        echo "no patches found"
+    else
+        for patch_file in ${extract_dir}-*.patch; do
+            echo "applying ${patch_file}"
+            patch -p1 <"${patch_file}" || die "patch failed"
+        done
+    fi
+}
+
 download "X-Plane SDK" XPSDK XPSDK401.zip 500613 https://developer.x-plane.com/wp-content/plugins/code-sample-generation/sample_templates/XPSDK401.zip c1104e83d9b54b03d0084c1db52ee6491e5290994503e8dd2d4a0af637e2bdd7 c5445598297a5ffa6efc9760c3f773e6
