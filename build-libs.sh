@@ -21,6 +21,25 @@ mkdir -p lib/_build
 num_cpus=$(cat /proc/cpuinfo | grep -E 'processor\s*:' | nl | tail -n1 | sed -e 's/\s*\([0-9]\+\)\s.*/\1/')
 num_jobs=$(( $num_cpus + 1 ))
 
+echo "===== Building Mesa GLU ====="
+cd "${script_dir}/lib/mesa-glu"
+[[ -d build ]] && (rm -Rf build || die "Mesa GLU clean failed")
+mkdir build || die "Mesa GLU mkdir failed"
+cd build
+meson setup -Dgl_provider=glvnd .. || die "Mesa GLU Meson setup failed"
+meson compile || die "Mesa GLU Meson compile failed"
+mkdir -p "${script_dir}/lib/_build/GL" || die "Failed to create GL target directory"
+old_ifs="${IFS}"
+IFS=$'\n'
+for file in $(find src/ -name \*.${BUILD_TARGET_DYNLIB_EXT}\* -and -not -name \*.p); do
+    cp -a "${file}" "${script_dir}/lib/_build/" || die "Mesa GLU copy failed (1: ${file})"
+done
+IFS="${old_ifs}"
+cp -a src/libGLU.a "${script_dir}/lib/_build/" || die "Mesa GLU copy failed (2)"
+cp ../include/GL/* "${script_dir}/lib/_build/GL/" || die "Mesa GLU copy failed (3)"
+echo
+
+
 echo "===== Building GLEW ====="
 echo "==== Cleaning main build ===="
 cd "${script_dir}/lib/glew"
@@ -48,6 +67,7 @@ cp "${script_dir}/lib/glew/include/GL/"* "${script_dir}/lib/_build/GL/" || die "
 cp "${script_dir}/lib/glew/lib/"* "${script_dir}/lib/_build/" || die "Failed to copy GLEW lib"
 echo
 
+
 echo "===== Building (c)imgui ====="
 cd "${script_dir}/lib/cimgui"
 
@@ -68,6 +88,7 @@ make -j${num_jobs} || die "cimgui make failed"
 cp -a cimgui.a "${script_dir}/lib/_build/" || die "cimgui copy (1) failed"
 cp -a ../cimgui.h "${script_dir}/lib/_build/" || die "cimgui copy (2) failed"
 echo
+
 
 echo "==== Installing ===="
 cp -a "${script_dir}/lib/imgui/imgui.h" "${script_dir}/lib/_build/" || die "imgui header copy (1) failed"
