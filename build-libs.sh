@@ -53,7 +53,7 @@ echo
 
 echo "==== Preparing \"auto\" ===="
 cd "${script_dir}/lib/glew/auto"
-REPO_OPENGL="${download_dir}/github.KhronosGroup.OpenGL-Registry.main.bundle" REPO_EGL="${download_dir}/github.KhronosGroup.EGL-Registry.main.bundle" REPO_GLFIXES="${download_dir}/github.nigels-com.glfixes.bundle" make -j${num_jobs} || die "Failed to prepare GLEW's \"auto\" directory"
+REPO_OPENGL="${download_dir}/github.KhronosGroup.OpenGL-Registry.main.bundle" REPO_EGL="${download_dir}/github.KhronosGroup.EGL-Registry.main.bundle" REPO_GLFIXES="${download_dir}/github.nigels-com.glfixes.bundle" make || die "Failed to prepare GLEW's \"auto\" directory"
 cd "${script_dir}/lib/glew"
 echo
 
