@@ -35,7 +35,10 @@ SET(XPRC_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/xpqueue.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/session.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/task_schedule.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/gui.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/gui_utils.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/img_window.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/settings_window.c
     ${COMMON_SOURCES}
 )
 

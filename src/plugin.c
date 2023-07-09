@@ -5,9 +5,6 @@
 #include <string.h>
 #include <threads.h>
 
-#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
-#include <cimgui.h>
-
 #include <XPLMDisplay.h>
 #include <XPLMPlugin.h>
 #include <XPLMProcessing.h>
@@ -19,7 +16,7 @@
 #include "server.h"
 #include "task_schedule.h"
 #include "xpcommands.h"
-#include "gui/img_window.h"
+#include "gui/gui.h"
 
 #define CALL_ON_NEXT_FRAME -1.0f
 #define SCHEDULE_CLEANING_INTERVAL 500
@@ -47,6 +44,8 @@ cnd_t post_processing_wait;
 thrd_t post_processing_thread;
 bool has_post_processing_thread = false;
 bool shutdown_post_processing = false;
+
+gui_t *gui = NULL;
 
 bool fatal_error = false;
 bool plugin_initialized = false;
@@ -184,53 +183,6 @@ static void register_flight_loop(XPLMFlightLoopPhaseType phase, XPLMFlightLoop_f
     XPLMScheduleFlightLoop(*flight_loop_id, CALL_ON_NEXT_FRAME, 1);
 }
 
-static int imgui_test = 0;
-static struct ImVec2 ZERO_SIZE = {
-    .x = 0,
-    .y = 0
-};
-static void imgui_update(img_window window, void *ref) {
-    igText("XPRC Test");
-    igText("Count: %d", imgui_test);
-    if (igButton("+", ZERO_SIZE)) {
-        imgui_test++;
-    }
-    if (igButton("-", ZERO_SIZE)) {
-        imgui_test--;
-    }
-}
-
-static struct {
-    int left;
-    int top;
-    int right;
-    int bottom;
-} global_screen_bounds = {0,};
-
-static img_window create_window() {
-    XPLMGetScreenBoundsGlobal(&global_screen_bounds.left, &global_screen_bounds.top, &global_screen_bounds.right, &global_screen_bounds.bottom);
-
-    int offset_x = 50; // from left
-    int offset_y = 100; // from top
-    int width = 400;
-    int height = 300;
-
-    int left = global_screen_bounds.left + offset_x;
-    int top = global_screen_bounds.top - offset_y;
-    int right = left + width;
-    int bottom = top - height;
-
-    img_window window =  img_window_create(left, top, right, bottom,
-                             xplm_WindowDecorationRoundRectangle, xplm_WindowLayerFloatingWindows,
-                             imgui_update, NULL, NULL);
-
-    img_window_set_title(window, "XPRC Settings");
-
-    return window;
-}
-
-static img_window settings_window;
-
 PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
     strcpy(name, "XPRC");
     strcpy(sig, "de.energiequant.xprc");
@@ -289,14 +241,18 @@ PLUGIN_API int XPluginEnable() {
         return 1;
     }
 
-    img_window_init_globals();
-    settings_window = create_window();
-    if (!settings_window) {
-        printf("[XPRC] failed to create settings window - simulator restart required\n");
+    if (gui) {
+        printf("[XPRC] GUI is still registered; did you install the plugin twice? simulator restart required\n");
         fatal_error = true;
         return 1;
     }
-    img_window_set_visible(settings_window, true);
+
+    gui = gui_create();
+    if (!gui) {
+        printf("[XPRC] failed to initialize GUI - simulator restart required\n");
+        fatal_error = true;
+        return 1;
+    }
 
     if (task_schedule) {
         printf("[XPRC] task schedule already exists; did you install the plugin twice? simulator restart required\n");
@@ -389,9 +345,8 @@ PLUGIN_API void XPluginDisable() {
         return;
     }
 
-    img_window_destroy(settings_window);
-    settings_window = NULL;
-    img_window_destroy_globals();
+    gui_destroy(gui);
+    gui = NULL;
 
     if (server_started) {
         error_t err = stop_server(server);
@@ -525,13 +480,6 @@ PLUGIN_API void XPluginStop() {
     if (fatal_error) {
         printf("[XPRC] a fatal error has occurred, XPRC is stuck - simulator restart required\n");
         return;
-    }
-
-    if (settings_window) {
-        img_window_destroy(settings_window);
-        settings_window = NULL;
-
-        img_window_destroy_globals();
     }
 
     cnd_destroy(&post_processing_wait);
