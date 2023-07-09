@@ -6,7 +6,12 @@
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #include <cimgui.h>
 
-#define IMGUI_ZERO_SIZE (struct ImVec2){.x = 0, .y = 0}
+#define IM_VEC2(X,Y) (struct ImVec2){.x = X, .y = Y}
+#define IM_VEC4(X,Y,Z,W) (struct ImVec4){.x = X, .y = Y, .z = Z, .w = W}
+
+#define IMGUI_ZERO_SIZE IM_VEC2(0,0)
+
+#define IM_RED IM_VEC4(1.0f, 0.0f, 0.0f, 1.0f)
 
 /**
  * Creates an img_window centered on screen.
