@@ -182,6 +182,23 @@ static void imgui_update(img_window window, void *ref) {
     handle_view_state(settings_window);
 }
 
+
+static bool imgui_show(img_window window, void *ref) {
+    // called by ImGui only if the window is not visible already
+
+    settings_window_t *settings_window = ref;
+    if (!settings_window) {
+        return false;
+    }
+
+    // window was not on screen before; take that chance to update/reset
+    // to actual current settings (discarding any previous changes)
+    printf("[XPRC] settings window will be shown, reading settings\n");
+    copy_from_settings(settings_window);
+
+    return true;
+}
+
 settings_window_t* create_settings_window() {
     settings_window_t *settings_window = zalloc(sizeof(settings_window_t));
     if (!settings_window) {
@@ -194,9 +211,11 @@ settings_window_t* create_settings_window() {
         return NULL;
     }
 
+    // copy settings initially before we start defining the UI, just in case (will be updated again before opening the
+    // window)
     copy_from_settings(settings_window);
 
-    settings_window->window = create_centered_window(655, 485,imgui_update, NULL, settings_window);
+    settings_window->window = create_centered_window(655, 485,imgui_update, imgui_show, settings_window);
     if (!settings_window->window) {
         printf("[XPRC] failed to create settings window\n");
         free(settings_window);
@@ -204,8 +223,6 @@ settings_window_t* create_settings_window() {
     }
 
     img_window_set_title(settings_window->window, "XPRC Settings");
-
-    img_window_set_visible(settings_window->window, true); // DEBUG
 
     return settings_window;
 }
@@ -217,4 +234,12 @@ void destroy_settings_window(settings_window_t* settings_window) {
 
     img_window_destroy(settings_window->window);
     free(settings_window);
+}
+
+void open_settings_window(settings_window_t* settings_window) {
+    if (!settings_window || !settings_window->window) {
+        return;
+    }
+
+    img_window_set_visible(settings_window->window, true);
 }

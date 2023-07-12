@@ -35,4 +35,6 @@ typedef struct {
 settings_window_t* create_settings_window();
 void destroy_settings_window(settings_window_t* settings_window);
 
+void open_settings_window(settings_window_t* settings_window);
+
 #endif
