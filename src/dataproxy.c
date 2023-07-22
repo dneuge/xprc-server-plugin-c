@@ -539,6 +539,7 @@ error_t dataproxy_get_types(dataproxy_t *proxy, XPLMDataTypeID *dest) {
 
     if (proxy->state != DATAPROXY_STATE_REGISTERED) {
         out_err = DATAPROXY_ERROR_INVALID_STATE;
+        *dest = xplmType_Unknown;
     } else {
         *dest = proxy->types;
     }
@@ -686,8 +687,10 @@ error_t dataproxy_array_length(dataproxy_t *proxy, XPLMDataTypeID type, int *len
 
     if (proxy->state != DATAPROXY_STATE_REGISTERED) {
         out_err = DATAPROXY_ERROR_INVALID_STATE;
+        *length = 0;
     } else if (!proxy->operations.array_length || (proxy->types & type) == 0) {
         out_err = DATAPROXY_ERROR_UNSUPPORTED_TYPE;
+        *length = 0;
     } else {
         int out = 0;
         err = proxy->operations.array_length(proxy->operations_ref, type, &out);
