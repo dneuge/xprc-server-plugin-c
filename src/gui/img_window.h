@@ -1,13 +1,17 @@
 #ifndef IMGWINDOW_WRAPPER_H
 #define IMGWINDOW_WRAPPER_H
 
-/* Wrapper to use ImgWindow from C instead of C++.
- * Refer to original sources from ImgWindow in xsb_public (and/or forked sources as used by this project).
+/**
+ * @file img_window.h
+ * Wrapper to use ImgWindow from C instead of C++.
+ *
+ * Refer to original sources from [ImgWindow](https://github.com/xsquawkbox/xsb_public/blob/master/ImgWindow.h) in
+ * [xsb_public](https://github.com/xsquawkbox/xsb_public) (and/or forked sources as used by this project).
  *
  * As the original interface and code documentation are mostly taken over, the original copyright applies to
  * the wrapper's interface definition:
  *
- *
+ * ```text
  * Copyright (C) 2018,2020 Christopher Collins
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,6 +39,7 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ * ```
  */
 
 #include <XPLMDataAccess.h>
@@ -49,8 +54,15 @@
 #ifdef __cplusplus
 extern "C" {
     class ImgWindowWrapper;
+
+    /**
+     * A pointer to a C++ ImgWindowWrapper object (usable from both C and C++).
+     */
     typedef ImgWindowWrapper* img_window;
 #else
+    /**
+     * A pointer to a C++ ImgWindowWrapper object (usable from both C and C++).
+     */
     typedef void* img_window;
 #endif
 
@@ -60,7 +72,7 @@ extern "C" {
      * @param window reference to wrapped ImgWindow
      * @param ref reference pointer as provided during construction
      * @note You must NOT destroy the window inside this callback -
-     *     use img_window_safe_delete for that.
+     *     use #img_window_safe_destroy() for that.
      */
     typedef void (*img_window_build_interface_f)(img_window window, void *ref);
 
@@ -84,6 +96,9 @@ extern "C" {
 #ifdef __cplusplus
 #include <ImgWindow.h>
 
+/**
+ * The C++ side implementation of an ImgWindow, to be used through C wrapper functions (referred to via #img_window).
+ */
 class ImgWindowWrapper : public ImgWindow {
 public:
     ImgWindowWrapper(int left, int top, int right, int bottom, XPLMWindowDecoration decoration, XPLMWindowLayer layer, img_window_build_interface_f build_interface, img_window_on_show_f on_show, void *ref);
@@ -139,7 +154,7 @@ extern "C" {
     img_window img_window_create(int left, int top, int right, int bottom, XPLMWindowDecoration decoration, XPLMWindowLayer layer, img_window_build_interface_f build_interface, img_window_on_show_f on_show, void *ref);
 
     /**
-     * Shows or hides the given window. The window's on_show callback can override the request.
+     * Shows or hides the given window. The window's #img_window_on_show_f callback can override the request.
      * It is also at this time that the window will be relocated onto the VR
      * display if the VR headset is in use.
      *
@@ -159,13 +174,13 @@ extern "C" {
     void img_window_set_title(img_window window, char *title);
 
     /**
-     * Can be used from within img_window_build_interface_f to destroy once it has finished rendering this frame.
+     * Can be used from within #img_window_build_interface_f to destroy once it has finished rendering this frame.
      * @param window window instance to destroy
      */
     void img_window_safe_destroy(img_window window);
 
     /**
-     * Immediately destroys the window. Must not be called from inside callbacks; use img_window_safe_destroy instead.
+     * Immediately destroys the window. Must not be called from inside callbacks; use #img_window_safe_destroy() instead.
      * @param window window instance to destroy
      */
     void img_window_destroy(img_window window);
