@@ -1,5 +1,6 @@
 __pycache__
 cmake-build-*
+doxygen/out/
 
 *~
 *.kate-swp
