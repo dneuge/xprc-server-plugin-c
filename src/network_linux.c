@@ -522,7 +522,6 @@ error_t create_network_server(network_server_t **server, network_server_config_t
     if (res) {
         printf("failed to bind on requested address: %d, errno %d\n", res, errno); // TODO: log
         close((*server)->ssd);
-        free(address);
         free(*server);
         *server = NULL;
         return NETWORK_ERROR_BIND_FAILED;
@@ -531,7 +530,6 @@ error_t create_network_server(network_server_t **server, network_server_config_t
     if (listen((*server)->ssd, CONNECTION_BACKLOG)) {
         printf("failed to listen on server socket\n"); // TODO: log
         close((*server)->ssd);
-        free(address);
         free(*server);
         *server = NULL;
         return NETWORK_ERROR_LISTEN_FAILED;
@@ -540,7 +538,6 @@ error_t create_network_server(network_server_t **server, network_server_config_t
     if (thrd_create(&(*server)->server_thread, run_server_thread, *server) != thrd_success) {
         printf("failed to spawn server thread\n"); // TODO: log
         close((*server)->ssd);
-        free(address);
         free(*server);
         *server = NULL;
         return NETWORK_ERROR_THREAD_FAILED;
@@ -555,7 +552,6 @@ error_t create_network_server(network_server_t **server, network_server_config_t
             printf("failed to rejoin server thread during failed construction cleanup\n"); // TODO: log
             return NETWORK_ERROR_THREAD_FAILED;
         }
-        free(address);
         free(*server);
         *server = NULL;
         return NETWORK_ERROR_THREAD_FAILED;
