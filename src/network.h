@@ -57,7 +57,7 @@ typedef struct {
 } network_server_config_t;
 
 error_t create_network_server(network_server_t **server, network_server_config_t *config, network_handler_t handler);
-void destroy_network_server(network_server_t *server);
+bool destroy_network_server(network_server_t *server);
 
 error_t send_to_network(network_connection_t *connection, char *content, int length);
 void close_network_connection(network_connection_t *connection);

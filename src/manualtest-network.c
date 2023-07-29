@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
     printf("program terminates\n");
     if (server) {
         printf("destroying server\n");
-        destroy_network_server(server);
+        destroy_network_server(server); // TODO: use return value
     }
     printf("complete\n");
 

@@ -309,7 +309,7 @@ error_t start_server(server_t **server, server_config_t *config) {
 }
 
 error_t stop_server(server_t *server) {
-    destroy_network_server(server->network);
+    destroy_network_server(server->network); // TODO: use return value
     destroy_list(server->sessions, NULL);
     mtx_destroy(&server->mutex);
     free(server->config.password);

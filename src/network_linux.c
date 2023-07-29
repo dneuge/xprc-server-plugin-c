@@ -564,7 +564,7 @@ error_t create_network_server(network_server_t **server, network_server_config_t
     return ERROR_NONE;
 }
 
-void destroy_network_server(network_server_t *server) {
+bool destroy_network_server(network_server_t *server) {
     int res;
     
     server->shutdown = true;
@@ -572,7 +572,7 @@ void destroy_network_server(network_server_t *server) {
     close(server->ssd); // this should unblock the thread
     if (thrd_join(server->server_thread, &res) != thrd_success) {
         printf("failed to join server thread\n"); // TODO: log with high severity
-        return; // we cannot continue destruction in this case
+        return false; // we cannot continue destruction in this case
     }
 
     // no new connections can be created at this point
@@ -582,15 +582,17 @@ void destroy_network_server(network_server_t *server) {
 
     if (thrd_join(server->maintenance_thread, &res) != thrd_success) {
         printf("failed to join server thread\n"); // TODO: log with high severity
-        return; // we cannot continue destruction in this case
+        return false; // we cannot continue destruction in this case
     }
     
     if (res != ERROR_NONE) {
         printf("maintenance thread was unable to close all connections\n"); // TODO: log with high severity
-        return; // we cannot continue destruction in this case
+        return false; // we cannot continue destruction in this case
     }
     
     free(server);
+
+    return true;
 }
 
 error_t send_to_network(network_connection_t *connection, char *content, int length) {
