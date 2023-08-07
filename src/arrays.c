@@ -109,14 +109,15 @@ bool dynamic_array_copy_from_other(dynamic_array_t *dest_arr, int dest_index, dy
         return false;
     }
 
+    int available_src_items = src_arr->length - src_index;
     if (count == DYNAMIC_ARRAY_COPY_ALL) {
-        count = src_arr->length - src_index;
+        count = available_src_items;
     }
 
-    if (count < 0) {
-        return false;
-    } else if (count == 0) {
+    if (count == 0) {
         return true;
+    } else if ((count < 0) || (available_src_items < count)) {
+        return false;
     }
 
     int available_dest_length = dest_arr->length - dest_index;
