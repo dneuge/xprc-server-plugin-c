@@ -4,6 +4,16 @@
 
 #include "hashmap.h"
 
+#if HASH_BYTES <= 1
+#define HASH_TYPE uint8_t
+#elif HASH_BYTES <= 2
+#define HASH_TYPE uint16_t
+#elif HASH_BYTES <= 4
+#define HASH_TYPE uint32_t
+#else
+#error unsupported hash type
+#endif
+
 static inline uint8_t ror8(uint8_t value, int num);
 #ifdef __GNUC__
 #include <x86intrin.h>

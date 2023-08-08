@@ -7,16 +7,6 @@
 #define HASH_BYTES 2
 #define HASH_COMBINATIONS (1 << (HASH_BYTES * 8))
 
-#if HASH_BYTES <= 1
-#define HASH_TYPE uint8_t
-#elif HASH_BYTES <= 2
-#define HASH_TYPE uint16_t
-#elif HASH_BYTES <= 4
-#define HASH_TYPE uint32_t
-#else
-#error unsupported hash type
-#endif
-
 typedef void hashmap_value_destructor_f (char *key, void *value);
 
 typedef struct _hashmap_item_t hashmap_item_t;
