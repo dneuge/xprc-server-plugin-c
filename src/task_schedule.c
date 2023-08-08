@@ -22,7 +22,7 @@ error_t create_task_schedule(task_schedule_t **task_schedule) {
         (*task_schedule)->queues[i] = create_preallocated_list();
         if (!(*task_schedule)->queues[i]) {
             for (int j=0; j<i; j++) {
-                destroy_preallocated_list((*task_schedule)->queues[j], NULL, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS);
+                destroy_preallocated_list((*task_schedule)->queues[j], free, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS);
                 mtx_destroy(&(*task_schedule)->mutex);
                 free(*task_schedule);
                 *task_schedule = NULL;
@@ -90,7 +90,7 @@ error_t destroy_task_schedule(task_schedule_t *task_schedule) {
             // TODO: log
             err = TASK_SCHEDULE_ERROR_STILL_SCHEDULED;
         } else {
-            destroy_preallocated_list(queue, NULL, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS);
+            destroy_preallocated_list(queue, free, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS);
             task_schedule->queues[phase] = NULL;
         }
     }
@@ -240,7 +240,7 @@ error_t clean_schedule(task_schedule_t *task_schedule) {
     }
 
     for (int i=0; i<TASK_SCHEDULE_NUM_TASK_QUEUES; i++) {
-        if (!prealloc_list_compact(task_schedule->queues[i], NULL, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS)) {
+        if (!prealloc_list_compact(task_schedule->queues[i], free, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS)) {
             success = false;
         }
     }
