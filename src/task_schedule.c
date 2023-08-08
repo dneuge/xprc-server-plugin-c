@@ -23,11 +23,12 @@ error_t create_task_schedule(task_schedule_t **task_schedule) {
         if (!(*task_schedule)->queues[i]) {
             for (int j=0; j<i; j++) {
                 destroy_preallocated_list((*task_schedule)->queues[j], free, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS);
-                mtx_destroy(&(*task_schedule)->mutex);
-                free(*task_schedule);
-                *task_schedule = NULL;
-                return ERROR_MEMORY_ALLOCATION;
             }
+
+            mtx_destroy(&(*task_schedule)->mutex);
+            free(*task_schedule);
+            *task_schedule = NULL;
+            return ERROR_MEMORY_ALLOCATION;
         }
     }
     
