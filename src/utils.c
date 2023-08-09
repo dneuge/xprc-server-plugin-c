@@ -5,8 +5,6 @@
 
 #include "utils.h"
 
-#define ESCAPE_CHAR '\\'
-
 char* dynamic_sprintf(char *format, ...) {
     va_list args;
     va_start(args, format);

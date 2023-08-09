@@ -6,6 +6,9 @@
 #include <stdint.h>
 #include <time.h>
 
+/// escape character that can be added in front of characters that would otherwise conflict with syntax
+#define ESCAPE_CHAR '\\'
+
 char* copy_string(char *s);
 char* copy_partial_string(char *s, int length);
 char* copy_unescaped_string(char *s); // removes escape characters from the copy
