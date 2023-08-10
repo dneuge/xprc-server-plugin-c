@@ -205,14 +205,17 @@ typedef error_t (*dataproxy_array_length_f)(void *ref, XPLMDataTypeID type, int 
  */
 typedef error_t (*dataproxy_array_update_f)(void *ref, XPLMDataTypeID type, void *values, int offset, int count, session_t *source_session);
 
-/**
- * All callbacks implementing actual data access behind the data proxy.
- */
+/// All callbacks implementing actual data access behind the data proxy.
 typedef struct {
+    /// called to get values of simple (non-array) datarefs
     dataproxy_simple_get_f simple_get;
+    /// called to set values of simple (non-array) datarefs
     dataproxy_simple_set_f simple_set;
+    /// called to get values of array datarefs
     dataproxy_array_get_f array_get;
+    /// called to get the length of array datarefs
     dataproxy_array_length_f array_length;
+    /// called to manipulate values of array datarefs
     dataproxy_array_update_f array_update;
 } dataproxy_operations_t;
 
@@ -220,9 +223,12 @@ typedef struct {
  * Handles data proxy registration and thread-safety.
  */
 typedef struct _dataproxy_registry_t {
+    /// only cleanup is allowed if destruction is pending (true)
     bool destruction_pending;
+    /// synchronizes access across the whole registry, including all proxies
     mtx_t mutex;
 
+    /// registered dataref proxies indexed by their name
     hashmap_t *by_dataref_name;
 } dataproxy_registry_t;
 
@@ -239,16 +245,25 @@ typedef struct _dataproxy_registry_t {
  * X-Plane).
  */
 typedef struct {
+    /// the registry controlling this proxy
     dataproxy_registry_t *registry;
+    /// current proxy state; see DATAPROXY_STATE_*
     dataproxy_state_t state;
-    
+
+    /// name of the dataref as to be registered in X-Plane
     char *dataref_name;
+    /// X-Plane reference as returned and used by the SDK
     XPLMDataRef xp_dataref;
+    /// hosted data types as defined by the X-Plane SDK; multiple types can be combined via OR
     XPLMDataTypeID types;
+    /// write access control before routing; see DATAPROXY_PERMISSION_*
     dataproxy_permission_t write_permission;
-    
+
+    /// the session that created and thus owns this proxy
     session_t *owner_session;
+    /// callbacks handling actual data processing/storage on backend
     dataproxy_operations_t operations;
+    /// passed to backend operation callbacks for context as provided during creation
     void *operations_ref;
 } dataproxy_t;
 

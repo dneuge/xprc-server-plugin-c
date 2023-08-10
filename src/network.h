@@ -31,7 +31,9 @@
 #define NETWORK_SEND_COMPLETE_STRING -34768
 
 // structures defined by implementation
+/// a network server; exact structure is to be defined by OS-specific network implementation
 typedef struct _network_server_t network_server_t;
+/// a network connection; exact structure is to be defined by OS-specific network implementation
 typedef struct _network_connection_t network_connection_t;
 
 /**
@@ -73,10 +75,13 @@ typedef void (*on_connection_closing_f)(void *handler_reference);
  * Callback configuration for network event handling.
  */
 typedef struct {
+    /// called when a new client connects
     new_connection_f new_connection;
     /// will be provided on every call to #new_connection
     void *new_connection_constructor_reference;
+    /// called when a new line has been received
     on_line_received_f on_line_received;
+    /// called when a connection is being closed
     on_connection_closing_f on_connection_closing;
 } network_handler_t;
 

@@ -125,7 +125,7 @@ channel_t* pop_channel(channels_table_t *table, channel_id_t id) {
     }
     
     uint8_t subtable_address = channel_subtable_address(id);
-    channel_t *channel = subtable->channels[subtable_address];
+    channel_t *channel = subtable->channels[subtable_address]; // TODO: quit early if channel is NULL, subtable cleanup will not be needed
     subtable->channels[subtable_address] = NULL;
 
     // remove subtable if all channels are gone

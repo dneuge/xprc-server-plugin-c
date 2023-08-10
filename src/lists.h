@@ -91,6 +91,7 @@
  */
 #define PREALLOC_LIST_OVERRIDE_DEFERRED_DESTRUCTORS true
 
+/// the status of an item in a pre-allocated list; see PREALLOC_ITEM_STATUS_*
 typedef uint8_t prealloc_item_status_t;
 
 /**

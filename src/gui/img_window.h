@@ -2,8 +2,7 @@
 #define IMGWINDOW_WRAPPER_H
 
 /**
- * @file img_window.h
- * Wrapper to use ImgWindow from C instead of C++.
+ * @file img_window.h Wrapper to use ImgWindow from C instead of C++.
  *
  * Refer to original sources from [ImgWindow](https://github.com/xsquawkbox/xsb_public/blob/master/ImgWindow.h) in
  * [xsb_public](https://github.com/xsquawkbox/xsb_public) (and/or forked sources as used by this project).

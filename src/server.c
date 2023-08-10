@@ -365,6 +365,7 @@ static void destroy_pending_channels(channels_table_t *channels) {
                 }
             }
 
+            // FIXME: potential memleak - pop_channel returns the channel reference, we don't free it
             if (!pop_channel(channels, channel->id)) {
                 printf("[XPRC] failed to remove channel after command destruction\n");
                 return;
