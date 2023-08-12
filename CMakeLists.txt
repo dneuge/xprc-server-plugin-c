@@ -13,6 +13,8 @@ SET(COMMON_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/arrays.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hashmap.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/lists.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/password_generator.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/random.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils.c
 )
 
@@ -98,4 +100,6 @@ IF(BUILD_TESTS)
     TARGET_LINK_LIBRARIES(test-hashmap PUBLIC m)
 
     ADD_EXECUTABLE(test-prealloc-list ${CMAKE_CURRENT_SOURCE_DIR}/src/test-prealloc-list.c ${COMMON_SOURCES})
+
+    ADD_EXECUTABLE(test-password-generator ${CMAKE_CURRENT_SOURCE_DIR}/src/test-password-generator.c ${COMMON_SOURCES})
 ENDIF()

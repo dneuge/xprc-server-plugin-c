@@ -1,0 +1,15 @@
+#ifndef XPRC_RANDOM_H
+#define XPRC_RANDOM_H
+
+/**
+ * Generates the specified number of random integers from a reasonably good source of entropy (not crypto-secure but
+ * attempting best effort to get somewhat better than default random numbers, do not use for anything that needs
+ * guaranteed secure randomness).
+ * @param count number of random numbers to generate
+ * @param min minimum value (inclusive)
+ * @param max maximum value (inclusive)
+ * @return an array of random integers; NULL on error
+ */
+int* get_random_ints(int count, int min, int max);
+
+#endif //XPRC_RANDOM_H
