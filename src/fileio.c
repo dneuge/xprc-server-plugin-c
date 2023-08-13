@@ -171,7 +171,7 @@ error_t read_file(char **data, size_t *length, char *path) {
 
     while (true) {
         // try to read as many characters as possible
-        num_read = fread(&buffer, 1, BUFFER_SIZE, fh);
+        num_read = fread(buffer, 1, BUFFER_SIZE, fh);
         if (num_read == 0) {
             break;
         }
