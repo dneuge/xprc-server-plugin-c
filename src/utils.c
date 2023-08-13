@@ -136,8 +136,10 @@ char* copy_partial_string(char *s, size_t length) {
     if (!copy) {
         return NULL;
     }
-    
-    memcpy(copy, s, length);
+
+    if (length > 0) {
+        memcpy(copy, s, length);
+    }
     copy[length] = 0;
     
     return copy;
