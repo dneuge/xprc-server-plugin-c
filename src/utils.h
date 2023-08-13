@@ -14,6 +14,14 @@
 #define ESCAPE_CHAR '\\'
 
 /**
+ * Allocates memory and copies the contents from given source.
+ * @param src source to copy from; must have sufficient size
+ * @param size number of bytes to copy; must not exceed source size
+ * @return pointer to copy; NULL on error
+ */
+void* copy_memory(void *src, size_t size);
+
+/**
  * Copies the given string up to null-termination.
  * @param s null-terminated string to copy; may be NULL
  * @return copy of the string up to null-termination; NULL if input was NULL or on error

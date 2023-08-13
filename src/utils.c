@@ -131,6 +131,21 @@ void* zalloc(size_t size) {
     return addr;
 }
 
+void* copy_memory(void *src, size_t size) {
+    if (size <= 0) {
+        return NULL;
+    }
+
+    void *out = malloc(size);
+    if (!out) {
+        return NULL;
+    }
+
+    memcpy(out, src, size);
+
+    return out;
+}
+
 char* copy_partial_string(char *s, size_t length) {
     char *copy = malloc(length + 1);
     if (!copy) {
