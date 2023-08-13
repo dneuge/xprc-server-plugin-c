@@ -93,6 +93,7 @@ SET_TARGET_PROPERTIES(xprc PROPERTIES SUFFIX ".xpl")
 
 # tests
 IF(BUILD_TESTS)
+    ADD_EXECUTABLE(manualtest-fileio ${CMAKE_CURRENT_SOURCE_DIR}/src/manualtest-fileio.c ${COMMON_SOURCES})
     ADD_EXECUTABLE(manualtest-network ${CMAKE_CURRENT_SOURCE_DIR}/src/manualtest-network.c ${COMMON_SOURCES})
     ADD_EXECUTABLE(manualtest-parser ${CMAKE_CURRENT_SOURCE_DIR}/src/manualtest-parser.c ${COMMON_SOURCES})
     ADD_EXECUTABLE(manualtest-password-generator ${CMAKE_CURRENT_SOURCE_DIR}/src/manualtest-password-generator.c ${COMMON_SOURCES})
