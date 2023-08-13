@@ -27,7 +27,7 @@ char* copy_string(char *s);
  * @param length exact number of characters to copy
  * @return null-terminated copy of the specified string segment
  */
-char* copy_partial_string(char *s, int length);
+char* copy_partial_string(char *s, size_t length);
 
 /**
  * Copies the given string up to null-termination, removing each leading #ESCAPE_CHAR of a 2-byte sequence *without*

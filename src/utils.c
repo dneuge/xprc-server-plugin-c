@@ -131,7 +131,7 @@ void* zalloc(size_t size) {
     return addr;
 }
 
-char* copy_partial_string(char *s, int length) {
+char* copy_partial_string(char *s, size_t length) {
     char *copy = malloc(length + 1);
     if (!copy) {
         return NULL;
