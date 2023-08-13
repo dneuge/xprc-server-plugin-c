@@ -93,14 +93,12 @@ SET_TARGET_PROPERTIES(xprc PROPERTIES SUFFIX ".xpl")
 
 # tests
 IF(BUILD_TESTS)
-    ADD_EXECUTABLE(manualtest-parser ${CMAKE_CURRENT_SOURCE_DIR}/src/manualtest-parser.c ${COMMON_SOURCES})
-
     ADD_EXECUTABLE(manualtest-network ${CMAKE_CURRENT_SOURCE_DIR}/src/manualtest-network.c ${COMMON_SOURCES})
+    ADD_EXECUTABLE(manualtest-parser ${CMAKE_CURRENT_SOURCE_DIR}/src/manualtest-parser.c ${COMMON_SOURCES})
+    ADD_EXECUTABLE(manualtest-password-generator ${CMAKE_CURRENT_SOURCE_DIR}/src/manualtest-password-generator.c ${COMMON_SOURCES})
 
     ADD_EXECUTABLE(test-hashmap ${CMAKE_CURRENT_SOURCE_DIR}/src/test-hashmap.c ${COMMON_SOURCES})
     TARGET_LINK_LIBRARIES(test-hashmap PUBLIC m)
 
     ADD_EXECUTABLE(test-prealloc-list ${CMAKE_CURRENT_SOURCE_DIR}/src/test-prealloc-list.c ${COMMON_SOURCES})
-
-    ADD_EXECUTABLE(test-password-generator ${CMAKE_CURRENT_SOURCE_DIR}/src/test-password-generator.c ${COMMON_SOURCES})
 ENDIF()

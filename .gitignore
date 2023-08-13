@@ -20,3 +20,4 @@ user.cfg
 manualtest*
 !src/manualtest-network.c
 !src/manualtest-parser.c
+!src/manualtest-password-generator.c
