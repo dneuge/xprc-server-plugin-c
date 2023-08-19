@@ -255,3 +255,28 @@ int count_chars(char *s, char needle, int length) {
 
     return count;
 }
+
+bool parse_int(int *dest, char *s) {
+    bool success = false;
+
+    if (!dest || !s) {
+        return false;
+    }
+
+    int parsed = atoi(s);
+
+    char *verification = dynamic_sprintf("%d", parsed);
+    if (!verification) {
+        return false;
+    }
+
+    if (!strcmp(s, verification)) {
+        // value matches; parsing successful
+        *dest = parsed;
+        success = true;
+    }
+
+    free(verification);
+
+    return success;
+}

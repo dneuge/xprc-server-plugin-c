@@ -136,4 +136,12 @@ int count_chars(char *s, char needle, int length);
  */
 void* zalloc(size_t size); // FIXME: rename to zmalloc to avoid confusion with Linux zalloc which does something else
 
+/**
+ * Attempts to parse the given string to an integer; destination will only be manipulated if successful.
+ * @param dest where to write the parsed value to; will not be modified in case of error
+ * @param s null-terminated string to parse
+ * @return true if successfully parsed, false on error
+ */
+bool parse_int(int *dest, char *s);
+
 #endif
