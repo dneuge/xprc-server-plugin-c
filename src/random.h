@@ -2,6 +2,10 @@
 #define XPRC_RANDOM_H
 
 /**
+ * @file random.h random number utilities
+ */
+
+/**
  * Generates the specified number of random integers from a reasonably good source of entropy (not crypto-secure but
  * attempting best effort to get somewhat better than default random numbers, do not use for anything that needs
  * guaranteed secure randomness).
