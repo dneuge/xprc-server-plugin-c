@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "gui_utils.h"
+#include "../network.h"
 #include "../utils.h"
 
 #include "settings_window.h"
@@ -11,16 +12,16 @@
 static char pwd[] = "abcdefg"; // DEBUG
 
 static void limit_network_port(settings_window_t *settings_window) {
-    if (settings_window->network_port < settings_window->network_port_min) {
-        settings_window->network_port = settings_window->network_port_min;
-    } else if (settings_window->network_port > settings_window->network_port_max) {
-        settings_window->network_port = settings_window->network_port_max;
+    if (settings_window->network_port < NETWORK_MINIMUM_PORT) {
+        settings_window->network_port = NETWORK_MINIMUM_PORT;
+    } else if (settings_window->network_port > NETWORK_MAXIMUM_PORT) {
+        settings_window->network_port = NETWORK_MAXIMUM_PORT;
     }
 }
 
 static void validate(settings_window_t *settings_window) {
-    settings_window->valid = (settings_window->network_port >= settings_window->network_port_min)
-                             && (settings_window->network_port <= settings_window->network_port_max)
+    settings_window->valid = (settings_window->network_port >= NETWORK_MINIMUM_PORT)
+                             && (settings_window->network_port <= NETWORK_MAXIMUM_PORT)
                              && (strlen(settings_window->network_interface) > 0) // FIXME: improve check
             ;
 }
@@ -32,8 +33,6 @@ static void copy_from_settings(settings_window_t *settings_window) {
 
     strncpy(settings_window->network_interface, "localhost", NETWORK_INTERFACE_SIZE); // FIXME: get from actual settings
     settings_window->network_port = 1234; // FIXME: get from actual settings
-    settings_window->network_port_min = 1024; // FIXME: get from network implementation (1024 on *NIX, lower on Windows?)
-    settings_window->network_port_max = 65535; // FIXME: get from network implementation
     limit_network_port(settings_window);
     settings_window->network_enable_ipv6 = false; // FIXME: get from network implementation
 

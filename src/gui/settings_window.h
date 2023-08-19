@@ -33,11 +33,6 @@ typedef struct {
     /// shows the current password if true; password will be hidden if false
     bool reveal_password;
 
-    /// minimum allowed TCP port number
-    int network_port_min;
-    /// maximum allowed TCP port number (incl.)
-    int network_port_max;
-
     /// "copy password" button state; pressed when true, released when false
     bool btn_pwd_copy_state;
     /// "reveal password" button state; pressed when true, released when false

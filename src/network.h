@@ -11,6 +11,13 @@
  * Defines a generic framework for line-based (telnet-style) TCP network servers.
  */
 
+/// minimum server port number that can be bound to without elevated permissions
+// TODO: may be platform-specific - no conclusive information found about what Windows does; testing needed when implemented
+#define NETWORK_MINIMUM_PORT 1024
+/// maximum server port number
+// TODO: exclude typical ephemeral ports? (platform-specific)
+#define NETWORK_MAXIMUM_PORT 65535
+
 /// indicates that the server socket could not be created
 #define NETWORK_ERROR_NO_SOCKET     (NETWORK_ERROR_BASE + 0)
 /// indicates that the requested server address could not be bound to
