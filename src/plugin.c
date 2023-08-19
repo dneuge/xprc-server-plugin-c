@@ -247,13 +247,6 @@ PLUGIN_API int XPluginEnable() {
         return 1;
     }
 
-    gui = gui_create();
-    if (!gui) {
-        printf("[XPRC] failed to initialize GUI - simulator restart required\n");
-        fatal_error = true;
-        return 1;
-    }
-
     if (task_schedule) {
         printf("[XPRC] task schedule already exists; did you install the plugin twice? simulator restart required\n");
         fatal_error = true;
@@ -262,6 +255,13 @@ PLUGIN_API int XPluginEnable() {
     
     if (xpqueue) {
         printf("[XPRC] XP queue already exists; did you install the plugin twice? simulator restart required\n");
+        fatal_error = true;
+        return 1;
+    }
+
+    gui = gui_create();
+    if (!gui) {
+        printf("[XPRC] failed to initialize GUI - simulator restart required\n");
         fatal_error = true;
         return 1;
     }
