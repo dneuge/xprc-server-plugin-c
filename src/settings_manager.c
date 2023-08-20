@@ -4,83 +4,83 @@
 
 #include "settings_manager.h"
 
-shared_settings_t* create_shared_settings() {
-    shared_settings_t *shared_settings = zalloc(sizeof(shared_settings_t));
-    if (!shared_settings) {
+settings_manager_t* create_settings_manager() {
+    settings_manager_t *settings_manager = zalloc(sizeof(settings_manager_t));
+    if (!settings_manager) {
         return NULL;
     }
 
-    shared_settings->settings = create_settings();
-    if (!shared_settings->settings) {
+    settings_manager->settings = create_settings();
+    if (!settings_manager->settings) {
         goto error;
     }
 
-    if (mtx_init(&shared_settings->mutex, mtx_plain | mtx_recursive) == thrd_success) {
-        return shared_settings;
+    if (mtx_init(&settings_manager->mutex, mtx_plain | mtx_recursive) == thrd_success) {
+        return settings_manager;
     }
 
     error:
-    destroy_shared_settings(shared_settings);
+    destroy_settings_manager(settings_manager);
     return NULL;
 }
 
-error_t destroy_shared_settings(shared_settings_t *shared_settings) {
+error_t destroy_settings_manager(settings_manager_t *settings_manager) {
     error_t err = ERROR_NONE;
 
-    if (!shared_settings) {
+    if (!settings_manager) {
         return ERROR_NONE;
     }
 
-    err = lock_shared_settings(shared_settings);
+    err = lock_settings_manager(settings_manager);
     if (err != ERROR_NONE) {
         return err;
     }
 
-    shared_settings->destruction_pending = true;
-    unlock_shared_settings(shared_settings);
+    settings_manager->destruction_pending = true;
+    unlock_settings_manager(settings_manager);
 
     // lock & unlock once more to make sure every thread had a chance to notice pending destruction
-    if (mtx_lock(&shared_settings->mutex) != thrd_success) {
-        printf("[XPRC] failed to lock shared settings mutex during destruction; continuing regardless\n");
+    if (mtx_lock(&settings_manager->mutex) != thrd_success) {
+        printf("[XPRC] failed to lock settings manager mutex during destruction; continuing regardless\n");
     } else {
-        mtx_unlock(&shared_settings->mutex);
+        mtx_unlock(&settings_manager->mutex);
     }
 
-    destroy_settings(shared_settings->settings);
-    shared_settings->settings = NULL;
+    destroy_settings(settings_manager->settings);
+    settings_manager->settings = NULL;
 
-    mtx_destroy(&shared_settings->mutex);
+    mtx_destroy(&settings_manager->mutex);
 
-    free(shared_settings);
+    free(settings_manager);
 
     return ERROR_NONE;
 }
 
-error_t lock_shared_settings(shared_settings_t *shared_settings) {
-    if (!shared_settings) {
+error_t lock_settings_manager(settings_manager_t *settings_manager) {
+    if (!settings_manager) {
         return ERROR_UNSPECIFIC;
     }
 
-    if (shared_settings->destruction_pending) {
+    if (settings_manager->destruction_pending) {
         return ERROR_DESTRUCTION_PENDING;
     }
 
-    if (mtx_lock(&shared_settings->mutex) != thrd_success) {
+    if (mtx_lock(&settings_manager->mutex) != thrd_success) {
         return ERROR_LOCK_FAILED;
     }
 
-    if (!shared_settings->destruction_pending) {
+    if (!settings_manager->destruction_pending) {
         return ERROR_NONE;
     }
 
-    unlock_shared_settings(shared_settings);
+    unlock_settings_manager(settings_manager);
     return ERROR_DESTRUCTION_PENDING;
 }
 
-void unlock_shared_settings(shared_settings_t *shared_settings) {
-    if (!shared_settings) {
+void unlock_settings_manager(settings_manager_t *settings_manager) {
+    if (!settings_manager) {
         return;
     }
 
-    mtx_unlock(&shared_settings->mutex);
+    mtx_unlock(&settings_manager->mutex);
 }
