@@ -15,7 +15,7 @@ SET(COMMON_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/arrays.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hashmap.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/lists.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/password_generator.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/password.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/random.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils.c
 )

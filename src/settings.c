@@ -4,7 +4,7 @@
 
 #include "fileio.h"
 #include "network.h"
-#include "password_generator.h"
+#include "password.h"
 #include "utils.h"
 
 #include "settings.h"

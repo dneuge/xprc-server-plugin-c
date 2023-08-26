@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "password_generator.h"
+#include "password.h"
 
 /* Repeatedly calls generate_password() and prints the resulting strings for manual testing.
  *

@@ -1,8 +1,8 @@
-#ifndef XPRC_PASSWORD_GENERATOR_H
-#define XPRC_PASSWORD_GENERATOR_H
+#ifndef XPRC_PASSWORD_H
+#define XPRC_PASSWORD_H
 
 /**
- * @file password_generator.h password generation
+ * @file password.h password generation
  */
 
 /**

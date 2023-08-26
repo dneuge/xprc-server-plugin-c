@@ -4,7 +4,7 @@
 #include "random.h"
 #include "utils.h"
 
-#include "password_generator.h"
+#include "password.h"
 
 #define PASSWORD_LENGTH 32
 
