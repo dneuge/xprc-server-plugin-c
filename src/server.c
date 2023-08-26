@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "password.h"
 #include "requests.h"
 #include "server.h"
 #include "session.h"
@@ -259,6 +260,12 @@ static void on_connection_closing(void *handler_reference) {
 }
 
 error_t start_server(server_t **server, server_config_t *config) {
+    // TODO: check password after copy
+    if (!config || !validate_password(config->password)) {
+        printf("[XPRC] bad password, refusing to start\n");
+        return ERROR_UNSPECIFIC;
+    }
+
     *server = malloc(sizeof(server_t));
     if (!(*server)) {
         return ERROR_MEMORY_ALLOCATION;
