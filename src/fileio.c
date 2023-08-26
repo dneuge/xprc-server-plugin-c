@@ -297,3 +297,17 @@ error_t write_lines_to_file(list_t *lines, char *path) {
     free(s);
     return err;
 }
+
+#ifdef TARGET_LINUX
+#include <unistd.h>
+#include <errno.h>
+bool check_file_exists(char *path) {
+    if (access(path, F_OK) == 0) {
+        return true;
+    }
+
+    return (errno != ENOENT);
+}
+#else
+#error "Check for file existence is target-specific but has not been implemented for the requested platform."
+#endif

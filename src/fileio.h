@@ -99,4 +99,11 @@ error_t read_lines_from_file(list_t **lines, char *path);
  */
 error_t write_lines_to_file(list_t *lines, char *path);
 
+/**
+ * Checks if the given file exists.
+ * @param path path to file to check for existence
+ * @return true if the file exists, false if not
+ */
+bool check_file_exists(char *path);
+
 #endif //XPRC_FILEIO_H
