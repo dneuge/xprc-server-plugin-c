@@ -27,8 +27,9 @@ char* generate_password() {
         return NULL;
     }
 
+    int max_random_index = (int) strlen(password_chars) - 1;
     while (!validate_password(out)) {
-        int *random = get_random_ints(PASSWORD_LENGTH, 0, strlen(password_chars) - 1);
+        int *random = get_random_ints(PASSWORD_LENGTH, 0, max_random_index);
         if (!random) {
             free(out);
             return NULL;
