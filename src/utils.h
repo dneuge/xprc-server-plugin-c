@@ -10,6 +10,14 @@
 #include <stdint.h>
 #include <time.h>
 
+/**
+ * Compiler macro to determine maximum of two values.
+ * @param x first value
+ * @param y second value
+ * @return x if greater than y, otherwise y
+ */
+#define MAX(x,y) (((x)>(y)) ? (x) : (y))
+
 /// escape character that can be added in front of characters that would otherwise conflict with syntax
 #define ESCAPE_CHAR '\\'
 
