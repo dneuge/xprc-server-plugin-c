@@ -50,7 +50,7 @@ void destroy_settings(settings_t *settings);
  * Copies all settings from given source onto destination instance.
  * @param dest will be updated to match the source settings; strings will be reallocated (values are copied), existing strings will be freed
  * @param src source to read settings to copy from
- * @param copy_password copies the password as well if true; original password in destination remains unchanged if false; use defines SETTINGS_*_PASSWORD
+ * @param copy_password copies the password as well if true; original password in destination remains unchanged if false; use defines #SETTINGS_COPY_PASSWORD and #SETTINGS_KEEP_PASSWORD
  * @return error code; #ERROR_NONE on success
  */
 error_t copy_settings(settings_t *dest, settings_t *src, bool copy_password);
