@@ -12,8 +12,8 @@
 #define MAX_PASSWORD_LENGTH 1000 /* password must fit into network line buffer */
 #define MIN_PASSWORD_UPPER_CASE 3
 #define MIN_PASSWORD_LOWER_CASE 3
-#define MIN_PASSWORD_NUMBERS 3
-#define MIN_PASSWORD_SPECIAL 3
+#define MIN_PASSWORD_NUMBERS 2
+#define MIN_PASSWORD_SPECIAL 1
 
 // the number of characters should be a multiple of 2; see random_linux.c implementation
 static const char password_chars[] = "abcdefghijklmnopqrstuvwxyz"
