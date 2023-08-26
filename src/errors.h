@@ -62,6 +62,11 @@
 #define DATAPROXY_ERROR_BASE 50
 
 /**
+ * Start offset for errors related to the settings manager module, see: settings_manager.h
+ */
+#define SETTINGS_MANAGER_ERROR_BASE 60
+
+/**
  * Indicates if and which error has occurred, #ERROR_NONE indicates success.
  */
 typedef int error_t;
