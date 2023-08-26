@@ -7,6 +7,21 @@
 
 #include "errors.h"
 #include "lists.h"
+#include "utils.h"
+
+/// Approximate maximum length for a file path on Linux; depends on actual kernel but 4k appears to be current standard.
+#define LINUX_PATH_MAX_LENGTH 4096
+
+/**
+ * Estimated maximum length for a file path on Windows. Documentation specifies 32k plus whatever is needed to
+ * expand the UNS prefix, *blindly* estimated here to 512 + 5 characters extra (no documentation found).
+ *
+ * Source: Documentation licensed under CC-BY 4.0, Copyright Microsoft Corporation, see:
+ * https://github.com/MicrosoftDocs/win32/blob/docs/desktop-src/FileIO/maximum-file-path-limitation.md
+ */
+#define WINDOWS_PATH_MAX_LENGTH (32767 + 512 + 5)
+
+#define PATH_MAX_LENGTH (MAX(WINDOWS_PATH_MAX_LENGTH, LINUX_PATH_MAX_LENGTH))
 
 /// separator between directories and files (depends on compilation target)
 #ifdef TARGET_WINDOWS
