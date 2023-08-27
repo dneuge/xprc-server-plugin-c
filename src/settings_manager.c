@@ -215,3 +215,43 @@ error_t persist_settings_from_manager(settings_manager_t *settings_manager) {
 
     return out_err;
 }
+
+error_t copy_settings_to_manager(settings_manager_t *settings_manager, settings_t *settings, bool copy_password) {
+    error_t err = ERROR_NONE;
+    error_t out_err = ERROR_NONE;
+
+    // only copy valid passwords, indicate error if invalid but continue
+    if ((copy_password == SETTINGS_COPY_PASSWORD) && !validate_password(settings->password)) {
+        out_err = SETTINGS_MANAGER_ERROR_PASSWORD_INVALID;
+        copy_password = SETTINGS_KEEP_PASSWORD;
+    }
+
+    err = lock_settings_manager(settings_manager);
+    if (err != ERROR_NONE) {
+        return err;
+    }
+
+    err = copy_settings(settings_manager->settings, settings, copy_password);
+    if (err != ERROR_NONE) {
+        out_err = err;
+    }
+
+    unlock_settings_manager(settings_manager);
+
+    return out_err;
+}
+
+error_t copy_settings_from_manager(settings_manager_t *settings_manager, settings_t *settings, bool copy_password) {
+    error_t err = ERROR_NONE;
+
+    err = lock_settings_manager(settings_manager);
+    if (err != ERROR_NONE) {
+        return err;
+    }
+
+    err = copy_settings(settings, settings_manager->settings, copy_password);
+
+    unlock_settings_manager(settings_manager);
+
+    return err;
+}

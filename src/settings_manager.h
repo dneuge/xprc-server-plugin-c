@@ -77,9 +77,13 @@ void unlock_settings_manager(settings_manager_t *settings_manager);
 
 /**
  * Copies the given settings onto the instance held by the manager for coordination across components.
+ *
+ * Invalid passwords are rejected, indicating #SETTINGS_MANAGER_ERROR_PASSWORD_INVALID, but other settings will be
+ * taken over.
+ *
  * @param settings_manager manager instance
  * @param settings settings to be copied to manager
- * @param copy_password copies the password if true; original password in manager settings remains unchanged if false; use defines #SETTINGS_COPY_PASSWORD and #SETTINGS_KEEP_PASSWORD
+ * @param copy_password copies the password if true and valid; original password in manager settings remains unchanged if false or invalid; use defines #SETTINGS_COPY_PASSWORD and #SETTINGS_KEEP_PASSWORD
  * @return error code; #ERROR_NONE on success
  */
 error_t copy_settings_to_manager(settings_manager_t *settings_manager, settings_t *settings, bool copy_password);
