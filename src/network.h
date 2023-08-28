@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "errors.h"
+#include "lists.h"
 
 /**
  * @file network.h
@@ -144,5 +145,19 @@ error_t send_to_network(network_connection_t *connection, char *content, int len
  * @param connection connection to terminate; must not be NULL
  */
 void close_network_connection(network_connection_t *connection);
+
+/**
+ * Returns all network interfaces available on the system as usable for #network_server_config_t, omitting general
+ * options.
+ *
+ * In addition to the interface names returned by this function the general options for local or unrestricted public
+ * access are always available.
+ *
+ * The interface names present on list values are copies which must be memory-managed by the caller.
+ *
+ * @param include_ipv6 true also lists IPv6 interfaces, false only shows IPv4
+ * @return network interfaces, usable for #network_server_config_t, general options omitted; NULL on error, empty if no additional interfaces were found
+ */
+list_t* get_network_interfaces(bool include_ipv6);
 
 #endif

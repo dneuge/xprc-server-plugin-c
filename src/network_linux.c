@@ -7,7 +7,10 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <ifaddrs.h>
 #include <unistd.h>
+
+#include "utils.h"
 
 #include "network.h"
 
@@ -19,6 +22,10 @@
 #define RECEIVE_MAX_LINE_LENGTH (64 * 1024)
 #define RECEIVE_CHUNK_SIZE 512
 #define SEND_CHECK_INTERVAL_MICROSECONDS 500000
+
+#define IPV6_NTOP_MIN_BUFFER_SIZE 39 /* fully expanded IPv6 address */
+#define TARGET_NTOP_MIN_BUFFER_SIZE MAX(INET_ADDRSTRLEN, INET6_ADDRSTRLEN) /* address required by API definition */
+#define NTOP_BUFFER_SIZE ((MAX(TARGET_NTOP_MIN_BUFFER_SIZE, IPV6_NTOP_MIN_BUFFER_SIZE)) + 1)
 
 typedef struct _network_connection_t {
     bool in_use; // connections are reused by server; no lock needed - only set true by server thread, reset to false when closed
@@ -653,4 +660,77 @@ error_t send_to_network(network_connection_t *connection, char *content, int len
 
 void close_network_connection(network_connection_t *connection) {
     connection->closing = true;
+}
+
+list_t* get_network_interfaces(bool include_ipv6) {
+    struct ifaddrs *sys_interfaces = NULL;
+
+    int res = getifaddrs(&sys_interfaces);
+    if (res != 0) {
+        return NULL;
+    }
+
+    char *ntop_buffer = zalloc(NTOP_BUFFER_SIZE);
+    if (!ntop_buffer) {
+        goto error;
+    }
+
+    list_t *out = create_list();
+    if (!out) {
+        goto error;
+    }
+
+    struct ifaddrs *sys_interface = sys_interfaces;
+    while (sys_interface) {
+        char *name = NULL;
+
+        if (!sys_interface->ifa_addr) {
+            sys_interface = sys_interface->ifa_next;
+            continue;
+        }
+
+        sa_family_t family = sys_interface->ifa_addr->sa_family;
+        bool should_include = (family == AF_INET) || (include_ipv6 && (family == AF_INET6));
+        if (!should_include) {
+            sys_interface = sys_interface->ifa_next;
+            continue;
+        }
+
+        memset(ntop_buffer, 0, NTOP_BUFFER_SIZE);
+
+        void *sys_addr = (family == AF_INET6) ? (void*) &((struct sockaddr_in6*) sys_interface->ifa_addr)->sin6_addr
+                                              : (void*) &((struct sockaddr_in*) sys_interface->ifa_addr)->sin_addr;
+        if (inet_ntop(family, sys_addr, ntop_buffer, NTOP_BUFFER_SIZE - 1)) {
+            name = copy_string(ntop_buffer);
+        }
+
+        if (name) {
+            if (!list_append(out, name)) {
+                free(name);
+                goto error;
+            }
+        }
+
+        sys_interface = sys_interface->ifa_next;
+    }
+
+    free(ntop_buffer);
+    freeifaddrs(sys_interfaces);
+
+    return out;
+
+error:
+    if (sys_interfaces) {
+        freeifaddrs(sys_interfaces);
+    }
+
+    if (out) {
+        destroy_list(out, free);
+    }
+
+    if (ntop_buffer) {
+        free(ntop_buffer);
+    }
+
+    return NULL;
 }
