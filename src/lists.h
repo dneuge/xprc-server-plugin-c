@@ -287,6 +287,21 @@ typedef struct {
 } list_t;
 
 /**
+ * Compares both provided list_item_t with each other:
+ *
+ * - 0 should be returned if both items are equal
+ * - a negative number should be returned if item A "is less than" B: A < B, cmp(A,B) < 0
+ * - a positive number should be returned if item A "is greater than" B: A > B, cmp(A,B) > 0
+ *
+ * The provided items are only allowed to be read from and must not be altered in any way.
+ *
+ * @param item_a left-hand list item to be compared; never NULL
+ * @param item_b right-hand list item to be compared; never NULL
+ * @return 0 if equal, negative if A<B, positive if A>B
+ */
+typedef int list_item_comparator_f (list_item_t *item_a, list_item_t *item_b);
+
+/**
  * Creates a new double-linked tracking list structure.
  *
  * @return list root; NULL on error
@@ -343,6 +358,22 @@ list_item_t* list_find(list_t *list, void *value);
  * @param value_destructor optional destructor to invoke for the item's value; set to NULL if not wanted
  */
 void list_delete_item(list_t *list, list_item_t *item, list_value_destructor_f value_destructor);
+
+/**
+ * Returns a new list holding all values of the given original list, sorted using the provided comparator.
+ *
+ * The original list remains unchanged. The caller is responsible for memory management of the original
+ * and the returned new list. Callers must ensure thread-safety as needed.
+ *
+ * Note that only the list_item_t value is being copied which should be a pointer, by default. Unless
+ * it is not a pointer, both lists will share the same memory for item values. Destroying values on one
+ * list will corrupt the other, destroying values on both lists will result in a double-free error.
+ *
+ * @param original original list to sort values of
+ * @param comparator comparator to sort list items with
+ * @return structurally new list with same (shared) values in sorted order; NULL on error
+ */
+list_t* copy_list_sorted(list_t *original, list_item_comparator_f comparator);
 
 /// @}
 

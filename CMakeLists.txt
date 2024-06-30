@@ -105,4 +105,5 @@ IF(BUILD_TESTS)
     TARGET_LINK_LIBRARIES(test-hashmap PUBLIC m)
 
     ADD_EXECUTABLE(test-prealloc-list ${CMAKE_CURRENT_SOURCE_DIR}/src/test-prealloc-list.c ${COMMON_SOURCES})
+    ADD_EXECUTABLE(test-list ${CMAKE_CURRENT_SOURCE_DIR}/src/test-list.c ${COMMON_SOURCES})
 ENDIF()

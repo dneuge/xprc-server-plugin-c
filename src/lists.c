@@ -313,3 +313,92 @@ void list_delete_item(list_t *list, list_item_t *item, list_value_destructor_f v
 
     free(item);
 }
+
+int sort_list_items_partition(list_item_t **items, int lowerLimit, int upperLimit, list_item_comparator_f comparator) {
+    // Quick Sort algorithm by Hoare as reproduced in pseudocode on Wikipedia as of 29 Jun 2024
+    // https://en.wikipedia.org/wiki/Quicksort
+
+    list_item_t *pivot_item = items[lowerLimit];
+    int i = lowerLimit - 1;
+    int j = upperLimit + 1;
+
+    while (true) {
+        while (comparator(items[++i], pivot_item) < 0);
+        while (comparator(items[--j], pivot_item) > 0);
+
+        if (i >= j) {
+            return j;
+        }
+
+        list_item_t *tmp = items[i];
+        items[i] = items[j];
+        items[j] = tmp;
+    }
+}
+
+void sort_list_items_quicksort(list_item_t **items, int lowerLimit, int upperLimit, list_item_comparator_f comparator) {
+    // Quick Sort algorithm by Hoare as reproduced in pseudocode on Wikipedia as of 29 Jun 2024
+    // https://en.wikipedia.org/wiki/Quicksort
+
+    if ((lowerLimit < 0) || (upperLimit < 0) || (lowerLimit >= upperLimit)) {
+        return;
+    }
+
+    int pivotIndex = sort_list_items_partition(items, lowerLimit, upperLimit, comparator);
+    sort_list_items_quicksort(items, lowerLimit, pivotIndex, comparator);
+    sort_list_items_quicksort(items, pivotIndex + 1, upperLimit, comparator);
+}
+
+list_t* copy_list_sorted(list_t *original, list_item_comparator_f comparator) {
+    if (!original || !comparator) {
+        return NULL;
+    }
+
+    list_t *out = create_list();
+    if (!out) {
+        return NULL;
+    }
+
+    if (original->size <= 0) {
+        // prevents zero memory allocation request
+        return out;
+    }
+
+    // collect all list item pointers in an array to apply the sorting algorithm on
+    int num_items = original->size;
+    list_item_t **items = malloc(sizeof(list_item_t*) * num_items);
+    if (!items) {
+        destroy_list(out, NULL);
+        return NULL;
+    }
+    int offset=0;
+    list_item_t *it = original->head;
+    while (it) {
+        if (offset >= original->size) {
+            // size changed during access
+            goto end;
+        }
+        items[offset++] = it;
+        it = it->next;
+    }
+    if ((offset != original->size) || (offset != num_items)) {
+        // size changed during access
+        goto end;
+    }
+
+    // sort the array
+    sort_list_items_quicksort(items, 0, num_items-1, comparator);
+
+    // append all value pointers from sorted items into the new list, in order
+    for (int i=0; i<num_items; i++) {
+        if (!list_append(out, items[i]->value)) {
+            destroy_list(out, NULL);
+            out = NULL;
+            goto end;
+        }
+    }
+
+end:
+    free(items);
+    return out;
+}
