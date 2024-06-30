@@ -6,6 +6,7 @@ doxygen/out/
 *.kate-swp
 \#*\#
 .\#*
+.idea
 
 *.bak
 
