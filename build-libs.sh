@@ -53,7 +53,14 @@ echo
 
 echo "==== Preparing \"auto\" ===="
 cd "${script_dir}/lib/glew/auto"
-REPO_OPENGL="${download_dir}/github.KhronosGroup.OpenGL-Registry.main.bundle" REPO_EGL="${download_dir}/github.KhronosGroup.EGL-Registry.main.bundle" REPO_GLFIXES="${download_dir}/github.nigels-com.glfixes.bundle" make || die "Failed to prepare GLEW's \"auto\" directory"
+# reference date for chosen commit refs is successful build from 28 Oct 2023
+REPO_OPENGL="${download_dir}/github.KhronosGroup.OpenGL-Registry.main.bundle" \
+    REF_OPENGL="784b8b340e0429da3be2378bd5217d3c5530b9e5" \
+    REPO_EGL="${download_dir}/github.KhronosGroup.EGL-Registry.main.bundle" \
+    REF_EGL="b055c9b483e70ecd57b3cf7204db21f5a06f9ffe" \
+    REPO_GLFIXES="${download_dir}/github.nigels-com.glfixes.bundle" \
+    REF_GLFIXES="b63c8d3e676097d610efda64870cbe6f10543bd3" \
+    make || die "Failed to prepare GLEW's \"auto\" directory"
 cd "${script_dir}/lib/glew"
 echo
 

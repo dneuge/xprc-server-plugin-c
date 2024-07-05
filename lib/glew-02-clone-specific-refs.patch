@@ -1,0 +1,26 @@
+GLEW does not check out any specific revision and instead just checks
+out branch head revisions which will fall out of sync with static
+library code over time. Both for (kind of) reproduceable builds and
+(more importantly) to not run into build-breaks every few months, we need to
+pin down working/consistent commit refs.
+
+--- a/glew/auto/Makefile	2024-07-05 18:53:35.698147301 +0200
++++ b/glew/auto/Makefile	2024-07-05 19:05:54.212559260 +0200
+@@ -93,7 +93,9 @@
+ 	@echo "Downloading OpenGL-Registry"
+ 	@echo "--------------------------------------------------------------------"
+ 	git clone --branch main $(REPO_OPENGL) OpenGL-Registry
++	cd OpenGL-Registry && git checkout ${REF_OPENGL} && cd ..
+ 	git clone --branch glew $(REPO_GLFIXES) glfixes
++	cd glfixes && git checkout ${REF_GLFIXES} && cd ..
+ 	touch $@
+ 
+ EGL-Registry/.dummy:
+@@ -101,6 +103,7 @@
+ 	@echo "Downloading EGL-Registry"
+ 	@echo "--------------------------------------------------------------------"
+ 	git clone --branch main $(REPO_EGL) EGL-Registry
++	cd EGL-Registry && git checkout ${REF_EGL} && cd ..
+ 	touch $@
+ 
+ $(EXT)/.dummy: OpenGL-Registry/.dummy EGL-Registry/.dummy

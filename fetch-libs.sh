@@ -196,6 +196,9 @@ function git_unbundle {
     fi
 }
 
+
+# NOTE: glew has extra pinned versions defined for its dependencies in build-libs.sh
+
 download "X-Plane SDK" XPSDK XPSDK401.zip 500613 https://developer.x-plane.com/wp-content/plugins/code-sample-generation/sdk_zip_files/XPSDK401.zip c1104e83d9b54b03d0084c1db52ee6491e5290994503e8dd2d4a0af637e2bdd7 c5445598297a5ffa6efc9760c3f773e6
 download "Mesa GLU" mesa-glu mesa-glu-9.0.2.zip 526625 https://gitlab.freedesktop.org/mesa/glu/-/archive/glu-9.0.2/glu-glu-9.0.2.zip 88fbc3262e55e932be71f5ee5ca59dcfdf1425f6551d4a31ccd0daf6d0d833d1 caa3d9ec5e2522387a3dc5bde9f5e572
 download "GLEW" glew glew-2.2.0.zip 329458 https://github.com/nigels-com/glew/archive/refs/tags/glew-2.2.0.zip 8aaa65f4a8c0fe439b28deb2925862fcdc0549943f08af010eead2a37baa6752 f150f61074d049ff0423b09b18cd1ef6
