@@ -81,7 +81,9 @@ static void destroy_expected_items(expected_item_t *item) {
 
 int main(int argc, char **argv) {
     srand(time(NULL));
-    
+
+    printf("--- hashmap tests starting\n");
+
     int num_items = 1000;
     if (argc > 1) {
         num_items = atoi(argv[1]);
@@ -247,5 +249,5 @@ int main(int argc, char **argv) {
     printf("destroying test structures\n");
     destroy_expected_items(expected_items_head);
     
-    printf("done\n");
+    printf("--- hashmap tests completed\n");
 }

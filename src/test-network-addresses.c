@@ -163,6 +163,8 @@ void assert_cmp_ip_address_greater_than(const char *a, const char *b) {
 }
 
 int main(int argc, char **argv) {
+    printf("--- network address tests starting\n");
+
     testcase("is_ipv4_address");
     assert_is_ipv4_address("0.0.0.0");
     assert_is_ipv4_address("000.000.000.000");

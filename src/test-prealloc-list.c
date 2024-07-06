@@ -11,6 +11,8 @@ static void final_value_destructor(void *value) {
 }
 
 int main(int argc, char **argv) {
+    printf("--- preallocated list tests starting\n");
+
     int num_items = 21854;
     if (argc > 1) {
         num_items = atoi(argv[1]);
@@ -149,7 +151,7 @@ int main(int argc, char **argv) {
 
     // TODO: verify number of deferred destructor calls
 
-    printf("done\n");
+    printf("--- preallocated list tests completed\n");
     
     return 0;
 }

@@ -166,7 +166,9 @@ int main(int argc, char **argv) {
     list_t *in;
     list_t *res;
 
-    printf("--- copy_list_sorted\n");
+    printf("--- list tests starting\n");
+
+    printf("-- copy_list_sorted\n");
 
     testcase("NULL list");
     if (copy_list_sorted(NULL, cmplong_direct_value)) {
@@ -270,6 +272,6 @@ int main(int argc, char **argv) {
         free(unsorted);
     }
 
-    printf("--- all tests completed\n");
+    printf("--- list tests completed\n");
     return 0;
 }
