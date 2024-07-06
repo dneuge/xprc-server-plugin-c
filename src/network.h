@@ -160,4 +160,63 @@ void close_network_connection(network_connection_t *connection);
  */
 list_t* get_network_interfaces(bool include_ipv6);
 
+/**
+ * Tests if the given null-terminated string represents an IPv4 address.
+ *
+ * @param address null-terminated string to test; null-safe
+ * @return true if the string represents an IPv4 address, false if not
+ */
+bool is_ipv4_address(char *address);
+
+/**
+ * Tests if the given null-terminated string represents an IPv6 address.
+ *
+ * @param address null-terminated string to test; null-safe
+ * @return true if the string represents an IPv6 address, false if not
+ */
+bool is_ipv6_address(char *address);
+
+/**
+ * Logically compares the given null-terminated strings assuming that both should
+ * represent IPv4 addresses. 0 will be returned for equal addresses, a negative
+ * will be returned if "a is less than b" and positive if "a is greater than b".
+ *
+ * Non-addresses precede addresses, NULL precedes any other value. The comparison
+ * will fall back to standard strcmp if none of the given strings is an IPv4 address.
+ *
+ * @param a left side string to compare; null-safe
+ * @param b right side string to compare; null-safe
+ * @return 0 if logically equal, negative if a < b, positive if a > b
+ */
+int cmp_ipv4_address(char *a, char *b);
+
+/**
+ * Logically compares the given null-terminated strings assuming that both should
+ * represent IPv6 addresses. 0 will be returned for equal addresses, a negative
+ * will be returned if "a is less than b" and positive if "a is greater than b".
+ *
+ * Non-addresses precede addresses, NULL precedes any other value. The comparison
+ * will fall back to standard strcmp if none of the given strings is an IPv6 address.
+ *
+ * @param a left side string to compare; null-safe
+ * @param b right side string to compare; null-safe
+ * @return 0 if logically equal, negative if a < b, positive if a > b
+ */
+int cmp_ipv6_address(char *a, char *b);
+
+/**
+ * Logically compares the given null-terminated strings assuming that both should
+ * represent IP addresses. 0 will be returned for equal addresses, a negative
+ * will be returned if "a is less than b" and positive if "a is greater than b".
+ *
+ * IPv4 addresses precede IPv6. For each IP version, non-addresses precede addresses
+ * and NULL precedes any other value. The comparison will fall back to standard strcmp
+ * if none of the given strings is an IP address.
+ *
+ * @param a left side string to compare; null-safe
+ * @param b right side string to compare; null-safe
+ * @return 0 if logically equal, negative if a < b, positive if a > b; IPv4 precedes IPv6
+ */
+int cmp_ip_address(char *a, char *b);
+
 #endif

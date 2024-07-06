@@ -106,4 +106,5 @@ IF(BUILD_TESTS)
 
     ADD_EXECUTABLE(test-prealloc-list ${CMAKE_CURRENT_SOURCE_DIR}/src/test-prealloc-list.c ${COMMON_SOURCES})
     ADD_EXECUTABLE(test-list ${CMAKE_CURRENT_SOURCE_DIR}/src/test-list.c ${COMMON_SOURCES})
+    ADD_EXECUTABLE(test-network-addresses ${CMAKE_CURRENT_SOURCE_DIR}/src/test-network-addresses.c ${COMMON_SOURCES})
 ENDIF()
