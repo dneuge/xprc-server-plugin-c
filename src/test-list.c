@@ -198,9 +198,9 @@ int main(int argc, char **argv) {
     if (!in) {
         setup_fail("list could not be created");
     }
-    append_direct_values(in, 1, single_value);
+    append_direct_values(in, 1, (long*) single_value);
     res = copy_list_sorted(in, cmplong_direct_value);
-    assert_equal_direct_values(res, 1, single_value);
+    assert_equal_direct_values(res, 1, (long*) single_value);
     destroy_list(in, NULL);
     destroy_list(res, NULL);
     in = NULL;
@@ -211,9 +211,9 @@ int main(int argc, char **argv) {
     if (!in) {
         setup_fail("list could not be created");
     }
-    append_direct_values(in, NUM_STATIC_VALUES, static_unsorted);
+    append_direct_values(in, NUM_STATIC_VALUES, (long*) static_unsorted);
     res = copy_list_sorted(in, cmplong_direct_value);
-    assert_equal_direct_values(res, NUM_STATIC_VALUES, static_sorted);
+    assert_equal_direct_values(res, NUM_STATIC_VALUES, (long*) static_sorted);
     destroy_list(in, NULL);
     destroy_list(res, NULL);
     in = NULL;
@@ -224,9 +224,9 @@ int main(int argc, char **argv) {
     if (!in) {
         setup_fail("list could not be created");
     }
-    append_direct_values(in, NUM_STATIC_VALUES, static_sorted);
+    append_direct_values(in, NUM_STATIC_VALUES, (long*) static_sorted);
     res = copy_list_sorted(in, cmplong_direct_value);
-    assert_equal_direct_values(res, NUM_STATIC_VALUES, static_sorted);
+    assert_equal_direct_values(res, NUM_STATIC_VALUES, (long*) static_sorted);
     destroy_list(in, NULL);
     destroy_list(res, NULL);
     in = NULL;
@@ -237,7 +237,7 @@ int main(int argc, char **argv) {
     if (!in) {
         setup_fail("list could not be created");
     }
-    append_direct_values(in, NUM_STATIC_VALUES, static_unsorted);
+    append_direct_values(in, NUM_STATIC_VALUES, (long*) static_unsorted);
     res = copy_list_sorted(in, NULL);
     if (res) {
         fail("result was not NULL");

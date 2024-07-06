@@ -19,7 +19,7 @@ void testcase(char *description) {
 }
 
 void assert_is_ipv4_address(const char *address) {
-    if (is_ipv4_address(address)) {
+    if (is_ipv4_address((char*) address)) {
         return;
     }
 
@@ -28,7 +28,7 @@ void assert_is_ipv4_address(const char *address) {
 }
 
 void assert_not_is_ipv4_address(const char *address) {
-    if (!is_ipv4_address(address)) {
+    if (!is_ipv4_address((char*) address)) {
         return;
     }
 
@@ -37,7 +37,7 @@ void assert_not_is_ipv4_address(const char *address) {
 }
 
 void assert_is_ipv6_address(const char *address) {
-    if (is_ipv6_address(address)) {
+    if (is_ipv6_address((char*) address)) {
         return;
     }
 
@@ -46,7 +46,7 @@ void assert_is_ipv6_address(const char *address) {
 }
 
 void assert_not_is_ipv6_address(const char *address) {
-    if (!is_ipv6_address(address)) {
+    if (!is_ipv6_address((char*) address)) {
         return;
     }
 
