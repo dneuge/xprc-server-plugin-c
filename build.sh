@@ -37,4 +37,10 @@ make -j$num_jobs || die "make failed"
 mkdir -p "${script_dir}/release/xprc/${XPLANE_PLATFORM_ID}" || die "Failed to create release directory ${XPLANE_PLATFORM_ID}"
 cp -a xprc.xpl "${script_dir}/release/xprc/${XPLANE_PLATFORM_ID}/xprc.xpl" || die "Failed to copy plugin to release directory ${XPLANE_PLATFORM_ID}"
 
+## TEST
+./test-hashmap || die "Failed tests for hashmaps"
+./test-list || die "Failed tests for lists"
+./test-prealloc-list || die "Failed tests for preallocated lists"
+./test-network-addresses || die "Failed tests for network addresses"
+
 echo Build complete.
