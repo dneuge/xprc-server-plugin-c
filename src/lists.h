@@ -302,6 +302,19 @@ typedef struct {
 typedef int list_item_comparator_f (list_item_t *item_a, list_item_t *item_b);
 
 /**
+ * Tests the provided list item value.
+ *
+ * The value must not be modified. The value may be NULL.
+ *
+ * ref is a freely chosen reference pointer passed through by calling functions.
+ *
+ * @param value value of a list item, may be NULL
+ * @param ref freely chosen reference pointer, passed through by calling functions
+ * @return true if tested positive/matched, false if not
+ */
+typedef bool list_value_test_f(void *value, void *ref);
+
+/**
  * Creates a new double-linked tracking list structure.
  *
  * @return list root; NULL on error
@@ -343,6 +356,18 @@ bool list_append(list_t *list, void *value);
 list_item_t* list_find(list_t *list, void *value);
 
 /**
+ * Searches the given list for the first item testing positive using the given test function.
+ *
+ * Callers must ensure thread-safety as needed.
+ *
+ * @param list list to search in; must not be NULL
+ * @param test test function, will be called with list item value pointers, which may include NULL
+ * @param ref reference pointer provided to test function
+ * @return the first item holding a value that tests positive; NULL if not found
+ */
+list_item_t* list_find_test(list_t *list, list_value_test_f *test, void *ref);
+
+/**
  * Deletes the given item from the list and destroys the item structure.
  *
  * In addition to the item structure itself a destructor function can be provided which will be called with the item's
@@ -358,6 +383,23 @@ list_item_t* list_find(list_t *list, void *value);
  * @param value_destructor optional destructor to invoke for the item's value; set to NULL if not wanted
  */
 void list_delete_item(list_t *list, list_item_t *item, list_value_destructor_f value_destructor);
+
+/**
+ * Deletes all items from the list whose values test positive through the provided callback and
+ * destroys their item structure.
+ *
+ * In addition to the item structure itself a destructor function can be provided which will be called with the item's
+ * value if it is not NULL. If no value destruction is wanted (the value is memory-managed outside the list), NULL can
+ * be provided to disable destructor calls.
+ *
+ * The list root will be updated in terms of head, tail and size. Callers must ensure thread-safety as needed.
+ *
+ * @param list list to remove matching items from
+ * @param test test function, will be called with list item value pointers, which may include NULL
+ * @param ref reference pointer provided to test function
+ * @param value_destructor optional destructor to invoke for the item's value; set to NULL if not wanted
+ */
+void list_delete_items_where(list_t *list, list_value_test_f *test, void *ref, list_value_destructor_f value_destructor);
 
 /**
  * Returns a new list holding all values of the given original list, sorted using the provided comparator.

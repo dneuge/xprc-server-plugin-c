@@ -288,6 +288,17 @@ list_item_t* list_find(list_t *list, void *value) {
     return NULL;
 }
 
+list_item_t* list_find_test(list_t *list, list_value_test_f *test, void *ref) {
+    list_item_t *item = list->head;
+    while (item) {
+        if (test(item->value, ref)) {
+            return item;
+        }
+        item = item->next;
+    }
+    return NULL;
+}
+
 void list_delete_item(list_t *list, list_item_t *item, list_value_destructor_f value_destructor) {
     if (item->prev) {
         item->prev->next = item->next;
@@ -312,6 +323,17 @@ void list_delete_item(list_t *list, list_item_t *item, list_value_destructor_f v
     }
 
     free(item);
+}
+
+void list_delete_items_where(list_t *list, list_value_test_f *test, void *ref, list_value_destructor_f value_destructor) {
+    list_item_t *item = list->head;
+    while (item) {
+        list_item_t *next = item->next;
+        if (test(item->value, ref)) {
+            list_delete_item(list, item, value_destructor);
+        }
+        item = next;
+    }
 }
 
 int sort_list_items_partition(list_item_t **items, int lowerLimit, int upperLimit, list_item_comparator_f comparator) {
