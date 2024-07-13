@@ -277,6 +277,29 @@ bool list_append(list_t *list, void *value) {
     return true;
 }
 
+bool list_prepend(list_t *list, void *value) {
+    list_item_t *item = zalloc(sizeof(list_item_t));
+    if (!item) {
+        return false;
+    }
+
+    item->value = value;
+    item->next = list->head;
+    list->head = item;
+
+    if (item->next) {
+        item->next->prev = item;
+    }
+
+    if (!list->tail) {
+        list->tail = item;
+    }
+
+    list->size++;
+
+    return true;
+}
+
 list_item_t* list_find(list_t *list, void *value) {
     list_item_t *item = list->head;
     while (item) {

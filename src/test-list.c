@@ -163,10 +163,109 @@ const long static_sorted[] = {
 };
 
 int main(int argc, char **argv) {
-    list_t *in;
-    list_t *res;
+    list_t *in = NULL;
+    list_t *res = NULL;
+    list_t *list = NULL;
+    list_item_t *item = NULL;
+    list_item_t *prev_item = NULL;
 
     printf("--- list tests starting\n");
+
+    printf("-- list_prepend\n");
+    testcase("empty list");
+    list = create_list();
+    if (!list_prepend(list, (void*)42)) {
+        fail("failed to prepend item (function returned false)");
+    }
+    if (list->size != 1) {
+        fail("unexpected list size after prepend");
+    }
+    if (list->head != list->tail) {
+        fail("head and tail do not match after prepend");
+    }
+    if (!list->head) {
+        fail("head is NULL after prepend");
+    }
+    if (list->head->next) {
+        fail("first item next pointer is NOT NULL after prepend");
+    }
+    if (list->head->prev) {
+        fail("first item prev pointer is NOT NULL after prepend");
+    }
+    if (list->head->value != (void*)42) {
+        fail("unexpected value on first item after prepend");
+    }
+    destroy_list(list, NULL);
+    list = NULL;
+
+    testcase("existing list");
+    list = create_list();
+    if (!list_append(list, (void*)23)) {
+        setup_fail("failed to add first item (function returned false)");
+    }
+    if (!list_append(list, (void*)42)) {
+        setup_fail("failed to add second item (function returned false)");
+    }
+    if (!list_append(list, (void*)11)) {
+        setup_fail("failed to add third item (function returned false)");
+    }
+    if (!list_prepend(list, (void*)5)) {
+        fail("failed to prepend item (function returned false)");
+    }
+    if (list->size != 4) {
+        fail("unexpected list size after prepend");
+    }
+    item = list->head;
+    prev_item = NULL;
+    if (item->value != (void*)5) {
+        fail("unexpected value on first item (prepended)");
+    }
+    if (item->prev) {
+        fail("prev pointer is NOT NULL on first item (prepended)");
+    }
+    prev_item = item;
+    item = item->next;
+    if (!item) {
+        fail("next pointer is NULL on first item (prepended)");
+    }
+    if (item->prev != prev_item) {
+        fail("prev pointer of second item (originally first appended) does not link to first item (prepended)");
+    }
+    if (item->value != (void*)23) {
+        fail("unexpected value on second item (originally first appended)");
+    }
+    prev_item = item;
+    item = item->next;
+    if (!item) {
+        fail("next pointer is NULL on second item (originally first appended)");
+    }
+    if (item->prev != prev_item) {
+        fail("prev pointer of third item (originally second appended) does not link to second item (originally first appended)");
+    }
+    if (item->value != (void*)42) {
+        fail("unexpected value on third item (originally second appended)");
+    }
+    prev_item = item;
+    item = item->next;
+    if (!item) {
+        fail("next pointer is NULL on third item (originally second appended)");
+    }
+    if (item->prev != prev_item) {
+        fail("prev pointer of fourth item (originally third appended) does not link to third item (originally second appended)");
+    }
+    if (item->value != (void*)11) {
+        fail("unexpected value on fourth item (originally third appended)");
+    }
+    if (item->next) {
+        fail("next pointer is NOT NULL on fourth item (originally third appended) although it should be the last one");
+    }
+    if (list->tail != item) {
+        fail("list tail does not point to last item");
+    }
+    destroy_list(list, NULL);
+    list = NULL;
+    item = NULL;
+    prev_item = NULL;
 
     printf("-- copy_list_sorted\n");
 

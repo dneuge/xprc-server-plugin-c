@@ -345,6 +345,17 @@ void destroy_list(list_t *list, list_value_destructor_f value_destructor);
 bool list_append(list_t *list, void *value);
 
 /**
+ * Prepends a value at the beginning of the given list.
+ *
+ * The list root will be updated in terms of head, tail and size. Callers must ensure thread-safety as needed.
+ *
+ * @param list list to prepend to; must not be NULL
+ * @param value value reference to be prepended at beginning of list
+ * @return true if an item holding the value reference was added, false in case of an error
+ */
+bool list_prepend(list_t *list, void *value);
+
+/**
  * Searches the given list for the first item holding the specified value reference (same pointer address).
  *
  * Callers must ensure thread-safety as needed.
