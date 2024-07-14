@@ -4,7 +4,7 @@
 #error "no implementation for network.h; target OS is not supported"
 #endif
 
-bool parse_ipv4_segment(uint8_t *out, char *address, int start, int endExcl) {
+static bool parse_ipv4_segment(uint8_t *out, char *address, int start, int endExcl) {
     int segment_length = endExcl - start;
     if ((segment_length < 1) || (segment_length > 3)) {
         return false;
@@ -21,7 +21,7 @@ bool parse_ipv4_segment(uint8_t *out, char *address, int start, int endExcl) {
     return true;
 }
 
-bool parse_ipv4_address(uint8_t segments[4], char *address) {
+static bool parse_ipv4_address(uint8_t segments[4], char *address) {
     uint8_t out[4] = {0,};
 
     if (!address) {
@@ -70,7 +70,7 @@ bool is_ipv4_address(char *address) {
     return parse_ipv4_address(segments, address);
 }
 
-bool parse_ipv6_segment(uint16_t *out, char *s, int length) {
+static bool parse_ipv6_segment(uint16_t *out, char *s, int length) {
     if ((length < 1) || (length > 4)) {
         return false;
     }
@@ -94,7 +94,7 @@ bool parse_ipv6_segment(uint16_t *out, char *s, int length) {
     return true;
 }
 
-bool parse_ipv6_address(uint16_t segments[8], char *s) {
+static bool parse_ipv6_address(uint16_t segments[8], char *s) {
     uint16_t front_segments[8] = {0,};
     int num_front_segments = 0;
     uint16_t rear_segments[8] = {0,};
@@ -196,9 +196,9 @@ bool is_ipv6_address(char *address) {
     return parse_ipv6_address(segments, address);
 }
 
-typedef int32_t _seg2i32_f(void *segments, int segment_index);
+typedef int32_t seg2i32_f(void *segments, int segment_index);
 
-int _cmp_address(char *a, char *b, void *segments_a, void *segments_b, _seg2i32_f read_segment, bool parsed_a, bool parsed_b, int num_segments) {
+static int cmp_address(char *a, char *b, void *segments_a, void *segments_b, seg2i32_f read_segment, bool parsed_a, bool parsed_b, int num_segments) {
     if (parsed_a && parsed_b) {
         for (int i=0; i<num_segments; i++) {
             int32_t res = read_segment(segments_a, i) - read_segment(segments_b, i);
@@ -229,7 +229,7 @@ int _cmp_address(char *a, char *b, void *segments_a, void *segments_b, _seg2i32_
     }
 }
 
-int32_t _read_ipv4_segment_int32(void *segments, int i) {
+static int32_t read_ipv4_segment_int32(void *segments, int i) {
     return (int32_t) ((uint8_t*) segments)[i];
 }
 
@@ -240,10 +240,10 @@ int cmp_ipv4_address(char *a, char *b) {
     bool parsed_a = parse_ipv4_address(segments_a, a);
     bool parsed_b = parse_ipv4_address(segments_b, b);
 
-    return _cmp_address(a, b, segments_a, segments_b, _read_ipv4_segment_int32, parsed_a, parsed_b, 4);
+    return cmp_address(a, b, segments_a, segments_b, read_ipv4_segment_int32, parsed_a, parsed_b, 4);
 }
 
-int32_t _read_ipv6_segment_int32(void *segments, int i) {
+static int32_t read_ipv6_segment_int32(void *segments, int i) {
     return (int32_t) ((uint16_t*) segments)[i];
 }
 
@@ -254,7 +254,7 @@ int cmp_ipv6_address(char *a, char *b) {
     bool parsed_a = parse_ipv6_address(segments_a, a);
     bool parsed_b = parse_ipv6_address(segments_b, b);
 
-    return _cmp_address(a, b, segments_a, segments_b, _read_ipv6_segment_int32, parsed_a, parsed_b, 8);
+    return cmp_address(a, b, segments_a, segments_b, read_ipv6_segment_int32, parsed_a, parsed_b, 8);
 }
 
 int cmp_ip_address(char *a, char *b) {
