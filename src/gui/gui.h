@@ -11,6 +11,7 @@
 
 typedef struct _gui_t gui_t;
 
+#include "../settings_manager.h"
 #include "settings_window.h"
 
 /// XPRC GUI root
@@ -28,9 +29,10 @@ typedef struct _gui_t {
 
 /**
  * Creates a new GUI root instance.
+ * @param settings_manager shared settings manager instance to connect with
  * @return GUI root instance; NULL on error
  */
-gui_t* gui_create();
+gui_t* gui_create(settings_manager_t *settings_manager);
 
 /**
  * Destroys the given GUI root instance.

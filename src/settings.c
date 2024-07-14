@@ -9,6 +9,7 @@
 
 #include "settings.h"
 
+#define XPRC_DEFAULT_NETWORK_ENABLE_IPV6 false
 #define XPRC_DEFAULT_NETWORK_PORT 23042
 #if (XPRC_DEFAULT_NETWORK_PORT < NETWORK_MINIMUM_PORT) || (XPRC_DEFAULT_NETWORK_PORT > NETWORK_MAXIMUM_PORT)
 #error "Default port exceeds valid network port range!"
@@ -19,9 +20,9 @@ static const settings_t default_settings = {
         .password = NULL, // must be auto-generated
         .auto_startup = true,
         .auto_regen_password = true,
-        .network_interface = INTERFACE_LOCAL,
+        .network_interface = XPRC_DEFAULT_NETWORK_INTERFACE,
         .network_port = XPRC_DEFAULT_NETWORK_PORT,
-        .network_enable_ipv6 = false
+        .network_enable_ipv6 = XPRC_DEFAULT_NETWORK_ENABLE_IPV6
 };
 
 #define SETTINGS_FIELD_TYPE_END_OF_FIELDS 0
@@ -430,4 +431,61 @@ error_t save_password(settings_t *settings, char *filepath) {
     }
 
     return write_file(settings->password, strlen(settings->password), filepath);
+}
+
+bool validate_settings(settings_t *settings, bool check_password) {
+    if (!settings) {
+        return false;
+    }
+
+    if (check_password && !validate_password(settings->password)) {
+        return false;
+    }
+
+    if ((settings->network_port < NETWORK_MINIMUM_PORT) || (settings->network_port > NETWORK_MAXIMUM_PORT)) {
+        return false;
+    }
+
+    // FIXME: check network interface for existence
+
+    return true;
+}
+
+bool constrain_settings(settings_t *settings) {
+    if (!settings) {
+        return false;
+    }
+
+    if (settings->network_port < NETWORK_MINIMUM_PORT) {
+        settings->network_port = NETWORK_MINIMUM_PORT;
+        return true;
+    }
+
+    if (settings->network_port > NETWORK_MAXIMUM_PORT) {
+        settings->network_port = NETWORK_MAXIMUM_PORT;
+        return true;
+    }
+
+    return false;
+}
+
+error_t reset_network_settings(settings_t *settings) {
+    if (!settings) {
+        return ERROR_UNSPECIFIC;
+    }
+
+    char *network_interface_new = copy_string(XPRC_DEFAULT_NETWORK_INTERFACE);
+    if (XPRC_DEFAULT_NETWORK_INTERFACE && !network_interface_new) {
+        return ERROR_MEMORY_ALLOCATION;
+    }
+
+    if (settings->network_interface) {
+        free(settings->network_interface);
+    }
+    settings->network_interface = network_interface_new;
+
+    settings->network_port = XPRC_DEFAULT_NETWORK_PORT;
+    settings->network_enable_ipv6 = XPRC_DEFAULT_NETWORK_ENABLE_IPV6;
+
+    return ERROR_NONE;
 }

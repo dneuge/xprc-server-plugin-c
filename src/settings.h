@@ -16,6 +16,8 @@
 /// password is kept unmodified when passed to #copy_settings()
 #define SETTINGS_KEEP_PASSWORD false
 
+#define XPRC_DEFAULT_NETWORK_INTERFACE INTERFACE_LOCAL
+
 /**
  * XPRC settings accessible to users
  */
@@ -54,6 +56,31 @@ void destroy_settings(settings_t *settings);
  * @return error code; #ERROR_NONE on success
  */
 error_t copy_settings(settings_t *dest, settings_t *src, bool copy_password);
+
+/**
+ * Checks if the given settings are valid.
+ * @param settings settings to check
+ * @param check_password if false, invalid passwords will not fail validation; otherwise password validation is included
+ * @return true if valid, false if not
+ */
+bool validate_settings(settings_t *settings, bool check_password);
+
+/**
+ * Constrains values back into valid ranges.
+ *
+ * Note that the only constrainable numeric value at this moment is the network port, other settings will remain
+ * unaffected.
+ * @param settings settings to constrain
+ * @return true if settings had to be constrained, false if handled settings were already in range
+ */
+bool constrain_settings(settings_t *settings);
+
+/**
+ * Resets only network-relevant settings to default values.
+ * @param settings settings to reset network part of
+ * @return error code; #ERROR_NONE on success
+ */
+error_t reset_network_settings(settings_t *settings);
 
 /**
  * Loads all settings except the password from given file (password is persisted in a separate file).

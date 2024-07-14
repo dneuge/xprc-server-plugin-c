@@ -12,9 +12,12 @@
 
 #include "commands.h"
 #include "dataproxy.h"
+#include "fileio.h"
 #include "lists.h"
 #include "server.h"
+#include "settings_manager.h"
 #include "task_schedule.h"
+#include "utils.h"
 #include "xpcommands.h"
 #include "gui/gui.h"
 
@@ -23,11 +26,23 @@
 #define SERVER_MAINTENANCE_INTERVAL 120
 #define XPREF_MAINTENANCE_INTERVAL 600
 
+/// minimum path buffer size as documented in XP SDK
+#define XP_MINIMUM_PATH_BUFFER_SIZE 512
+
+/// Actual buffer size to use when communicating paths over XP SDK - maximum of actual target platform path lengths and
+/// SDK, times 2 to get enough safety margin for possible errors.
+#define XP_PATH_BUFFER_SIZE (2 * MAX(XP_MINIMUM_PATH_BUFFER_SIZE, (PATH_MAX_LENGTH+1)))
+
+/// minimum length expected for full X-Plane preferences directory path; used for plausibility check to detect errors in XP SDK usage/malfunction
+#define MIN_EXPECTED_XP_PREFERENCES_DIRECTORY_LENGTH 5
+
 XPLMFlightLoopID flight_loop_before_flight_model_id = {0};
 XPLMFlightLoopID flight_loop_after_flight_model_id = {0};
 bool flight_loop_registered = false;
 
 command_factory_t *command_factory = NULL;
+
+settings_manager_t *settings_manager = NULL;
 
 server_t *server = NULL;
 server_config_t server_config = {0};
@@ -183,6 +198,69 @@ static void register_flight_loop(XPLMFlightLoopPhaseType phase, XPLMFlightLoop_f
     XPLMScheduleFlightLoop(*flight_loop_id, CALL_ON_NEXT_FRAME, 1);
 }
 
+/**
+ * Retrieves X-Plane preferences directory path via the SDK; expensive to call, cache result if needed.
+ * @return X-Plane preference directory path, null-terminated without trailing directory separator; NULL on error
+ */
+static char* get_xp_preferences_directory() {
+    char *buffer = zalloc(XP_PATH_BUFFER_SIZE);
+    if (!buffer) {
+        printf("[XPRC] failed to allocate XP path buffer (%d bytes)\n", XP_PATH_BUFFER_SIZE);
+        return NULL;
+    }
+
+    strcpy(buffer, "dummy.txt"); // TODO: this may not be necessary; does XPLMGetPrefsPath not expand but return _some_ file path?
+    XPLMGetPrefsPath(buffer);
+    size_t dummy_filepath_length = strlen(buffer);
+    if (dummy_filepath_length >= XP_PATH_BUFFER_SIZE) {
+        printf("[XPRC] buffer overrun detected via XPLMGetPrefsPath in get_xp_preferences_directory; fatal_error (%ld >= %d)\n", dummy_filepath_length, XP_PATH_BUFFER_SIZE);
+        goto fatal_error;
+    }
+
+    XPLMExtractFileAndPath(buffer); // turns last directory separator into null-termination
+    size_t directory_length = strlen(buffer);
+    if (directory_length >= XP_PATH_BUFFER_SIZE) {
+        printf("[XPRC] buffer overrun detected via XPLMExtractFileAndPath in get_xp_preferences_directory; fatal_error (%ld >= %d)\n", directory_length, XP_PATH_BUFFER_SIZE);
+        goto fatal_error;
+    }
+
+    if (directory_length >= dummy_filepath_length) {
+        printf("[XPRC] expected path after XPLMExtractFileAndPath (%ld) to be shorter than XPLMGetPrefsPath (%ld); fatal_error\n", directory_length, dummy_filepath_length);
+        goto fatal_error;
+    }
+
+    if (directory_length < MIN_EXPECTED_XP_PREFERENCES_DIRECTORY_LENGTH) {
+        printf("[XPRC] X-Plane preference path is implausible (got %ld characters, expected at least %d); fatal_error\n", directory_length, MIN_EXPECTED_XP_PREFERENCES_DIRECTORY_LENGTH);
+        goto fatal_error;
+    }
+
+    if (buffer[directory_length-1] == DIRECTORY_SEPARATOR) {
+        printf("[XPRC] Possible SDK change: X-Plane preference path ends in directory separator (will try to shorten and continue)\n");
+        directory_length--;
+
+        if (buffer[directory_length-1] == DIRECTORY_SEPARATOR) {
+            printf("[XPRC] X-Plane preference path still ends in directory separator after shortening; fatal_error\n");
+            goto fatal_error;
+        }
+    }
+
+    // only keep the directory part that we actually need, free the (much larger) original buffer
+    // directory_length may be shorter than strlen; see tolerant SDK handling above
+    char *out = copy_partial_string(buffer, directory_length);
+    if (!out) {
+        printf("[XPRC] failed to allocate preference path output string\n");
+    }
+
+    free(buffer);
+
+    return out;
+
+fatal_error:
+    fatal_error = 1;
+    free(buffer);
+    return NULL;
+}
+
 PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
     strcpy(name, "XPRC");
     strcpy(sig, "de.energiequant.xprc");
@@ -196,6 +274,19 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
     
     if (fatal_error) {
         printf("[XPRC] a fatal error has occurred, XPRC is stuck - simulator restart required\n");
+        return 1;
+    }
+
+    // check that plugin and X-Plane use the same directory separator
+    // TODO: Macs will probably need XPLM_USE_NATIVE_PATHS to be set for UNIX-style paths (or XPRC needs to use pre-10 colons), see X-Plane documentation, check low-level stdio.h behaviour; must not be set on Windows
+    const char *xp_directory_separator = XPLMGetDirectorySeparator();
+    if (!xp_directory_separator) {
+        printf("[XPRC] X-Plane did not return any directory separator, consistency cannot be checked\n");
+    } else if (strlen(xp_directory_separator) != 1) {
+        printf("[XPRC] X-Plane directory separator has an unexpected length: got %ld, expected 1\n", strlen(xp_directory_separator));
+    } else if (DIRECTORY_SEPARATOR != xp_directory_separator[0]) {
+        printf("[XPRC] X-Plane directory separator is different from plugin platform code! Plugin is incompatible and will refuse to start; please report to XPRC developers. XP: \"%s\", XPRC: '%c'\n", xp_directory_separator, DIRECTORY_SEPARATOR);
+        fatal_error = 1;
         return 1;
     }
 
@@ -234,7 +325,7 @@ PLUGIN_API int XPluginEnable() {
         printf("[XPRC] a fatal error has occurred, XPRC is stuck - simulator restart required\n");
         return 1;
     }
-    
+
     if (server_started) {
         printf("[XPRC] server is already/still running; did you install the plugin twice? simulator restart required\n");
         fatal_error = true;
@@ -259,7 +350,40 @@ PLUGIN_API int XPluginEnable() {
         return 1;
     }
 
-    gui = gui_create();
+    if (settings_manager) {
+        printf("[XPRC] settings manager already/still exist; did you install the plugin twice? simulator restart required\n");
+        fatal_error = true;
+        return 1;
+    }
+
+    char *preferences_directory = get_xp_preferences_directory();
+    if (!preferences_directory) {
+        printf("[XPRC] failed to get preferences directory from X-Plane; simulator restart required\n");
+        fatal_error = true;
+        return 1;
+    }
+
+    settings_manager = create_settings_manager(preferences_directory);
+    free(preferences_directory);
+    preferences_directory = NULL;
+
+    if (!settings_manager) {
+        printf("[XPRC] failed to create settings manager; plugin cannot run without configuration\n");
+        return 1;
+    }
+
+    err = configure_settings_manager_from_storage(settings_manager);
+    if (err != ERROR_NONE) {
+        // TODO: inform user via popup according to error code
+        printf("[XPRC] configure_settings_manager_from_storage returned %d\n", err);
+    }
+
+    server_config.password = copy_string(settings_manager->settings->password);
+    if (!server_config.password && settings_manager->settings->password) {
+        printf("[XPRC] failed to copy password from settings manager\n");
+    }
+
+    gui = gui_create(settings_manager);
     if (!gui) {
         printf("[XPRC] failed to initialize GUI - simulator restart required\n");
         fatal_error = true;
@@ -474,6 +598,16 @@ PLUGIN_API void XPluginDisable() {
             return;
         }
         xpqueue = NULL;
+    }
+
+    if (settings_manager) {
+        err = destroy_settings_manager(settings_manager);
+        if (err != ERROR_NONE) {
+            printf("[XPRC] settings manager could not be destroyed (error %d); plugin shutdown is not possible\n", err);
+            fatal_error = true;
+            return;
+        }
+        settings_manager = NULL;
     }
 }
 

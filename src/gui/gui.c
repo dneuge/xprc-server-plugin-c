@@ -43,7 +43,7 @@ static void xp_menu_callback(void *inMenuRef, void *inItemRef) {
     }
 }
 
-gui_t* gui_create() {
+gui_t* gui_create(settings_manager_t *settings_manager) {
     // called inside XP context
 
     gui_t *gui = zalloc(sizeof(gui_t));
@@ -55,7 +55,7 @@ gui_t* gui_create() {
 
     img_window_init_globals();
 
-    gui->settings_window = create_settings_window();
+    gui->settings_window = create_settings_window(settings_manager);
     if (!gui->settings_window) {
         goto error;
     }

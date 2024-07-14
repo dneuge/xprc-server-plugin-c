@@ -7,6 +7,10 @@
 
 #include "img_window.h"
 
+#include "../settings_manager.h"
+
+#include "../lists.h"
+
 /// everything related to the XPRC settings window
 typedef struct {
     /// ImGui window instance
@@ -18,18 +22,14 @@ typedef struct {
     bool valid;
 
     // settings
-    /// automatically start XPRC? true enables, false disables autostart
-    bool auto_startup;
-    /// automatically generate a new password when starting XPRC? true enabled, false disables password regeneration
-    bool auto_regen_password;
-    /// hostname/IP of the network interface to bind XPRC to
-    char *network_interface;
-    /// TCP port number to bind XPRC to
-    int network_port;
-    /// true enables IPv6 support; false disables IPv6
-    bool network_enable_ipv6;
+    /// shared settings manager instance
+    settings_manager_t *settings_manager;
+    /// locally editable settings instance
+    settings_t *settings;
 
     // UI
+    /// length of password in settings (needs to be updated whenever password changes)
+    size_t password_length;
     /// shows the current password if true; password will be hidden if false
     bool reveal_password;
 
@@ -40,6 +40,8 @@ typedef struct {
     /// "regenerate password" button state; pressed when true, released when false
     bool btn_pwd_regen_state;
 
+    /// all network interface options to be shown on the GUI, as displayed
+    list_t *network_interface_options;
     /// "reset network configuration" button state; pressed when true, released when false
     bool btn_network_reset_state;
 
@@ -51,9 +53,10 @@ typedef struct {
 
 /**
  * Creates a new settings window instance.
+ * @param settings_manager shared settings manager instance to connect with
  * @return settings window instance; NULL on error
  */
-settings_window_t* create_settings_window();
+settings_window_t* create_settings_window(settings_manager_t *settings_manager);
 /**
  * Destroy a settings window instance.
  * @param settings_window settings window to destroy
