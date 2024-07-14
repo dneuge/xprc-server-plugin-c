@@ -132,6 +132,7 @@ error_t copy_settings_from_manager(settings_manager_t *settings_manager, setting
  *
  * @return error code, see full documentation for details on interpretation
  */
+// TODO: also indicate an error if settings do not validate
 error_t configure_settings_manager_from_storage(settings_manager_t *settings_manager);
 
 /**

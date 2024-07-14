@@ -324,6 +324,7 @@ PLUGIN_API int XPluginEnable() {
     err = start_server(&server, &server_config);
     if (err != ERROR_NONE) {
         printf("[XPRC] failed to start server: %d\n", err);
+        // FIXME: post-processing thread depends on task_schedule and has to be terminated first
         destroy_task_schedule(task_schedule);
         task_schedule = NULL;
         return 1;
