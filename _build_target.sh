@@ -55,6 +55,16 @@ else
 fi
 export XPLANE_PLATFORM_ID
 
+if [[ "${BUILD_TARGET}" == "linux" ]]; then
+	GCC_CPP_COMPILER="g++"
+elif [[ "${BUILD_TARGET}" == "windows" ]]; then
+	GCC_CPP_COMPILER="x86_64-w64-mingw32-g++"
+else
+	die "GCC C++ compiler variable not configured for ${BUILD_TARGET}"
+fi
+export GCC_CPP_COMPILER
+
+
 # normalize paths
 if [[ "${CMAKE_TOOLCHAIN_FILE}" != "" ]]; then
 	CMAKE_TOOLCHAIN_FILE=$(realpath "${CMAKE_TOOLCHAIN_FILE}")
