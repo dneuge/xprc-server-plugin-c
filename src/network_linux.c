@@ -439,13 +439,13 @@ static struct sockaddr* create_address_ipv4(network_server_config_t *config) {
     address->sin_family = AF_INET;
     address->sin_port = htons(config->port);
 
-    if (!config->interface) {
+    if (!config->interface_address) {
         address->sin_addr.s_addr = INADDR_ANY;
-    } else if (!strcmp(config->interface, INTERFACE_LOCAL)) {
+    } else if (!strcmp(config->interface_address, INTERFACE_LOCAL)) {
         address->sin_addr.s_addr = INADDR_LOOPBACK;
     } else {
         // TODO: support selection of specific interface to bind to
-        printf("unable to resolve interface \"%s\"\n", config->interface); // TODO: log
+        printf("unable to resolve interface \"%s\"\n", config->interface_address); // TODO: log
         free(address);
         return NULL;
     }
@@ -464,13 +464,13 @@ static struct sockaddr* create_address_ipv6(network_server_config_t *config) {
     address->sin6_family = AF_INET6;
     address->sin6_port = htons(config->port);
 
-    if (!config->interface) {
+    if (!config->interface_address) {
         address->sin6_addr = in6addr_any;
-    } else if (!strcmp(config->interface, INTERFACE_LOCAL)) {
+    } else if (!strcmp(config->interface_address, INTERFACE_LOCAL)) {
         address->sin6_addr = in6addr_loopback;
     } else {
         // TODO: support selection of specific interface to bind to
-        printf("unable to resolve interface \"%s\"\n", config->interface); // TODO: log
+        printf("unable to resolve interface \"%s\"\n", config->interface_address); // TODO: log
         free(address);
         return NULL;
     }

@@ -103,7 +103,7 @@ typedef struct {
     /// allows to listen on IPv6 if true, restricts to IPv4 if false
     bool enable_ipv6;
     /// listening interface address as null-terminated string; when set to NULL the server will listen on all interfaces
-    char *interface;
+    char *interface_address;
     /// TCP port number to listen on
     uint16_t port;
 } network_server_config_t;

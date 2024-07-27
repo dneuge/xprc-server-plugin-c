@@ -308,7 +308,7 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
 
     // TODO: load network settings from persistence
     server_config.network.enable_ipv6 = true;
-    server_config.network.interface = INTERFACE_LOCAL;
+    server_config.network.interface_address = INTERFACE_LOCAL;
     server_config.network.port = 23042;
 
     server_config.command_factory = command_factory;

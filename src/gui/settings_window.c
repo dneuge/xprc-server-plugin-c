@@ -156,16 +156,16 @@ static int imgui_input_set_dirty(ImGuiInputTextCallbackData* data) {
 
 /**
  * Returns a shared string representing the given interface option for display to users on GUI.
- * @param interface interface option to represent
+ * @param option interface option to represent
  * @return shared string representing the given interface for GUI; must not be freed, may be same as input
  */
-static const char* interface_option_label(char *interface) {
-    if (!interface) {
+static const char* interface_option_label(char *option) {
+    if (!option) {
         return NETWORK_INTERFACE_LABEL_ALL;
-    } else if (!strcmp(interface, INTERFACE_LOCAL)) {
+    } else if (!strcmp(option, INTERFACE_LOCAL)) {
         return NETWORK_INTERFACE_LABEL_LOCAL;
     } else {
-        return interface;
+        return option;
     }
 }
 

@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
     
     network_server_config_t config = {
         .enable_ipv6 = true,
-        .interface = NULL,
+        .interface_address = NULL,
         .port = PORT,
     };
 
