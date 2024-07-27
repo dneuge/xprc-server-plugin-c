@@ -38,7 +38,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+#ifndef NEED_C11_THREADS_WRAPPER
 #include <threads.h>
+#else
+#include <c11/threads.h>
+#endif
 
 #include <XPLMUtilities.h>
 

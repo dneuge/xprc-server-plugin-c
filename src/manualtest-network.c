@@ -3,7 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+#ifndef NEED_C11_THREADS_WRAPPER
 #include <threads.h>
+#else
+#include <c11/threads.h>
+#endif
 
 #include "network.h"
 #include "utils.h"

@@ -6,7 +6,12 @@
  */
 
 #include <stdbool.h>
+
+#ifndef NEED_C11_THREADS_WRAPPER
 #include <threads.h>
+#else
+#include <c11/threads.h>
+#endif
 
 typedef struct _server_t server_t;
 

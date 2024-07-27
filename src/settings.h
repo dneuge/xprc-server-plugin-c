@@ -7,7 +7,12 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+
+#ifndef NEED_C11_THREADS_WRAPPER
 #include <threads.h>
+#else
+#include <c11/threads.h>
+#endif
 
 #include "errors.h"
 
