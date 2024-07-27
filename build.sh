@@ -4,7 +4,7 @@ set -Eeuo pipefail
 
 script_path=$(readlink -f "$0")
 script_dir=$(dirname "${script_path}")
-root_dir="${script_dir}/.."
+root_dir="${script_dir}"
 cd "${script_dir}"
 
 src_dir="${script_dir}/src"

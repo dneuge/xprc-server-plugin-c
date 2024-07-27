@@ -50,6 +50,8 @@ export BUILD_TARGET_DYNLIB_EXT
 
 if [[ "${BUILD_TARGET}" == "linux" ]]; then
 	XPLANE_PLATFORM_ID="lin_x64"
+elif [[ "${BUILD_TARGET}" == "windows" ]]; then
+	XPLANE_PLATFORM_ID="win_x64"
 else
 	die "X-Plane platform ID not set up for ${BUILD_TARGET}"
 fi
