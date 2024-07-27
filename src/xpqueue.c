@@ -34,7 +34,7 @@ static error_t lock_xpqueue(xpqueue_t *queue) {
     }
 
     if (mtx_lock(&queue->mutex) != thrd_success) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
 
     if (queue->destruction_pending) {

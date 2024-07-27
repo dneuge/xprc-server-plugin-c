@@ -55,7 +55,7 @@ error_t destroy_dataproxy_registry(dataproxy_registry_t *registry) {
     }
 
     if (mtx_lock(&registry->mutex) != thrd_success) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
 
     if (registry->destruction_pending) {
@@ -69,7 +69,7 @@ error_t destroy_dataproxy_registry(dataproxy_registry_t *registry) {
     // unlock, relock, unlock to give every thread a chance to notice that destruction is pending now
     mtx_unlock(&registry->mutex);
     if (mtx_lock(&registry->mutex) != thrd_success) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
     mtx_unlock(&registry->mutex);
 
@@ -94,7 +94,7 @@ error_t lock_dataproxy_registry(dataproxy_registry_t *registry) {
     }
     
     if (mtx_lock(&registry->mutex) != thrd_success) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
 
     if (registry->destruction_pending) {

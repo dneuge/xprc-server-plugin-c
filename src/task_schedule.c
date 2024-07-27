@@ -111,7 +111,7 @@ error_t lock_schedule(task_schedule_t *task_schedule) {
     }
 
     if (mtx_lock(&task_schedule->mutex) != thrd_success) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
 
     if (task_schedule->destruction_pending) {

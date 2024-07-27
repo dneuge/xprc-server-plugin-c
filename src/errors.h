@@ -26,7 +26,7 @@
  * Used when the requested operation cannot be performed or completed because a thread lock could not be acquired
  * where thread-safety is required.
  */
-#define ERROR_LOCK_FAILED 3
+#define ERROR_MUTEX_FAILED 3
 
 /**
  * Used when a data structure is pending destruction, including parent structures shutting down.

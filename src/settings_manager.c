@@ -100,7 +100,7 @@ error_t lock_settings_manager(settings_manager_t *settings_manager) {
     }
 
     if (mtx_lock(&settings_manager->mutex) != thrd_success) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
 
     if (!settings_manager->destruction_pending) {

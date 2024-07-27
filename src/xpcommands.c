@@ -30,7 +30,7 @@ error_t create_xpcommand_registry(xpcommand_registry_t **registry) {
 
 error_t destroy_xpcommand_registry(xpcommand_registry_t *registry) {
     if (mtx_lock(&registry->mutex) != thrd_success) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
 
     if (registry->destruction_pending) {
@@ -72,7 +72,7 @@ error_t lock_xpcommand_registry(xpcommand_registry_t *registry) {
     }
 
     if (mtx_lock(&registry->mutex) != thrd_success) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
     
     if (registry->destruction_pending) {
@@ -313,7 +313,7 @@ error_t unregister_dropped_xpcommands(xpcommand_registry_t *registry) {
 
     err = lock_xpcommand_registry(registry);
     if (err != ERROR_NONE) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
     
     list_item_t *item = registry->commands->head;

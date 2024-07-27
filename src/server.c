@@ -326,7 +326,7 @@ error_t stop_server(server_t *server) {
 
 error_t register_session(server_t *server, session_t *session) {
     if (mtx_lock(&server->mutex) != thrd_success) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
 
     list_append(server->sessions, session);
@@ -338,7 +338,7 @@ error_t register_session(server_t *server, session_t *session) {
 
 error_t unregister_session(server_t *server, session_t *session) {
     if (mtx_lock(&server->mutex) != thrd_success) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
 
     list_item_t *item = list_find(server->sessions, session);
@@ -390,7 +390,7 @@ error_t maintain_server(server_t *server) {
     error_t out_err = ERROR_NONE;
     
     if (mtx_lock(&server->mutex) != thrd_success) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
 
     list_item_t *item = server->sessions->head;
@@ -401,7 +401,7 @@ error_t maintain_server(server_t *server) {
         
         session_t *session = item->value;
         if (!lock_session(session)) {
-            out_err = ERROR_LOCK_FAILED;
+            out_err = ERROR_MUTEX_FAILED;
         } else {
             destroy_pending_channels(session->channels);
             unlock_session(session);

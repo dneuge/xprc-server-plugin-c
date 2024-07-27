@@ -1013,7 +1013,7 @@ static error_t drci_simple_get(void *ref, XPLMDataTypeID type, void *dest) {
     }
 
     if (mtx_lock(&command->mutex) != thrd_success) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
     
     if (type == xplmType_Int) {
@@ -1203,7 +1203,7 @@ static error_t drci_simple_set(void *ref, XPLMDataTypeID type, void *value, sess
     }
 
     if (mtx_lock(&command->mutex) != thrd_success) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
 
     apply_value(type, value, &command->value_int, &command->value_float, &command->value_double, command->intconv_mode);
@@ -1249,7 +1249,7 @@ static error_t drci_array_get(void *ref, XPLMDataTypeID type, void *dest, int *n
     }
 
     if (mtx_lock(&command->mutex) != thrd_success) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
 
     dynamic_array_t *arr = NULL;
@@ -1299,7 +1299,7 @@ static error_t drci_array_length(void *ref, XPLMDataTypeID type, int *length) {
     }
 
     if (mtx_lock(&command->mutex) != thrd_success) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
 
     dynamic_array_t *arr = NULL;
@@ -1342,7 +1342,7 @@ static error_t drci_array_update(void *ref, XPLMDataTypeID type, void *values, i
 
     if (mtx_lock(&command->mutex) != thrd_success) {
         //printf("[XPRC] [DRCI] drci_array_update: lock failed\n"); // DEBUG
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
 
     int actual_count = 0;

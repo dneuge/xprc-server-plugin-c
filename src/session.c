@@ -161,7 +161,7 @@ error_t confirm_channel(session_t *session, channel_id_t channel_id, int64_t tim
     printf("[XPRC] confirm_channel: %s\n", message); // DEBUG
     
     if (!lock_session(session)) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
     
     channel_t *channel = get_channel(session->channels, channel_id);
@@ -184,7 +184,7 @@ error_t continue_channel(session_t *session, channel_id_t channel_id, int64_t ti
     //printf("[XPRC] continue_channel: %s\n", message); // DEBUG
     
     if (!lock_session(session)) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
     
     channel_t *channel = get_channel(session->channels, channel_id);
@@ -207,7 +207,7 @@ error_t finish_channel(session_t *session, channel_id_t channel_id, int64_t time
     printf("[XPRC] finish_channel: %s\n", message); // DEBUG
 
     if (!lock_session(session)) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
     
     channel_t *channel = get_channel(session->channels, channel_id);
@@ -232,7 +232,7 @@ error_t error_channel(session_t *session, channel_id_t channel_id, int64_t times
     printf("[XPRC] error_channel: %s\n", message); // DEBUG
 
     if (!lock_session(session)) {
-        return ERROR_LOCK_FAILED;
+        return ERROR_MUTEX_FAILED;
     }
     
     channel_t *channel = get_channel(session->channels, channel_id);
