@@ -4,6 +4,8 @@
 
 #include "lists.h"
 
+#include "random.h"
+
 void fail(char *reason) {
     printf(" => failed (%s)\n", reason);
     exit(1);
@@ -348,16 +350,16 @@ int main(int argc, char **argv) {
     testcase("random lists");
     int num_runs = 1000;
     int max_length = 150;
-    srandom(time(NULL));
+    initialize_insecure_random();
 
     for (int run=0; run<num_runs; run++) {
-        int length = abs((int) (random() % max_length));
+        int length = abs((int) (get_random_long_insecure() % max_length));
         long *unsorted = malloc(length * sizeof(long));
         if (!unsorted) {
             setup_fail("failed to allocate unsorted array");
         }
         for (int i = 0; i < length; i++) {
-            unsorted[i] = random();
+            unsorted[i] = get_random_long_insecure();
         }
         in = create_list();
         if (!in) {

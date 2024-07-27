@@ -73,3 +73,11 @@ error:
 
     return NULL;
 }
+
+long get_random_long_insecure() {
+    return random();
+}
+
+void initialize_insecure_random() {
+    srandom(time(NULL));
+}
