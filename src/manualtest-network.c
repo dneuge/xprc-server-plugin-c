@@ -114,8 +114,11 @@ int main(int argc, char **argv) {
     printf("waiting for connections on port %d\n", PORT);
 
     signal(SIGTERM, signal_shutdown);
-    signal(SIGHUP, signal_shutdown);
     signal(SIGINT, signal_shutdown);
+
+#ifndef TARGET_WINDOWS
+    signal(SIGHUP, signal_shutdown);
+#endif
 
     while (!shutdown) {
         thrd_sleep(&(struct timespec){.tv_sec=1,.tv_nsec=0}, NULL);
