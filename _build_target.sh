@@ -1,7 +1,7 @@
 # include from build bash scripts
 # first parameter passed to any script including this file is expected to be the build target name
 # 
-# root_dir must be set to the root directory of framebuffet before including this file
+# root_dir must be set to the root directory of XPRC before including this file
 
 BUILD_TARGET="linux"
 CMAKE_TOOLCHAIN_FILE=""
