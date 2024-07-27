@@ -308,6 +308,11 @@ bool check_file_exists(char *path) {
 
     return (errno != ENOENT);
 }
+#elif TARGET_WINDOWS
+bool check_file_exists(char *path) {
+    // FIXME: implement for Windows
+    return false;
+}
 #else
 #error "Check for file existence is target-specific but has not been implemented for the requested platform."
 #endif

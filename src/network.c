@@ -1,8 +1,15 @@
 #ifdef TARGET_LINUX
 #include "network_linux.c"
+#elif TARGET_WINDOWS
+#include "network_windows.c"
 #else
 #error "no implementation for network.h; target OS is not supported"
 #endif
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 static bool parse_ipv4_segment(uint8_t *out, char *address, int start, int endExcl) {
     int segment_length = endExcl - start;
