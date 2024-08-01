@@ -202,6 +202,7 @@ function git_unbundle {
 download "X-Plane SDK" XPSDK XPSDK401.zip 500613 https://developer.x-plane.com/wp-content/plugins/code-sample-generation/sdk_zip_files/XPSDK401.zip c1104e83d9b54b03d0084c1db52ee6491e5290994503e8dd2d4a0af637e2bdd7 c5445598297a5ffa6efc9760c3f773e6
 download "Mesa" mesa mesa-22.3.1.tar.xz 16972884 https://archive.mesa3d.org/mesa-22.3.1.tar.xz 3c9cd611c0859d307aba0659833386abdca4c86162d3c275ba5be62d16cf31eb 5644bca27c9be0092c98f1ec0e1bedd5
 download "Mesa GLU" mesa-glu mesa-glu-9.0.2.zip 526625 https://gitlab.freedesktop.org/mesa/glu/-/archive/glu-9.0.2/glu-glu-9.0.2.zip 88fbc3262e55e932be71f5ee5ca59dcfdf1425f6551d4a31ccd0daf6d0d833d1 caa3d9ec5e2522387a3dc5bde9f5e572
+download "FreeGLUT" freeglut freeglut-3.4.0.zip 554300 https://github.com/FreeGLUTProject/freeglut/archive/refs/tags/v3.4.0.zip 8aed768c71dd5ec0676216bc25e23fa928cc628c82e54ecca261385ccfcee93a 959c956c0387a1fe217ffa80d89e4949
 download "GLEW" glew glew-2.2.0.zip 329458 https://github.com/nigels-com/glew/archive/refs/tags/glew-2.2.0.zip 8aaa65f4a8c0fe439b28deb2925862fcdc0549943f08af010eead2a37baa6752 f150f61074d049ff0423b09b18cd1ef6
 git_mirror "GLEW glfixes" github.nigels-com.glfixes.bundle https://github.com/nigels-com/glfixes.git glew
 git_mirror "Khronos Group OpenGL Registry" github.KhronosGroup.OpenGL-Registry.main.bundle https://github.com/KhronosGroup/OpenGL-Registry.git main

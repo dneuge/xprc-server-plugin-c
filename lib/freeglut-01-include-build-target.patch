@@ -1,0 +1,14 @@
+FreeGLUT depends on GLU headers which should be included from build
+target directory.
+
+--- a/freeglut/CMakeLists.txt	2022-10-07 18:12:51.000000000 +0200
++++ b/freeglut/CMakeLists.txt	2023-01-06 17:10:50.712900995 +0100
+@@ -306,7 +306,7 @@
+ 
+     FIND_PACKAGE(OpenGL REQUIRED)
+     LIST(APPEND LIBS ${OPENGL_gl_LIBRARY})
+-    INCLUDE_DIRECTORIES(${OPENGL_INCLUDE_DIR})
++    INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}/../_build" ${OPENGL_INCLUDE_DIR})
+ ENDIF()
+ 
+ # For Wayland: compile with -DFREEGLUT_WAYLAND and pull EGL
