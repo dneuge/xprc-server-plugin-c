@@ -38,9 +38,16 @@ mkdir -p "${script_dir}/release/xprc/${XPLANE_PLATFORM_ID}" || die "Failed to cr
 cp -a xprc.xpl "${script_dir}/release/xprc/${XPLANE_PLATFORM_ID}/xprc.xpl" || die "Failed to copy plugin to release directory ${XPLANE_PLATFORM_ID}"
 
 ## TEST
-./test-hashmap || die "Failed tests for hashmaps"
-./test-list || die "Failed tests for lists"
-./test-prealloc-list || die "Failed tests for preallocated lists"
-./test-network-addresses || die "Failed tests for network addresses"
+exec_wrapper=""
+ext_executable=""
+if [[ "${BUILD_TARGET}" == "windows" ]]; then
+    exec_wrapper="wine"
+    ext_executable=".exe"
+    export WINEDEBUG="-all"
+fi
+${exec_wrapper} ./test-hashmap${ext_executable} || die "Failed tests for hashmaps"
+${exec_wrapper} ./test-list${ext_executable} || die "Failed tests for lists"
+${exec_wrapper} ./test-prealloc-list${ext_executable} || die "Failed tests for preallocated lists"
+${exec_wrapper} ./test-network-addresses${ext_executable} || die "Failed tests for network addresses"
 
 echo Build complete.
