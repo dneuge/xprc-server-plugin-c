@@ -33,8 +33,26 @@
 
 #include "utils.h"
 
+#define MAJOR_WINSOCK_VERSION 2
+#define MINOR_WINSOCK_VERSION 2
+
 #define MAX_ADDRESS_RESULT_BUFFER_SIZE (1 * 1024 * 1024) /* 1MB should be enough for everyone */
 #define ADDRESS_STRING_BUFFER_SIZE 40 /* IPv6: 8x 4 hex chars + 7 dividers + 1 NULL terminator */
+
+error_t initialize_os_network_apis() {
+    unsigned long res = 0;
+
+    WSADATA wsadata = {0,};
+
+    uint16_t requested_winsock_version = (MAJOR_WINSOCK_VERSION << 8) | MINOR_WINSOCK_VERSION;
+    res = WSAStartup(requested_winsock_version, &wsadata);
+    if (res) {
+        printf("[XPRC] WSAStartup failed, res=%lu\r\n", res);
+        return ERROR_UNSPECIFIC;
+    }
+
+    return ERROR_NONE;
+}
 
 error_t create_network_server(network_server_t **server, network_server_config_t *config, network_handler_t handler) {
     // FIXME: implement for Windows

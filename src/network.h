@@ -109,6 +109,13 @@ typedef struct {
 } network_server_config_t;
 
 /**
+ * Initializes network APIs provided by the operating system. This should probably not be called by the plugin but
+ * is essential for standalone test applications.
+ * @return error code; #ERROR_NONE on success
+ */
+error_t initialize_os_network_apis();
+
+/**
  * Creates and starts a new network server.
  *
  * @param server will be set to reference to server instance; must not be NULL

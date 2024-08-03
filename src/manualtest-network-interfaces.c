@@ -10,6 +10,12 @@ int main(int argc, char **argv) {
     }
     bool include_ipv6 = (atoi(argv[1]) == 1);
 
+    error_t err = initialize_os_network_apis();
+    if (err != ERROR_NONE) {
+        printf("failed to initialize OS network APIs: %d\n", err);
+        return 1;
+    }
+
     list_t *interfaces = get_network_interfaces(include_ipv6);
     if (!interfaces) {
         printf("no additional interfaces found\n");

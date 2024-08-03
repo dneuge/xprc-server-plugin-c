@@ -734,3 +734,8 @@ error:
 
     return NULL;
 }
+
+error_t initialize_os_network_apis() {
+    // we do not need to initialize anything on Linux
+    return ERROR_NONE;
+}

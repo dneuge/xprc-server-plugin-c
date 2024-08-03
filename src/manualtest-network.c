@@ -92,7 +92,13 @@ void signal_shutdown() {
 
 int main(int argc, char **argv) {
     int res;
-    
+
+    error_t err = initialize_os_network_apis();
+    if (err != ERROR_NONE) {
+        printf("failed to initialize OS network APIs: %d\n", err);
+        return 1;
+    }
+
     network_server_config_t config = {
         .enable_ipv6 = true,
         .interface_address = NULL,
