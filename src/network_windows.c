@@ -37,7 +37,8 @@
 #define MINOR_WINSOCK_VERSION 2
 
 #define MAX_ADDRESS_RESULT_BUFFER_SIZE (1 * 1024 * 1024) /* 1MB should be enough for everyone */
-#define ADDRESS_STRING_BUFFER_SIZE 40 /* IPv6: 8x 4 hex chars + 7 dividers + 1 NULL terminator */
+#define ADDRESS_STRING_BUFFER_SIZE (40 + 10) /* IPv6: 8x 4 hex chars + 7 dividers + 1 NULL terminator = 40 bytes
+                                                scoped link-local addresses indicate interface ID, so we add 10 extra */
 
 error_t initialize_os_network_apis() {
     unsigned long res = 0;
