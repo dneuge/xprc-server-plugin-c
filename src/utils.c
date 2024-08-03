@@ -124,6 +124,11 @@ int strpos_unescaped(char *haystack, char *needle, int start) {
 }
 
 void* zalloc(size_t size) {
+    // prevent zero allocation requests as some malloc implementations may corrupt in that case
+    if (size == 0) {
+        return NULL;
+    }
+
     void *addr = malloc(size);
     if (addr) {
         memset(addr, 0, size);
