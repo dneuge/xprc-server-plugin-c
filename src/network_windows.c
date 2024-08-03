@@ -23,6 +23,8 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+#include <stdio.h>
+
 // Windows APIs
 #include <winsock2.h>
 #include <iphlpapi.h>
@@ -94,8 +96,13 @@ list_t* get_network_interfaces(bool include_ipv6) {
             // Windows indicates that our buffer is too small and has modified result_buffer_size to indicate
             // the suggested size for the next attempt.
             // We only retry if that requested size is actually larger than before and while it is within limit.
-            if ((result_buffer_size <= original_result_buffer_size) ||
-                (result_buffer_size > MAX_ADDRESS_RESULT_BUFFER_SIZE)) {
+            if ((result_buffer_size <= original_result_buffer_size) || (result_buffer_size > MAX_ADDRESS_RESULT_BUFFER_SIZE)) {
+                printf(
+                    "[XPRC] GetAdaptersAddresses unreasonable ERROR_BUFFER_OVERFLOW; result_buffer_size=%lu, original_result_buffer_size=%lu\r\n",
+                    res,
+                    result_buffer_size,
+                    original_result_buffer_size
+                );
                 goto error;
             }
 
@@ -103,6 +110,7 @@ list_t* get_network_interfaces(bool include_ipv6) {
         }
 
         // something went wrong; abort
+        printf("[XPRC] GetAdaptersAddresses generic error res=%lu\r\n", res);
         goto error;
     }
 
@@ -127,6 +135,7 @@ list_t* get_network_interfaces(bool include_ipv6) {
             long unsigned int address_string_length = ADDRESS_STRING_BUFFER_SIZE;
             char *address_string = zalloc(address_string_length * 4);
             if (!address_string) {
+                printf("[XPRC] failed to allocate address_string\r\n");
                 goto error;
             }
 
@@ -140,6 +149,19 @@ list_t* get_network_interfaces(bool include_ipv6) {
 
             if (res) {
                 // error
+                res = WSAGetLastError();
+                if (res == WSANOTINITIALISED) {
+                    printf("[XPRC] WSAAddressToString error decoded: WSANOTINITIALISED\r\n");
+                } else if (res == WSAENOBUFS) {
+                    printf("[XPRC] WSAAddressToString error decoded: WSAENOBUFS\r\n");
+                } else if (res == WSAEINVAL) {
+                    printf("[XPRC] WSAAddressToString error decoded: WSAEINVAL\r\n");
+                } else if (res == WSAEFAULT) {
+                    printf("[XPRC] WSAAddressToString error decoded: WSAEFAULT\r\n");
+                } else {
+                    printf("[XPRC] WSAAddressToString unknown error: %lu\r\n", res);
+                }
+
                 free(address_string);
                 address_string = NULL;
             } else {
@@ -149,10 +171,12 @@ list_t* get_network_interfaces(bool include_ipv6) {
                 address_string = NULL;
 
                 if (!copy) {
+                    printf("[XPRC] WSAAddressToString failed copy\r\n");
                     goto error;
                 }
 
                 if (!list_append(out, copy)) {
+                    printf("[XPRC] WSAAddressToString failed append\r\n");
                     free(copy);
                     goto error;
                 }
@@ -176,6 +200,8 @@ error:
     if (result_buffer) {
         free(result_buffer);
     }
+
+    printf("[XPRC] get_network_interfaces aborted\r\n");
 
     return NULL;
 }
