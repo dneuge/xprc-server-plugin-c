@@ -701,13 +701,18 @@ list_t* get_network_interfaces(bool include_ipv6) {
         void *sys_addr = (family == AF_INET6) ? (void*) &((struct sockaddr_in6*) sys_interface->ifa_addr)->sin6_addr
                                               : (void*) &((struct sockaddr_in*) sys_interface->ifa_addr)->sin_addr;
         if (inet_ntop(family, sys_addr, ntop_buffer, NTOP_BUFFER_SIZE - 1)) {
-            name = copy_string(ntop_buffer);
-        }
-
-        if (name) {
-            if (!list_append(out, name)) {
-                free(name);
-                goto error;
+            if (!is_ip_address(ntop_buffer)) {
+                // avoid errors in caller; we are supposed to only return what we understand as IP addresses ourselves
+                printf("[XPRC] get_network_interfaces: IP address is not recognized as valid, skipping: \"%s\"\r\n", ntop_buffer);
+            } else {
+                // valid IP address
+                name = copy_string(ntop_buffer);
+                if (name) {
+                    if (!list_append(out, name)) {
+                        free(name);
+                        goto error;
+                    }
+                }
             }
         }
 

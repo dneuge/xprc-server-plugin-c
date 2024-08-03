@@ -184,6 +184,11 @@ list_t* get_network_interfaces(bool include_ipv6) {
 
                 free(address_string);
                 address_string = NULL;
+            } else if (!is_ip_address(address_string)) {
+                // avoid errors in caller; we are supposed to only return what we understand as IP addresses ourselves
+                printf("[XPRC] get_network_interfaces: IP address is not recognized as valid, skipping: \"%s\"\r\n", address_string);
+                free(address_string);
+                address_string = NULL;
             } else {
                 // no error
                 char *copy = copy_partial_string(address_string, address_string_length);
