@@ -82,8 +82,8 @@ list_t* get_network_interfaces(bool include_ipv6) {
 
         unsigned long res = GetAdaptersAddresses(
                 /* Family           */ include_ipv6 ? AF_UNSPEC : AF_INET,
-                /* Flags            */GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_FRIENDLY_NAME |
-                                      GAA_FLAG_INCLUDE_ALL_INTERFACES,
+                /* Flags            */ GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_FRIENDLY_NAME |
+                                       GAA_FLAG_INCLUDE_ALL_INTERFACES,
                 /* (Reserved)       */ NULL,
                 /* AdapterAddresses */ result_buffer,
                 /* SizePointer      */ &result_buffer_size
@@ -119,7 +119,7 @@ list_t* get_network_interfaces(bool include_ipv6) {
         goto error;
     }
 
-    IP_ADAPTER_ADDRESSES *item = (IP_ADAPTER_ADDRESSES *) result_buffer;
+    IP_ADAPTER_ADDRESSES *item = (IP_ADAPTER_ADDRESSES*) result_buffer;
     while (item) {
         IP_ADAPTER_UNICAST_ADDRESS_XP *unicast_item = item->FirstUnicastAddress;
         while (unicast_item) {
