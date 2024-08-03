@@ -168,6 +168,14 @@ void close_network_connection(network_connection_t *connection);
 list_t* get_network_interfaces(bool include_ipv6);
 
 /**
+ * Tests if the given null-terminated string represents an IP address (IPv4 or IPv6).
+ *
+ * @param address null-terminated string to test; null-safe
+ * @return true if the string represents an IP address, false if not
+ */
+bool is_ip_address(char *address);
+
+/**
  * Tests if the given null-terminated string represents an IPv4 address.
  *
  * @param address null-terminated string to test; null-safe

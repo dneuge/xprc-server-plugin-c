@@ -301,3 +301,7 @@ int cmp_ip_address(char *a, char *b) {
         return strcmp(a, b);
     }
 }
+
+bool is_ip_address(char *address) {
+    return is_ipv4_address(address) || is_ipv6_address(address);
+}
