@@ -63,6 +63,7 @@ list_t* get_network_interfaces(bool include_ipv6) {
 
     void *result_buffer = NULL;
     list_t *out = NULL;
+    unsigned long res = 0;
 
     // GetAdaptersAddresses needs a fully pre-allocated result buffer. Microsoft recommends to start with 15kB for a
     // first attempt. Due to the high number of network interfaces usually encountered these days we start with 64kB
@@ -80,7 +81,7 @@ list_t* get_network_interfaces(bool include_ipv6) {
             goto error;
         }
 
-        unsigned long res = GetAdaptersAddresses(
+        res = GetAdaptersAddresses(
                 /* Family           */ include_ipv6 ? AF_UNSPEC : AF_INET,
                 /* Flags            */ GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_FRIENDLY_NAME |
                                        GAA_FLAG_INCLUDE_ALL_INTERFACES,
@@ -139,7 +140,7 @@ list_t* get_network_interfaces(bool include_ipv6) {
                 goto error;
             }
 
-            unsigned long res = WSAAddressToString(
+            res = WSAAddressToString(
                     /* lpsaAddress             */ address_container.lpSockaddr,
                     /* dwAddressLength         */ address_container.iSockaddrLength,
                     /* lpProtocolInfo          */ NULL,
