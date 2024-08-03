@@ -11,6 +11,7 @@ doxygen/out/
 *.bak
 
 *.nocommit
+*.nocommit.*
 
 build/
 lib/*
