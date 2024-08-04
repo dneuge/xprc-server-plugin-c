@@ -19,6 +19,11 @@ int main(int argc, char **argv) {
 
     for (int i=0; i<num_iterations; i++) {
         char *pwd = generate_password();
+        if (!pwd) {
+            printf("-- error: generated password is NULL\n");
+            return 1;
+        }
+
         printf("%s\n", pwd);
 
         // increase the count for that character
