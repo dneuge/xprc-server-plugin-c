@@ -50,6 +50,7 @@ static const int SOCKOPT_ENABLE_VALUE = 1;
 // Windows API
 #include <winsock2.h>
 #include <windows.h>
+#include <ws2tcpip.h>
 
 // Microsoft API docs:
 // [sdk-api] docs/sdk-api-src/content/winsock2/nf-winsock2-shutdown.md
