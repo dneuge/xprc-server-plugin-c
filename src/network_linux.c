@@ -81,6 +81,31 @@ error:
     return NULL;
 }
 
+static struct sockaddr* create_address_ipv6(network_server_config_t *config) {
+    struct sockaddr_in6 *address = malloc(sizeof(struct sockaddr_in6));
+    if (!address) {
+        return NULL;
+    }
+
+    memset(address, 0, sizeof(struct sockaddr_in6));
+
+    address->sin6_family = AF_INET6;
+    address->sin6_port = htons(config->port);
+
+    if (!config->interface_address) {
+        address->sin6_addr = in6addr_any;
+    } else if (!strcmp(config->interface_address, INTERFACE_LOCAL)) {
+        address->sin6_addr = in6addr_loopback;
+    } else {
+        // TODO: support selection of specific interface to bind to
+        printf("unable to resolve interface \"%s\"\n", config->interface_address); // TODO: log
+        free(address);
+        return NULL;
+    }
+
+    return (struct sockaddr*) address;
+}
+
 error_t initialize_os_network_apis() {
     // we do not need to initialize anything on Linux
     return ERROR_NONE;

@@ -232,3 +232,13 @@ error:
 
     return NULL;
 }
+
+static struct sockaddr* create_address_ipv6(network_server_config_t *config) {
+    // Microsoft API docs:
+    // [sdk-api] docs/sdk-api-src/content/ws2ipdef/ns-ws2ipdef-sockaddr_in6_*.md
+
+    // FIXME: different structure, implement for Windows
+
+    return NULL;
+}
+

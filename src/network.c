@@ -1,3 +1,27 @@
+/* In an effort to share as much code as possible across operating systems, this file contains some early includes and
+ * aliases to establish compatibility with Windows operating systems. The code is primarily developed on/for Linux
+ * but Windows network APIs appear to be similar enough to facilitate rather low-effort portability.
+ *
+ * Necessary adaptions are based on API information published by Microsoft under CC-BY 4.0 and MIT licenses at:
+ *
+ *   https://github.com/MicrosoftDocs/sdk-api
+ *   revision 5da3012685fee3b1dbbefe7fa1f9a9935b9fa14e (2 Aug 2024)
+ *   see repository at specified revision for detailed license information
+ *
+ * Official API documentation omits headers and thus low-level type information. Missing information has
+ * been substituted in reference to headers distributed as part of wine which are published under terms of
+ * LGPL 2.1:
+ *
+ *   https://github.com/wine-mirror/wine/blob/master/include/
+ *
+ * This file itself remains published under MIT license. If one of the API reference sources requires a more
+ * restrictive license to be put into effect, the respective license shall take precedence with closely limited effect
+ * in accordance to the right to sublicense MIT-licensed works. This will mainly affect binary distributions and
+ * other code that might be based upon this file. To avoid licensing issues and to avoid taking over a potentially
+ * wrong implementation, it is strongly recommended not to use this file for reference in other projects; follow
+ * the original API docs on your own instead.
+ */
+
 #include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -20,8 +44,14 @@
 #include <ifaddrs.h>
 #include <unistd.h>
 #elif TARGET_WINDOWS
+// Windows API
 #include <winsock2.h>
 #include <windows.h>
+
+// Microsoft API docs:
+// [sdk-api] docs/sdk-api-src/content/winsock2/nf-winsock2-shutdown.md
+
+#define SHUT_RD SD_RECEIVE
 #endif
 
 static bool parse_ipv4_segment(uint8_t *out, char *address, int start, int endExcl) {
@@ -758,30 +788,10 @@ static struct sockaddr* create_address_ipv4(network_server_config_t *config) {
     return (struct sockaddr*) address;
 }
 
-static struct sockaddr* create_address_ipv6(network_server_config_t *config) {
-    struct sockaddr_in6 *address = malloc(sizeof(struct sockaddr_in6));
-    if (!address) {
-        return NULL;
-    }
-
-    memset(address, 0, sizeof(struct sockaddr_in6));
-
-    address->sin6_family = AF_INET6;
-    address->sin6_port = htons(config->port);
-
-    if (!config->interface_address) {
-        address->sin6_addr = in6addr_any;
-    } else if (!strcmp(config->interface_address, INTERFACE_LOCAL)) {
-        address->sin6_addr = in6addr_loopback;
-    } else {
-        // TODO: support selection of specific interface to bind to
-        printf("unable to resolve interface \"%s\"\n", config->interface_address); // TODO: log
-        free(address);
-        return NULL;
-    }
-
-    return (struct sockaddr*) address;
-}
+// structure for IPv6 addresses is different on Windows and Linux, so we need to implement it OS-specific
+// Microsoft API docs:
+// [sdk-api] docs/sdk-api-src/content/ws2ipdef/ns-ws2ipdef-sockaddr_in6_*.md
+static struct sockaddr* create_address_ipv6(network_server_config_t *config);
 
 static struct sockaddr* create_address(network_server_config_t *config) {
     if (config->enable_ipv6) {
