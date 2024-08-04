@@ -375,7 +375,7 @@ const struct timespec MAINTENANCE_INTERVAL = {
         .tv_nsec = 0,
 };
 
-static inline int min(int a, int b) {
+static inline int _min(int a, int b) {
     return (a < b) ? a : b;
 }
 
@@ -440,7 +440,7 @@ static int run_send_thread(void *arg) {
             pending = SEND_BUFFER_SIZE - connection->send_read_pos;
         }
 
-        int chunk_size = min(pending, SEND_CHUNK_SIZE);
+        int chunk_size = _min(pending, SEND_CHUNK_SIZE);
 
         // release lock as we will perform long-running calls now
         mtx_unlock(&connection->send_mutex);
@@ -940,7 +940,7 @@ error_t send_to_network(network_connection_t *connection, char *content, int len
 
     // first copy: until end of buffer is reached
     int buffer_remaining = SEND_BUFFER_SIZE - connection->send_write_pos;
-    int num_copy_to_end = min(buffer_remaining, length);
+    int num_copy_to_end = _min(buffer_remaining, length);
 
     memcpy(connection->send_ringbuffer + connection->send_write_pos, content, num_copy_to_end);
     connection->send_write_pos += num_copy_to_end;
