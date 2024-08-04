@@ -52,6 +52,8 @@
 // [sdk-api] docs/sdk-api-src/content/winsock2/nf-winsock2-shutdown.md
 
 #define SHUT_RD SD_RECEIVE
+#else
+#error "OS-specific early parts of network.c are missing; target OS is not supported"
 #endif
 
 static bool parse_ipv4_segment(uint8_t *out, char *address, int start, int endExcl) {
