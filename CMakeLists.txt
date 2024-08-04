@@ -135,6 +135,7 @@ IF(UNIX)
 ELSEIF(WIN32)
     SET(OS_LIBRARIES bcrypt iphlpapi ws2_32)
     TARGET_LINK_LIBRARIES(xprc PUBLIC ${OS_LIBRARIES})
+    TARGET_LINK_OPTIONS(xprc PRIVATE -static-libstdc++ -static-libgcc) # TODO: this relicenses the binary to GPL, replace by more liberal libraries
 ENDIF()
 
 
