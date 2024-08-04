@@ -43,6 +43,9 @@
 #include <sys/socket.h>
 #include <ifaddrs.h>
 #include <unistd.h>
+
+static const int SOCKOPT_ENABLE_VALUE = 1;
+#define SOCKOPT_ENABLE_SIZE sizeof(int)
 #elif TARGET_WINDOWS
 // Windows API
 #include <winsock2.h>
@@ -52,6 +55,9 @@
 // [sdk-api] docs/sdk-api-src/content/winsock2/nf-winsock2-shutdown.md
 
 #define SHUT_RD SD_RECEIVE
+
+static const char SOCKOPT_ENABLE_VALUE = 1;
+#define SOCKOPT_ENABLE_SIZE sizeof(char)
 #else
 #error "OS-specific early parts of network.c are missing; target OS is not supported"
 #endif
@@ -831,12 +837,12 @@ error_t create_network_server(network_server_t **server, network_server_config_t
         return NETWORK_ERROR_NO_SOCKET;
     }
 
-    res = setsockopt((*server)->ssd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
+    res = setsockopt((*server)->ssd, SOL_SOCKET, SO_REUSEADDR, &SOCKOPT_ENABLE_VALUE, SOCKOPT_ENABLE_SIZE);
     if (res) {
         printf("failed to enable REUSEADDR on socket: %d, errno %d\n", res, errno); // TODO: log
     }
 
-    res = setsockopt((*server)->ssd, SOL_SOCKET, SO_KEEPALIVE, &(int){1}, sizeof(int));
+    res = setsockopt((*server)->ssd, SOL_SOCKET, SO_KEEPALIVE, &SOCKOPT_ENABLE_VALUE, SOCKOPT_ENABLE_SIZE);
     if (res) {
         printf("failed to enable KEEPALIVE on socket: %d, errno %d\n", res, errno); // TODO: log
     }
