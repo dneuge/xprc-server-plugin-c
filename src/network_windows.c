@@ -242,8 +242,8 @@ static struct sockaddr* create_address_ipv6(network_server_config_t *config) {
     return (struct sockaddr*) address;
 }
 
-static int close_socket(int ssd) {
+static int close_socket(int sd) {
     // Microsoft API docs:
     // [sdk-api] docs/sdk-api-src/content/winsock2/nf-winsock2-closesocket.md
-    return closesocket(ssd);
+    return closesocket(sd);
 }

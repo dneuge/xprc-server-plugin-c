@@ -63,7 +63,12 @@ static const char SOCKOPT_ENABLE_VALUE = 1;
 #error "OS-specific early parts of network.c are missing; target OS is not supported"
 #endif
 
-static int close_socket(int ssd);
+/**
+ * Closes the given (server) socket descriptor using the correct function depending on operating system.
+ * @param sd (server) socket descriptor to close
+ * @return result forwarded from OS function
+ */
+static int close_socket(int sd);
 
 static bool parse_ipv4_segment(uint8_t *out, char *address, int start, int endExcl) {
     int segment_length = endExcl - start;
