@@ -707,7 +707,7 @@ static int run_server_thread(void *arg) {
         // NOTE: this does *not* count as a reason to shut down, so consecutive_errors is *not* incremented
         if (connection_id < 0) {
             printf("maximum number of connections reached\n"); // TODO: log
-            close(sd);
+            close_socket(sd);
             continue;
         }
 
@@ -767,7 +767,7 @@ static int run_server_thread(void *arg) {
     }
 
     printf("server thread shutting down\n"); // TODO: log
-    close(server->ssd);
+    close_socket(server->ssd);
 
     server->server_thread_stopped = true;
 
@@ -854,7 +854,7 @@ error_t create_network_server(network_server_t **server, network_server_config_t
     free(address);
     if (res) {
         printf("failed to bind on requested address: %d, errno %d\n", res, errno); // TODO: log
-        close((*server)->ssd);
+        close_socket((*server)->ssd);
         free(*server);
         *server = NULL;
         return NETWORK_ERROR_BIND_FAILED;
@@ -862,7 +862,7 @@ error_t create_network_server(network_server_t **server, network_server_config_t
 
     if (listen((*server)->ssd, CONNECTION_BACKLOG)) {
         printf("failed to listen on server socket\n"); // TODO: log
-        close((*server)->ssd);
+        close_socket((*server)->ssd);
         free(*server);
         *server = NULL;
         return NETWORK_ERROR_LISTEN_FAILED;
@@ -870,7 +870,7 @@ error_t create_network_server(network_server_t **server, network_server_config_t
 
     if (thrd_create(&(*server)->server_thread, run_server_thread, *server) != thrd_success) {
         printf("failed to spawn server thread\n"); // TODO: log
-        close((*server)->ssd);
+        close_socket((*server)->ssd);
         free(*server);
         *server = NULL;
         return NETWORK_ERROR_THREAD_FAILED;
@@ -880,7 +880,7 @@ error_t create_network_server(network_server_t **server, network_server_config_t
         printf("failed to spawn maintenance thread\n");
         (*server)->shutdown = true;
         shutdown((*server)->ssd, SHUT_RD);
-        close((*server)->ssd);
+        close_socket((*server)->ssd);
         if (thrd_join((*server)->server_thread, &res) != thrd_success) {
             printf("failed to rejoin server thread during failed construction cleanup\n"); // TODO: log
             return NETWORK_ERROR_THREAD_FAILED;
