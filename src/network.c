@@ -1,11 +1,3 @@
-#ifdef TARGET_LINUX
-#include "network_linux.c"
-#elif TARGET_WINDOWS
-#include "network_windows.c"
-#else
-#error "no implementation for network.h; target OS is not supported"
-#endif
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -305,3 +297,11 @@ int cmp_ip_address(char *a, char *b) {
 bool is_ip_address(char *address) {
     return is_ipv4_address(address) || is_ipv6_address(address);
 }
+
+#ifdef TARGET_LINUX
+#include "network_linux.c"
+#elif TARGET_WINDOWS
+#include "network_windows.c"
+#else
+#error "OS-specific implementation for network.h is missing; target OS is not supported"
+#endif
