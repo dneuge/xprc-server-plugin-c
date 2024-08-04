@@ -138,6 +138,7 @@ ELSEIF(WIN32)
     TARGET_LINK_OPTIONS(xprc PRIVATE -static-libstdc++ -static-libgcc) # TODO: this relicenses the binary to GPL, replace by more liberal libraries
 ENDIF()
 
+TARGET_LINK_OPTIONS(xprc PRIVATE -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/export_symbols.map)
 
 IF("${XPLANE_TARGET}" EQUAL "12.04")
     TARGET_COMPILE_DEFINITIONS(xprc PUBLIC -DXPLM400=1)
