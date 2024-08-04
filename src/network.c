@@ -891,12 +891,14 @@ error_t create_network_server(network_server_t **server, network_server_config_t
     return ERROR_NONE;
 }
 
+static int close_server_socket(int ssd);
+
 bool destroy_network_server(network_server_t *server) {
     int res;
 
     server->shutdown = true;
     shutdown(server->ssd, SHUT_RD);
-    close(server->ssd); // this should unblock the thread
+    close_server_socket(server->ssd); // this should unblock the thread
     if (thrd_join(server->server_thread, &res) != thrd_success) {
         printf("failed to join server thread\n"); // TODO: log with high severity
         return false; // we cannot continue destruction in this case
