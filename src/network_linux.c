@@ -106,7 +106,7 @@ static struct sockaddr* create_address_ipv6(network_server_config_t *config) {
     return (struct sockaddr*) address;
 }
 
-static int close_server_socket(int ssd) {
+static int close_socket(int ssd) {
     return close(ssd);
 }
 

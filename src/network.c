@@ -63,6 +63,8 @@ static const char SOCKOPT_ENABLE_VALUE = 1;
 #error "OS-specific early parts of network.c are missing; target OS is not supported"
 #endif
 
+static int close_socket(int ssd);
+
 static bool parse_ipv4_segment(uint8_t *out, char *address, int start, int endExcl) {
     int segment_length = endExcl - start;
     if ((segment_length < 1) || (segment_length > 3)) {
@@ -591,7 +593,7 @@ static bool shutdown_network_connection(network_connection_t *connection) {
 
     if (!connection->socket_closed) {
         shutdown(connection->sd, SHUT_RD); // QUESTION: close write channel as well?
-        close(connection->sd);
+        close_socket(connection->sd);
         connection->socket_closed = true;
     }
 
@@ -891,14 +893,12 @@ error_t create_network_server(network_server_t **server, network_server_config_t
     return ERROR_NONE;
 }
 
-static int close_server_socket(int ssd);
-
 bool destroy_network_server(network_server_t *server) {
     int res;
 
     server->shutdown = true;
     shutdown(server->ssd, SHUT_RD);
-    close_server_socket(server->ssd); // this should unblock the thread
+    close_socket(server->ssd); // this should unblock the thread
     if (thrd_join(server->server_thread, &res) != thrd_success) {
         printf("failed to join server thread\n"); // TODO: log with high severity
         return false; // we cannot continue destruction in this case
@@ -986,6 +986,7 @@ error_t send_to_network(network_connection_t *connection, char *content, int len
 
 void close_network_connection(network_connection_t *connection) {
     connection->closing = true;
+    close_socket(connection->sd);
 }
 
 #ifdef TARGET_LINUX
