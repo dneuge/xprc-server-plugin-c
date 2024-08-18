@@ -240,7 +240,11 @@ error_t clean_schedule(task_schedule_t *task_schedule) {
     }
 
     for (int i=0; i<TASK_SCHEDULE_NUM_TASK_QUEUES; i++) {
-        if (!prealloc_list_compact(task_schedule->queues[i], free, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS)) {
+        // FIXME: previously changed to call free in 2d480561 to fix a memleak, however that results in double-frees
+        //        because each command's ..._terminate function usually frees the memory - check more thorougly which
+        //        command or stuck setup deviates from that routine; alternatively always free here (late) instead
+        //        of during termination; both isn't possible.
+        if (!prealloc_list_compact(task_schedule->queues[i], NULL, PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS)) {
             success = false;
         }
     }
