@@ -44,6 +44,10 @@
 #define RCLOG_TRACE(format, ...) ;
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef uint8_t xprc_log_level_t;
 
 void xprc_log_init();
@@ -60,6 +64,10 @@ bool xprc_is_log_level_enabled(xprc_log_level_t level);
 #define RCLOG_IS_TRACE_ENABLED() xprc_is_log_level_enabled(RCLOG_LEVEL_TRACE)
 #else
 #define RCLOG_IS_TRACE_ENABLED() (false)
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif
