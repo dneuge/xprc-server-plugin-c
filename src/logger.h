@@ -49,7 +49,7 @@ typedef uint8_t xprc_log_level_t;
 void xprc_log_init();
 void xprc_log_destroy();
 
-void xprc_log(xprc_log_level_t level, char *format, ...);
+void xprc_log(xprc_log_level_t level, const char *format, ...);
 
 void xprc_set_min_log_level_console(xprc_log_level_t level);
 void xprc_set_min_log_level_xplane(xprc_log_level_t level);

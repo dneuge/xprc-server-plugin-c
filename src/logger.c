@@ -164,7 +164,7 @@ static bool format_message(char *buffer, xprc_log_level_t level, char *format, v
     return true;
 }
 
-void xprc_log(xprc_log_level_t level, char *format, ...) {
+void xprc_log(xprc_log_level_t level, const char *format, ...) {
     // skip if log level is disabled
     if (level < min_log_level) {
         return;
@@ -174,7 +174,7 @@ void xprc_log(xprc_log_level_t level, char *format, ...) {
 
     va_list args;
     va_start(args, format);
-    bool success = format_message(&buffer[0], level, format, args);
+    bool success = format_message(&buffer[0], level, (char*) format, args);
     va_end(args);
     
     if (!success) {
