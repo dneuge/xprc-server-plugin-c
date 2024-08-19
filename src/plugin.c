@@ -272,6 +272,10 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
 
     xprc_log_init();
 
+    // TODO: make log levels configurable
+    xprc_set_min_log_level_console(RCLOG_LEVEL_TRACE);
+    xprc_set_min_log_level_xplane(RCLOG_LEVEL_INFO);
+
     if (plugin_initialized) {
         RCLOG_ERROR("plugin has already been initialized without shutdown (did you install it twice?) - simulator restart required");
         fatal_error = 1;
