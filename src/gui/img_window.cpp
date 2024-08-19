@@ -16,7 +16,7 @@ ImgWindowWrapper::ImgWindowWrapper(int left, int top, int right, int bottom, XPL
 ImgWindowWrapper::~ImgWindowWrapper() = default;
 
 void ImgWindowWrapper::buildInterface() {
-    RCLOG_TRACE("ImgWindowWrapper::buildInterface()");
+    //RCLOG_TRACE("ImgWindowWrapper::buildInterface()"); // DEBUG: triggered every single frame; only activate if needed
 
     this->build_interface(this, this->ref);
 }
