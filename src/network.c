@@ -25,7 +25,6 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -35,6 +34,7 @@
 #include <c11/threads.h>
 #endif
 
+#include "logger.h"
 #include "network.h"
 
 #ifdef TARGET_LINUX
@@ -453,7 +453,7 @@ static int run_send_thread(void *arg) {
     bool holds_lock = false;
 
     if (mtx_lock(&connection->send_mutex) != thrd_success) {
-        printf("failed to get initial lock of mutex in send thread\n"); // TODO: log
+        RCLOG_WARN("failed to get initial lock of mutex in send thread");
     } else {
         holds_lock = true;
     }
@@ -462,13 +462,13 @@ static int run_send_thread(void *arg) {
         if (connection->send_read_pos == connection->send_write_pos) {
             // everything has been sent (pointers are equal), go to sleep
             if (time_from_now(&wait_until, SEND_CHECK_INTERVAL_MICROSECONDS) != ERROR_NONE) {
-                printf("unable to calculate time to wait in send thread\n"); // TODO: log
+                RCLOG_WARN("unable to calculate time to wait in send thread");
                 break;
             }
 
             int res = cnd_timedwait(&connection->send_wait, &connection->send_mutex, &wait_until);
             if (res != thrd_success && res != thrd_timedout) {
-                printf("condition failed to wait on send thread\n"); // TODO: log
+                RCLOG_WARN("condition failed to wait on send thread");
                 holds_lock = false;
                 break;
             }
@@ -494,13 +494,13 @@ static int run_send_thread(void *arg) {
 
         ssize_t sent = send(connection->sd, connection->send_ringbuffer + connection->send_read_pos, chunk_size, 0);
         if (sent <= 0) {
-            printf("failed to send\n"); // TODO: log
+            RCLOG_WARN("failed to send");
             break;
         }
 
         // we need to regain the lock to continue
         if (mtx_lock(&connection->send_mutex) != thrd_success) {
-            printf("failed to regain lock on mutex in send thread\n"); // TODO: log
+            RCLOG_WARN("failed to regain lock on mutex in send thread");
             break;
         }
         holds_lock = true;
@@ -516,7 +516,7 @@ static int run_send_thread(void *arg) {
         mtx_unlock(&connection->send_mutex);
     }
 
-    printf("send thread terminates connection\n"); // TODO: log
+    RCLOG_DEBUG("send thread terminates connection");
     close_network_connection(connection);
 
     return 0;
@@ -536,7 +536,7 @@ static int run_receive_thread(void *arg) {
             // connection was closed
             break;
         } else if (received < 0) {
-            printf("error while reading from connection\n"); // TODO: log
+            RCLOG_WARN("error while reading from connection");
             break;
         }
 
@@ -558,7 +558,7 @@ static int run_receive_thread(void *arg) {
                 line_buffer[line_write_offset++] = ch;
                 if (line_write_offset >= RECEIVE_MAX_LINE_LENGTH) {
                     // excessively long lines cannot be handled, connection must be terminated
-                    printf("receive buffer exceeded\n"); // TODO: log
+                    RCLOG_WARN("receive buffer exceeded");
                     abort = true;
                     break;
                 }
@@ -570,7 +570,7 @@ static int run_receive_thread(void *arg) {
         }
     }
 
-    printf("receive thread terminates connection\n"); // TODO: log
+    RCLOG_DEBUG("receive thread terminates connection");
     close_network_connection(connection);
 
     return 0;
@@ -581,7 +581,7 @@ static bool shutdown_network_connection(network_connection_t *connection) {
     bool success = true;
 
     if (!connection->in_use) {
-        printf("connection is not in use\n"); // TODO: log
+        RCLOG_DEBUG("connection is not in use");
         return true;
     }
 
@@ -606,7 +606,7 @@ static bool shutdown_network_connection(network_connection_t *connection) {
         if (thrd_join(connection->recv_thread, &res) == thrd_success) {
             connection->joined_recv_thread = true;
         } else {
-            printf("failed to join client receive thread\n"); // TODO: log
+            RCLOG_ERROR("failed to join client receive thread");
             success = false;
         }
     }
@@ -615,13 +615,13 @@ static bool shutdown_network_connection(network_connection_t *connection) {
         if (thrd_join(connection->send_thread, &res) == thrd_success) {
             connection->joined_send_thread = true;
         } else {
-            printf("failed to join client send thread\n"); // TODO: log
+            RCLOG_ERROR("failed to join client send thread");
             success = false;
         }
     }
 
     if (!success) {
-        printf("connection could not be terminated\n"); // TODO: log with high severity
+        RCLOG_ERROR("connection could not be terminated");
         return false; // connection is a zombie and must remain "in use"
     }
 
@@ -694,7 +694,7 @@ static int run_server_thread(void *arg) {
     while (!server->shutdown && (consecutive_errors < SERVER_MAX_CONSECUTIVE_ERRORS)) {
         int sd = accept(server->ssd, NULL, NULL);
         if (sd < 0) {
-            printf("accept failed\n"); // TODO: log
+            RCLOG_WARN("accept failed");
             consecutive_errors++;
             continue;
         }
@@ -711,7 +711,7 @@ static int run_server_thread(void *arg) {
         // close socket if we have reached maximum connections
         // NOTE: this does *not* count as a reason to shut down, so consecutive_errors is *not* incremented
         if (connection_id < 0) {
-            printf("maximum number of connections reached\n"); // TODO: log
+            RCLOG_WARN("maximum number of connections reached");
             close_socket(sd);
             continue;
         }
@@ -723,7 +723,7 @@ static int run_server_thread(void *arg) {
         connection->server = server;
 
         if (mtx_init(&connection->send_mutex, mtx_plain) != thrd_success) {
-            printf("failed to initialize send mutex\n"); // TODO: log
+            RCLOG_ERROR("failed to initialize send mutex");
             consecutive_errors++;
             close_network_connection(connection);
             continue;
@@ -731,7 +731,7 @@ static int run_server_thread(void *arg) {
         connection->has_send_mutex = true;
 
         if (cnd_init(&connection->send_wait) != thrd_success) {
-            printf("failed to initialize send condition\n"); // TODO: log
+            RCLOG_ERROR("failed to initialize send condition");
             consecutive_errors++;
             close_network_connection(connection);
             continue;
@@ -740,21 +740,21 @@ static int run_server_thread(void *arg) {
 
         connection->send_ringbuffer = malloc(SEND_BUFFER_SIZE);
         if (!connection->send_ringbuffer) {
-            printf("failed to allocate send ring buffer\n"); // TODO: log
+            RCLOG_ERROR("failed to allocate send ring buffer");
             consecutive_errors++;
             close_network_connection(connection);
             continue;
         }
 
         if (thrd_create(&connection->send_thread, run_send_thread, connection) != thrd_success) {
-            printf("failed to spawn send thread\n"); // TODO: log
+            RCLOG_ERROR("failed to spawn send thread");
             consecutive_errors++;
             close_network_connection(connection);
             continue;
         }
 
         if (thrd_create(&connection->recv_thread, run_receive_thread, connection) != thrd_success) {
-            printf("failed to spawn receive thread\n"); // TODO: log
+            RCLOG_ERROR("failed to spawn receive thread");
             consecutive_errors++;
             close_network_connection(connection);
             continue;
@@ -762,7 +762,7 @@ static int run_server_thread(void *arg) {
 
         int res = server->handler.new_connection(connection, &connection->handler_reference, server->handler.new_connection_constructor_reference);
         if (res != ERROR_NONE) {
-            printf("handler failed to create connection: %d\n", res); // TODO: log
+            RCLOG_WARN("handler failed to create connection: %d", res);
             consecutive_errors++;
             close_network_connection(connection);
             continue;
@@ -771,7 +771,7 @@ static int run_server_thread(void *arg) {
         consecutive_errors = 0;
     }
 
-    printf("server thread shutting down\n"); // TODO: log
+    RCLOG_DEBUG("server thread shutting down");
     close_socket(server->ssd);
 
     server->server_thread_stopped = true;
@@ -796,7 +796,7 @@ static struct sockaddr* create_address_ipv4(network_server_config_t *config) {
         address->sin_addr.s_addr = INADDR_LOOPBACK;
     } else {
         // TODO: support selection of specific interface to bind to
-        printf("unable to resolve interface \"%s\"\n", config->interface_address); // TODO: log
+        RCLOG_WARN("unable to resolve interface \"%s\"", config->interface_address);
         free(address);
         return NULL;
     }
@@ -823,7 +823,7 @@ error_t create_network_server(network_server_t **server, network_server_config_t
     struct sockaddr *address = create_address(config);
     socklen_t address_size = config->enable_ipv6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in);
     if (!address) {
-        printf("failed to create server address\n"); // TODO: log
+        RCLOG_WARN("failed to create server address");
         return NETWORK_ERROR_BAD_ADDRESS;
     }
 
@@ -847,18 +847,18 @@ error_t create_network_server(network_server_t **server, network_server_config_t
 
     res = setsockopt((*server)->ssd, SOL_SOCKET, SO_REUSEADDR, &SOCKOPT_ENABLE_VALUE, SOCKOPT_ENABLE_SIZE);
     if (res) {
-        printf("failed to enable REUSEADDR on socket: %d, errno %d\n", res, errno); // TODO: log
+        RCLOG_WARN("failed to enable REUSEADDR on socket: %d, errno %d", res, errno);
     }
 
     res = setsockopt((*server)->ssd, SOL_SOCKET, SO_KEEPALIVE, &SOCKOPT_ENABLE_VALUE, SOCKOPT_ENABLE_SIZE);
     if (res) {
-        printf("failed to enable KEEPALIVE on socket: %d, errno %d\n", res, errno); // TODO: log
+        RCLOG_WARN("failed to enable KEEPALIVE on socket: %d, errno %d", res, errno);
     }
 
     res = bind((*server)->ssd, (struct sockaddr*) address, address_size);
     free(address);
     if (res) {
-        printf("failed to bind on requested address: %d, errno %d\n", res, errno); // TODO: log
+        RCLOG_WARN("failed to bind on requested address: %d, errno %d", res, errno);
         close_socket((*server)->ssd);
         free(*server);
         *server = NULL;
@@ -866,7 +866,7 @@ error_t create_network_server(network_server_t **server, network_server_config_t
     }
 
     if (listen((*server)->ssd, CONNECTION_BACKLOG)) {
-        printf("failed to listen on server socket\n"); // TODO: log
+        RCLOG_WARN("failed to listen on server socket");
         close_socket((*server)->ssd);
         free(*server);
         *server = NULL;
@@ -874,7 +874,7 @@ error_t create_network_server(network_server_t **server, network_server_config_t
     }
 
     if (thrd_create(&(*server)->server_thread, run_server_thread, *server) != thrd_success) {
-        printf("failed to spawn server thread\n"); // TODO: log
+        RCLOG_ERROR("failed to spawn server thread");
         close_socket((*server)->ssd);
         free(*server);
         *server = NULL;
@@ -882,12 +882,12 @@ error_t create_network_server(network_server_t **server, network_server_config_t
     }
 
     if (thrd_create(&(*server)->maintenance_thread, run_maintenance_thread, *server) != thrd_success) {
-        printf("failed to spawn maintenance thread\n");
+        RCLOG_ERROR("failed to spawn maintenance thread");
         (*server)->shutdown = true;
         shutdown((*server)->ssd, SHUT_RD);
         close_socket((*server)->ssd);
         if (thrd_join((*server)->server_thread, &res) != thrd_success) {
-            printf("failed to rejoin server thread during failed construction cleanup\n"); // TODO: log
+            RCLOG_ERROR("failed to rejoin server thread during failed construction cleanup");
             return NETWORK_ERROR_THREAD_FAILED;
         }
         free(*server);
@@ -905,7 +905,7 @@ bool destroy_network_server(network_server_t *server) {
     shutdown(server->ssd, SHUT_RD);
     close_socket(server->ssd); // this should unblock the thread
     if (thrd_join(server->server_thread, &res) != thrd_success) {
-        printf("failed to join server thread\n"); // TODO: log with high severity
+        RCLOG_ERROR("failed to join server thread");
         return false; // we cannot continue destruction in this case
     }
 
@@ -915,12 +915,12 @@ bool destroy_network_server(network_server_t *server) {
     // All connections that could be closed will have been closed when rejoining that thread.
 
     if (thrd_join(server->maintenance_thread, &res) != thrd_success) {
-        printf("failed to join server thread\n"); // TODO: log with high severity
+        RCLOG_ERROR("failed to join server thread");
         return false; // we cannot continue destruction in this case
     }
 
     if (res != ERROR_NONE) {
-        printf("maintenance thread was unable to close all connections\n"); // TODO: log with high severity
+        RCLOG_ERROR("maintenance thread was unable to close all connections");
         return false; // we cannot continue destruction in this case
     }
 

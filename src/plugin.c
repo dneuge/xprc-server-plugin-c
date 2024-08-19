@@ -1,7 +1,5 @@
 #include <math.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #ifndef NEED_C11_THREADS_WRAPPER
@@ -19,6 +17,7 @@
 #include "dataproxy.h"
 #include "fileio.h"
 #include "lists.h"
+#include "logger.h"
 #include "server.h"
 #include "settings_manager.h"
 #include "task_schedule.h"
@@ -81,14 +80,14 @@ int run_post_processing_thread(void *arg) {
     
     err = lock_schedule(task_schedule);
     if (err != ERROR_NONE) {
-        printf("[XPRC] post-processing thread failed to lock schedule: %d\n", err);
+        RCLOG_WARN("post-processing thread failed to lock schedule: %d", err);
         return 0;
     }
     has_lock = true;
     
     while (!shutdown_post_processing) {
         if (cnd_wait(&post_processing_wait, &task_schedule->mutex) != thrd_success) {
-            printf("[XPRC] post-processing thread failed to wait\n");
+            RCLOG_WARN("post-processing thread failed to wait");
             break;
         }
 
@@ -103,7 +102,7 @@ int run_post_processing_thread(void *arg) {
             cycles_until_schedule_cleaning = SCHEDULE_CLEANING_INTERVAL;
             err = clean_schedule(task_schedule);
             if (err != ERROR_NONE) {
-                printf("[XPRC] clean_schedule reported error %d\n", err);
+                RCLOG_WARN("clean_schedule reported error %d", err);
             }
         }
 
@@ -117,12 +116,12 @@ int run_post_processing_thread(void *arg) {
             
             err = maintain_server(server);
             if (err != ERROR_NONE) {
-                printf("[XPRC] server maintenance reported error %d\n", err);
+                RCLOG_WARN("server maintenance reported error %d", err);
             }
             
             err = lock_schedule(task_schedule);
             if (err != ERROR_NONE) {
-                printf("[XPRC] failed to regain lock on task schedule after server maintenance: %d\n", err);
+                RCLOG_WARN("failed to regain lock on task schedule after server maintenance: %d", err);
                 break;
             }
             has_lock = true;
@@ -133,7 +132,7 @@ int run_post_processing_thread(void *arg) {
         unlock_schedule(task_schedule);
     }
 
-    printf("[XPRC] post-processing thread terminates\n");
+    RCLOG_DEBUG("post-processing thread terminates\n");
     
     return 0;
 }
@@ -163,7 +162,7 @@ static float process_flight_loop_after_flight_model(float inElapsedSinceLastCall
     err = flush_xpqueue(xpqueue);
     if (err != ERROR_NONE) {
         // FIXME: if this happens it's unlikely that the issue will fix by itself next iteration; silence warning after first occurrence (in a row) or even mark server as failed?
-        printf("[XPRC] error %d while flushing XP queue\n", err);
+        RCLOG_WARN("error %d while flushing XP queue", err);
     }
 
     // TODO: X-Plane reference maintenance should be time-based (once every 2 seconds)
@@ -173,12 +172,12 @@ static float process_flight_loop_after_flight_model(float inElapsedSinceLastCall
 
         err = unregister_dropped_dataproxies(dataproxy_registry);
         if (err != ERROR_NONE) {
-            printf("[XPRC] error %d while unregistering dropped dataproxies (maintenance)\n", err);
+            RCLOG_WARN("error %d while unregistering dropped dataproxies (maintenance)", err);
         }
 
         err = unregister_dropped_xpcommands(xpcommand_registry);
         if (err != ERROR_NONE) {
-            printf("[XPRC] error %d while unregistering dropped XP commands (maintenance)\n", err);
+            RCLOG_WARN("error %d while unregistering dropped XP commands (maintenance)", err);
         }
     }
 
@@ -210,7 +209,7 @@ static void register_flight_loop(XPLMFlightLoopPhaseType phase, XPLMFlightLoop_f
 static char* get_xp_preferences_directory() {
     char *buffer = zalloc(XP_PATH_BUFFER_SIZE);
     if (!buffer) {
-        printf("[XPRC] failed to allocate XP path buffer (%d bytes)\n", XP_PATH_BUFFER_SIZE);
+        RCLOG_WARN("failed to allocate XP path buffer (%d bytes)", XP_PATH_BUFFER_SIZE);
         return NULL;
     }
 
@@ -218,33 +217,33 @@ static char* get_xp_preferences_directory() {
     XPLMGetPrefsPath(buffer);
     size_t dummy_filepath_length = strlen(buffer);
     if (dummy_filepath_length >= XP_PATH_BUFFER_SIZE) {
-        printf("[XPRC] buffer overrun detected via XPLMGetPrefsPath in get_xp_preferences_directory; fatal_error (%ld >= %d)\n", dummy_filepath_length, XP_PATH_BUFFER_SIZE);
+        RCLOG_ERROR("buffer overrun detected via XPLMGetPrefsPath in get_xp_preferences_directory; fatal_error (%ld >= %d)", dummy_filepath_length, XP_PATH_BUFFER_SIZE);
         goto fatal_error;
     }
 
     XPLMExtractFileAndPath(buffer); // turns last directory separator into null-termination
     size_t directory_length = strlen(buffer);
     if (directory_length >= XP_PATH_BUFFER_SIZE) {
-        printf("[XPRC] buffer overrun detected via XPLMExtractFileAndPath in get_xp_preferences_directory; fatal_error (%ld >= %d)\n", directory_length, XP_PATH_BUFFER_SIZE);
+        RCLOG_ERROR("buffer overrun detected via XPLMExtractFileAndPath in get_xp_preferences_directory; fatal_error (%ld >= %d)", directory_length, XP_PATH_BUFFER_SIZE);
         goto fatal_error;
     }
 
     if (directory_length >= dummy_filepath_length) {
-        printf("[XPRC] expected path after XPLMExtractFileAndPath (%ld) to be shorter than XPLMGetPrefsPath (%ld); fatal_error\n", directory_length, dummy_filepath_length);
+        RCLOG_ERROR("expected path after XPLMExtractFileAndPath (%ld) to be shorter than XPLMGetPrefsPath (%ld); fatal_error", directory_length, dummy_filepath_length);
         goto fatal_error;
     }
 
     if (directory_length < MIN_EXPECTED_XP_PREFERENCES_DIRECTORY_LENGTH) {
-        printf("[XPRC] X-Plane preference path is implausible (got %ld characters, expected at least %d); fatal_error\n", directory_length, MIN_EXPECTED_XP_PREFERENCES_DIRECTORY_LENGTH);
+        RCLOG_ERROR("X-Plane preference path is implausible (got %ld characters, expected at least %d); fatal_error", directory_length, MIN_EXPECTED_XP_PREFERENCES_DIRECTORY_LENGTH);
         goto fatal_error;
     }
 
     if (buffer[directory_length-1] == DIRECTORY_SEPARATOR) {
-        printf("[XPRC] Possible SDK change: X-Plane preference path ends in directory separator (will try to shorten and continue)\n");
+        RCLOG_WARN("Possible SDK change: X-Plane preference path ends in directory separator (will try to shorten and continue)");
         directory_length--;
 
         if (buffer[directory_length-1] == DIRECTORY_SEPARATOR) {
-            printf("[XPRC] X-Plane preference path still ends in directory separator after shortening; fatal_error\n");
+            RCLOG_ERROR("X-Plane preference path still ends in directory separator after shortening; fatal_error");
             goto fatal_error;
         }
     }
@@ -253,7 +252,7 @@ static char* get_xp_preferences_directory() {
     // directory_length may be shorter than strlen; see tolerant SDK handling above
     char *out = copy_partial_string(buffer, directory_length);
     if (!out) {
-        printf("[XPRC] failed to allocate preference path output string\n");
+        RCLOG_WARN("failed to allocate preference path output string");
     }
 
     free(buffer);
@@ -271,14 +270,16 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
     strcpy(sig, "de.energiequant.xprc");
     strcpy(desc, "XP Remote Control");
 
+    xprc_log_init();
+
     if (plugin_initialized) {
-        printf("[XPRC] plugin has already been initialized without shutdown (did you install it twice?) - simulator restart required\n");
+        RCLOG_ERROR("plugin has already been initialized without shutdown (did you install it twice?) - simulator restart required");
         fatal_error = 1;
         return 1;
     }
     
     if (fatal_error) {
-        printf("[XPRC] a fatal error has occurred, XPRC is stuck - simulator restart required\n");
+        RCLOG_ERROR("a fatal error has occurred, XPRC is stuck - simulator restart required");
         return 1;
     }
 
@@ -286,24 +287,24 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
     // TODO: Macs will probably need XPLM_USE_NATIVE_PATHS to be set for UNIX-style paths (or XPRC needs to use pre-10 colons), see X-Plane documentation, check low-level stdio.h behaviour; must not be set on Windows
     const char *xp_directory_separator = XPLMGetDirectorySeparator();
     if (!xp_directory_separator) {
-        printf("[XPRC] X-Plane did not return any directory separator, consistency cannot be checked\n");
+        RCLOG_WARN("X-Plane did not return any directory separator, consistency cannot be checked");
     } else if (strlen(xp_directory_separator) != 1) {
-        printf("[XPRC] X-Plane directory separator has an unexpected length: got %ld, expected 1\n", strlen(xp_directory_separator));
+        RCLOG_WARN("X-Plane directory separator has an unexpected length: got %ld, expected 1", strlen(xp_directory_separator));
     } else if (DIRECTORY_SEPARATOR != xp_directory_separator[0]) {
-        printf("[XPRC] X-Plane directory separator is different from plugin platform code! Plugin is incompatible and will refuse to start; please report to XPRC developers. XP: \"%s\", XPRC: '%c'\n", xp_directory_separator, DIRECTORY_SEPARATOR);
+        RCLOG_ERROR("X-Plane directory separator is different from plugin platform code! Plugin is incompatible and will refuse to start; please report to XPRC developers. XP: \"%s\", XPRC: '%c'", xp_directory_separator, DIRECTORY_SEPARATOR);
         fatal_error = 1;
         return 1;
     }
 
     if (cnd_init(&post_processing_wait) != thrd_success) {
-        printf("[XPRC] failed to create condition for post-processing thread - simulator restart required\n");
+        RCLOG_ERROR("failed to create condition for post-processing thread - simulator restart required");
         fatal_error = 1;
         return 1;
     }
 
     command_factory = create_command_factory();
     if (!command_factory) {
-        printf("[XPRC] failed to create command factory - simulator restart required\n");
+        RCLOG_ERROR("failed to create command factory - simulator restart required");
         fatal_error = 1;
         return 1;
     }
@@ -327,43 +328,43 @@ PLUGIN_API int XPluginEnable() {
     error_t err = ERROR_NONE;
     
     if (fatal_error) {
-        printf("[XPRC] a fatal error has occurred, XPRC is stuck - simulator restart required\n");
+        RCLOG_ERROR("a fatal error has occurred, XPRC is stuck - simulator restart required");
         return 1;
     }
 
     if (server_started) {
-        printf("[XPRC] server is already/still running; did you install the plugin twice? simulator restart required\n");
+        RCLOG_ERROR("server is already/still running; did you install the plugin twice? simulator restart required");
         fatal_error = true;
         return 1;
     }
 
     if (gui) {
-        printf("[XPRC] GUI is still registered; did you install the plugin twice? simulator restart required\n");
+        RCLOG_ERROR("GUI is still registered; did you install the plugin twice? simulator restart required");
         fatal_error = true;
         return 1;
     }
 
     if (task_schedule) {
-        printf("[XPRC] task schedule already exists; did you install the plugin twice? simulator restart required\n");
+        RCLOG_ERROR("task schedule already exists; did you install the plugin twice? simulator restart required");
         fatal_error = true;
         return 1;
     }
     
     if (xpqueue) {
-        printf("[XPRC] XP queue already exists; did you install the plugin twice? simulator restart required\n");
+        RCLOG_ERROR("XP queue already exists; did you install the plugin twice? simulator restart required");
         fatal_error = true;
         return 1;
     }
 
     if (settings_manager) {
-        printf("[XPRC] settings manager already/still exist; did you install the plugin twice? simulator restart required\n");
+        RCLOG_ERROR("settings manager already/still exist; did you install the plugin twice? simulator restart required");
         fatal_error = true;
         return 1;
     }
 
     char *preferences_directory = get_xp_preferences_directory();
     if (!preferences_directory) {
-        printf("[XPRC] failed to get preferences directory from X-Plane; simulator restart required\n");
+        RCLOG_ERROR("failed to get preferences directory from X-Plane; simulator restart required");
         fatal_error = true;
         return 1;
     }
@@ -373,57 +374,57 @@ PLUGIN_API int XPluginEnable() {
     preferences_directory = NULL;
 
     if (!settings_manager) {
-        printf("[XPRC] failed to create settings manager; plugin cannot run without configuration\n");
+        RCLOG_ERROR("failed to create settings manager; plugin cannot run without configuration");
         return 1;
     }
 
     err = configure_settings_manager_from_storage(settings_manager);
     if (err != ERROR_NONE) {
         // TODO: inform user via popup according to error code
-        printf("[XPRC] configure_settings_manager_from_storage returned %d\n", err);
+        RCLOG_WARN("configure_settings_manager_from_storage returned %d", err);
     }
 
     server_config.password = copy_string(settings_manager->settings->password);
     if (!server_config.password && settings_manager->settings->password) {
-        printf("[XPRC] failed to copy password from settings manager\n");
+        RCLOG_WARN("failed to copy password from settings manager");
     }
 
     gui = gui_create(settings_manager);
     if (!gui) {
-        printf("[XPRC] failed to initialize GUI - simulator restart required\n");
+        RCLOG_ERROR("failed to initialize GUI - simulator restart required");
         fatal_error = true;
         return 1;
     }
 
     err = create_xpqueue(&xpqueue);
     if (err != ERROR_NONE) {
-        printf("[XPRC] failed to create XP queue: %d\n", err);
+        RCLOG_ERROR("failed to create XP queue: %d", err);
         return 1;
     }
     server_config.xpqueue = xpqueue;
 
     if (dataproxy_registry) {
-        printf("[XPRC] dataproxy registry already exists; did you install the plugin twice? simulator restart required\n");
+        RCLOG_ERROR("dataproxy registry already exists; did you install the plugin twice? simulator restart required");
         fatal_error = true;
         return 1;
     }
 
     if (xpcommand_registry) {
-        printf("[XPRC] XP command registry already exists; did you install the plugin twice? simulator restart required\n");
+        RCLOG_ERROR("XP command registry already exists; did you install the plugin twice? simulator restart required");
         fatal_error = true;
         return 1;
     }
 
     err = create_dataproxy_registry(&dataproxy_registry);
     if (err != ERROR_NONE) {
-        printf("[XPRC] failed to create dataproxy registry: %d\n", err);
+        RCLOG_ERROR("failed to create dataproxy registry: %d", err);
         return 1;
     }
     server_config.dataproxy_registry = dataproxy_registry;
 
     err = create_xpcommand_registry(&xpcommand_registry);
     if (err != ERROR_NONE) {
-        printf("[XPRC] failed to create XP command registry: %d\n", err);
+        RCLOG_ERROR("failed to create XP command registry: %d", err);
         return 1;
     }
     server_config.xpcommand_registry = xpcommand_registry;
@@ -432,27 +433,27 @@ PLUGIN_API int XPluginEnable() {
     
     err = create_task_schedule(&task_schedule);
     if (err != ERROR_NONE) {
-        printf("[XPRC] failed to create task schedule: %d\n", err);
+        RCLOG_ERROR("failed to create task schedule: %d", err);
         return 1;
     }
     server_config.task_schedule = task_schedule;
 
     if (has_post_processing_thread) {
-        printf("[XPRC] post-processing thread still exists; simulator restart required\n");
+        RCLOG_ERROR("post-processing thread still exists; simulator restart required");
         fatal_error = true;
         return 1;
     }
     
     shutdown_post_processing = false;
     if (thrd_create(&post_processing_thread, run_post_processing_thread, NULL) != thrd_success) {
-        printf("[XPRC] failed to spawn post-processing thread\n");
+        RCLOG_ERROR("failed to spawn post-processing thread");
         return 1;
     }
     has_post_processing_thread = true;
     
     err = start_server(&server, &server_config);
     if (err != ERROR_NONE) {
-        printf("[XPRC] failed to start server: %d\n", err);
+        RCLOG_ERROR("failed to start server: %d", err);
         // FIXME: post-processing thread depends on task_schedule and has to be terminated first
         destroy_task_schedule(task_schedule);
         task_schedule = NULL;
@@ -471,7 +472,7 @@ PLUGIN_API void XPluginDisable() {
     error_t err = ERROR_NONE;
     
     if (fatal_error) {
-        printf("[XPRC] a fatal error has occurred, XPRC is stuck - simulator restart required\n");
+        RCLOG_ERROR("a fatal error has occurred, XPRC is stuck - simulator restart required");
         return;
     }
 
@@ -481,7 +482,7 @@ PLUGIN_API void XPluginDisable() {
     if (server_started) {
         error_t err = stop_server(server);
         if (err != ERROR_NONE) {
-            printf("[XPRC] server failed to stop: %d\n", err);
+            RCLOG_ERROR("server failed to stop: %d", err);
             fatal_error = true;
             return;
         }
@@ -496,13 +497,13 @@ PLUGIN_API void XPluginDisable() {
         if (task_schedule && lock_schedule(task_schedule) == ERROR_NONE) {
             schedule_locked = true;
         } else {
-            printf("[XPRC] failed to lock task schedule to signal shutdown to post-processing thread\n");
+            RCLOG_ERROR("failed to lock task schedule to signal shutdown to post-processing thread");
             can_join_post_processing_thread = false;
         }
     
         shutdown_post_processing = true;
         if (cnd_broadcast(&post_processing_wait) != thrd_success) {
-            printf("[XPRC] post processing thread cannot be notified\n");
+            RCLOG_ERROR("post processing thread cannot be notified");
             can_join_post_processing_thread = false;
         }
 
@@ -520,7 +521,7 @@ PLUGIN_API void XPluginDisable() {
             thrd_yield();
         }
         if (flight_loop_locked_task_schedule) {
-            printf("[XPRC] task schedule cannot be unlocked; plugin shutdown is not possible\n");
+            RCLOG_ERROR("task schedule cannot be unlocked; plugin shutdown is not possible");
             fatal_error = true;
             return;
         }
@@ -530,12 +531,12 @@ PLUGIN_API void XPluginDisable() {
 
     if (has_post_processing_thread) {
         if (!can_join_post_processing_thread) {
-            printf("[XPRC] post processing thread cannot be joined safely - simulator restart required\n");
+            RCLOG_ERROR("post processing thread cannot be joined safely - simulator restart required");
             fatal_error = true;
             return;
         } else {
             if (thrd_join(post_processing_thread, NULL) != thrd_success) {
-                printf("[XPRC] post processing thread cannot be joined; plugin shutdown is not possible\n");
+                RCLOG_ERROR("post processing thread cannot be joined; plugin shutdown is not possible");
                 fatal_error = true;
                 return;
             }
@@ -547,7 +548,7 @@ PLUGIN_API void XPluginDisable() {
     if (task_schedule) {
         err = destroy_task_schedule(task_schedule);
         if (err != ERROR_NONE) {
-            printf("[XPRC] task schedule could not be destroyed (error %d); plugin shutdown is not possible\n", err);
+            RCLOG_ERROR("task schedule could not be destroyed (error %d); plugin shutdown is not possible", err);
             fatal_error = true;
             return;
         }
@@ -557,14 +558,14 @@ PLUGIN_API void XPluginDisable() {
     if (xpcommand_registry) {
         err = unregister_dropped_xpcommands(xpcommand_registry);
         if (err != ERROR_NONE) {
-            printf("[XPRC] dropped XP commands could not be unregistered (error %d); plugin shutdown is not possible\n", err);
+            RCLOG_ERROR("dropped XP commands could not be unregistered (error %d); plugin shutdown is not possible", err);
             fatal_error = true;
             return;
         }
         
         err = destroy_xpcommand_registry(xpcommand_registry);
         if (err != ERROR_NONE) {
-            printf("[XPRC] XP command registry could not be destroyed (error %d); plugin shutdown is not possible\n", err);
+            RCLOG_ERROR("XP command registry could not be destroyed (error %d); plugin shutdown is not possible", err);
             fatal_error = true;
             return;
         }
@@ -574,14 +575,14 @@ PLUGIN_API void XPluginDisable() {
     if (dataproxy_registry) {
         err = unregister_dropped_dataproxies(dataproxy_registry);
         if (err != ERROR_NONE) {
-            printf("[XPRC] dropped dataproxies could not be unregistered (error %d); plugin shutdown is not possible\n", err);
+            RCLOG_ERROR("dropped dataproxies could not be unregistered (error %d); plugin shutdown is not possible", err);
             fatal_error = true;
             return;
         }
         
         err = destroy_dataproxy_registry(dataproxy_registry);
         if (err != ERROR_NONE) {
-            printf("[XPRC] dataproxy registry could not be destroyed (error %d); plugin shutdown is not possible\n", err);
+            RCLOG_ERROR("dataproxy registry could not be destroyed (error %d); plugin shutdown is not possible", err);
             fatal_error = true;
             return;
         }
@@ -591,14 +592,14 @@ PLUGIN_API void XPluginDisable() {
     if (xpqueue) {
         err = flush_xpqueue(xpqueue);
         if (err != ERROR_NONE) {
-            printf("[XPRC] failed final flush of XP queue (error %d); plugin shutdown is not possible\n", err);
+            RCLOG_ERROR("failed final flush of XP queue (error %d); plugin shutdown is not possible", err);
             fatal_error = true;
             return;
         }
 
         err = destroy_xpqueue(xpqueue);
         if (err != ERROR_NONE) {
-            printf("[XPRC] XP queue could not be destroyed (error %d); plugin shutdown is not possible\n", err);
+            RCLOG_ERROR("XP queue could not be destroyed (error %d); plugin shutdown is not possible", err);
             fatal_error = true;
             return;
         }
@@ -608,7 +609,7 @@ PLUGIN_API void XPluginDisable() {
     if (settings_manager) {
         err = destroy_settings_manager(settings_manager);
         if (err != ERROR_NONE) {
-            printf("[XPRC] settings manager could not be destroyed (error %d); plugin shutdown is not possible\n", err);
+            RCLOG_ERROR("settings manager could not be destroyed (error %d); plugin shutdown is not possible", err);
             fatal_error = true;
             return;
         }
@@ -618,7 +619,7 @@ PLUGIN_API void XPluginDisable() {
 
 PLUGIN_API void XPluginStop() {
     if (fatal_error) {
-        printf("[XPRC] a fatal error has occurred, XPRC is stuck - simulator restart required\n");
+        RCLOG_ERROR("a fatal error has occurred, XPRC is stuck - simulator restart required");
         return;
     }
 
@@ -629,6 +630,7 @@ PLUGIN_API void XPluginStop() {
         command_factory = NULL;
     }
 
+    xprc_log_destroy();
     plugin_initialized = false;
 }
 

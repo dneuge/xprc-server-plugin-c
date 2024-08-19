@@ -1,12 +1,11 @@
 #include "command_cmhd.h"
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include <XPLMUtilities.h>
 
 #include "lists.h"
+#include "logger.h"
 #include "session.h"
 #include "utils.h"
 #include "xptypes.h"
@@ -47,7 +46,7 @@ static void destroy_entry(void *value) {
 }
 
 static error_t cmhd_destroy(void *command_ref) {
-    printf("[XPRC] [CMHD] destroy\n"); // DEBUG
+    RCLOG_TRACE("[CMHD] destroy");
     
     if (!command_ref) {
         return ERROR_UNSPECIFIC;
@@ -61,7 +60,7 @@ static error_t cmhd_destroy(void *command_ref) {
         while (item) {
             cmhd_entry_t *entry = item->value;
             if (entry->held) {
-                printf("[XPRC] [CMHD] destroying list although XP command is still being held: %s\n", entry->name);
+                RCLOG_WARN("[CMHD] destroying list although XP command is still being held: %s", entry->name);
             }
             item = item->next;
         }
@@ -70,10 +69,10 @@ static error_t cmhd_destroy(void *command_ref) {
         command->entries = NULL;
     }
 
-    printf("[XPRC] [CMHD] destroy: freeing command\n"); // DEBUG
+    RCLOG_TRACE("[CMHD] destroy: freeing command");
     free(command);
     
-    printf("[XPRC] [CMHD] destroy: done\n"); // DEBUG
+    RCLOG_TRACE("[CMHD] destroy: done");
 
     return ERROR_NONE;
 }
@@ -92,11 +91,11 @@ static error_t cmhd_unschedule(command_cmhd_t *command) {
     }
         
     if (err != ERROR_NONE) {
-        printf("[XPRC] [CMHD] failed to unschedule task: %d\n", err); // DEBUG
+        RCLOG_WARN("[CMHD] failed to unschedule task: %d", err);
         return err;
     }
         
-    printf("[XPRC] [CMHD] freeing task\n"); // DEBUG
+    RCLOG_TRACE("[CMHD] freeing task");
     free(command->task);
     command->task = NULL;
 
@@ -104,7 +103,7 @@ static error_t cmhd_unschedule(command_cmhd_t *command) {
 }
 
 static error_t cmhd_terminate(void *command_ref) {
-    printf("[XPRC] [CMHD] terminate\n"); // DEBUG
+    RCLOG_TRACE("[CMHD] terminate");
     
     if (!command_ref) {
         return ERROR_UNSPECIFIC;
@@ -118,7 +117,7 @@ static error_t cmhd_terminate(void *command_ref) {
 
     err = cmhd_unschedule(command);
     if (err != ERROR_NONE) {
-        printf("[XPRC] [CMHD] terminate failed to unschedule task: %d\n", err); // DEBUG
+        RCLOG_WARN("[CMHD] terminate failed to unschedule task: %d", err);
         return err;
     }
     
@@ -139,7 +138,7 @@ static error_t cmhd_terminate(void *command_ref) {
                 // although we failed it makes more sense trying to release the remaining commands
                 // we still hold, even if that changes the order in which we release them
                 // (otherwise we may never release them which could cause even more severe issues)
-                printf("[XPRC] [CMHD] failed to queue XPLMCommandEnd (error %d) for: %s\n", err, entry->name);
+                RCLOG_WARN("[CMHD] failed to queue XPLMCommandEnd (error %d) for: %s", err, entry->name);
             }
         }
         
@@ -147,13 +146,13 @@ static error_t cmhd_terminate(void *command_ref) {
     }
 
     if (command->entries->size > 0) {
-        printf("[XPRC] [CMHD] %d commands could not be queued for release\n", command->entries->size);
+        RCLOG_WARN("[CMHD] %d commands could not be queued for release", command->entries->size);
         return ERROR_UNSPECIFIC;
     }
 
     channel_id_t channel_id = command->channel_id;
     
-    printf("[XPRC] [CMHD] terminate: poisoning channel ID\n"); // DEBUG
+    RCLOG_TRACE("[CMHD] terminate: poisoning channel ID");
     command->channel_id = BAD_CHANNEL_ID;
     
     request_channel_destruction(command->session->channels, channel_id);
@@ -174,7 +173,7 @@ static void cmhd_process_flightloop(command_cmhd_t *command) {
         entry->xp_ref = XPLMFindCommand(entry->name);
         if (entry->xp_ref == NO_XP_COMMAND) {
             command->failed = true;
-            printf("[XPRC] [CMHD] XP command not found: %s\n", entry->name);
+            RCLOG_DEBUG("[CMHD] XP command not found: %s", entry->name);
             error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "XP command not found");
             return;
         }
@@ -218,7 +217,7 @@ static void cmhd_process_post(command_cmhd_t *command) {
 
     error_t err = cmhd_unschedule(command);
     if (err != ERROR_NONE) {
-        printf("[XPRC] [CMHD] failed to unschedule in post-process callback\n");
+        RCLOG_WARN("[CMHD] failed to unschedule in post-process callback");
         command->failed = true;
     }
 }

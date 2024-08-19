@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "fileio.h"
+#include "logger.h"
 
 // Tests reading and writing files incl. splitting and rejoining lines through fileio.h.
 
@@ -11,34 +12,37 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    xprc_log_init();
+    xprc_set_min_log_level_console(RCLOG_LEVEL_TRACE);
+
     char *in_path = argv[1];
     char *out_path = (argc > 2) ? argv[2] : NULL;
     error_t err = ERROR_NONE;
 
     list_t *lines = NULL;
 
-    printf("Reading: %s\n", in_path);
+    RCLOG_INFO("Reading: %s", in_path);
     err = read_lines_from_file(&lines, in_path);
     if (err != ERROR_NONE) {
-        printf("read_lines_from_file failed: %d\n", err);
+        RCLOG_WARN("read_lines_from_file failed: %d", err);
         return 1;
     }
 
-    printf("Read %d lines:\n", lines->size);
+    RCLOG_INFO("Read %d lines:", lines->size);
     int line_number = 1;
     list_item_t *item = lines->head;
     while (item) {
-        printf("%4d %s\n", line_number++, (char*) item->value);
+        RCLOG_INFO("%4d %s", line_number++, (char*) item->value);
         item = item->next;
     }
 
     if (!out_path) {
-        printf("File output is disabled.\n");
+        RCLOG_INFO("File output is disabled.");
     } else {
-        printf("Writing: %s\n", out_path);
+        RCLOG_INFO("Writing: %s", out_path);
         err = write_lines_to_file(lines, out_path);
         if (err != ERROR_NONE) {
-            printf("read_lines_from_file failed: %d\n", err);
+            RCLOG_WARN("write_lines_to_file failed: %d", err);
             destroy_list(lines, free);
             return 1;
         }
@@ -46,7 +50,9 @@ int main(int argc, char **argv) {
 
     destroy_list(lines, free);
 
-    printf("Done.\n");
+    RCLOG_INFO("Done.");
+
+    xprc_log_destroy();
 
     return 0;
 }

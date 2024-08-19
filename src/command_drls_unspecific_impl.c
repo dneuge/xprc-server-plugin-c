@@ -1,7 +1,6 @@
-#include <stdio.h>
-
 #include <XPLMDataAccess.h>
 
+#include "logger.h"
 #include "protocol.h"
 #include "utils.h"
 
@@ -158,7 +157,7 @@ static void process_submit(command_drls_t *command) {
         }
 
         if (xp_info->structSize != sizeof(XPLMDataRefInfo_t)) {
-            printf("[XPRC] [DRLS unspecific] mismatch in XPLMDataRefInfo_t.structSize: expected %lu, got %d\n", sizeof(XPLMDataRefInfo_t), xp_info->structSize);
+            RCLOG_WARN("[DRLS unspecific] mismatch in XPLMDataRefInfo_t.structSize: expected %lu, got %d", sizeof(XPLMDataRefInfo_t), xp_info->structSize);
             error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "X-Plane API corrupted datarefs array");
             command->failed = true;
             return;
@@ -191,7 +190,7 @@ static void process_submit(command_drls_t *command) {
 
         char *out_types = xprc_encode_types(xp_info->type);
         if (!out_types) {
-            printf("[XPRC] [DRLS unspecific] types %d could not be encoded for %s\n", xp_info->type, xp_info->name);
+            RCLOG_WARN("[DRLS unspecific] types %d could not be encoded for %s", xp_info->type, xp_info->name);
             error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "failed to encode types");
             command->failed = true;
             return;

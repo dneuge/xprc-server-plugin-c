@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "logger.h"
 #include "utils.h"
 
 #include "fileio.h"
@@ -348,7 +349,7 @@ bool check_file_exists(char *path) {
     // prepend \\?\ to enable long path handling
     char *long_path = dynamic_sprintf("\\\\?\\%s", path);
     if (!long_path) {
-        printf("[XPRC] failed to construct long path from: \"%s\"\r\n", path);
+        RCLOG_WARN("failed to construct long path from: \"%s\"", path);
         return false;
     }
 
@@ -363,7 +364,7 @@ bool check_file_exists(char *path) {
 
     if (buffer_length <= 0) {
         unsigned long err = GetLastError();
-        printf("[XPRC] string conversion failed early with error %lu: \"%s\"\r\n", err, long_path);
+        RCLOG_WARN("string conversion failed early with error %lu: \"%s\"", err, long_path);
         free(long_path);
         return false;
     }
@@ -372,7 +373,7 @@ bool check_file_exists(char *path) {
 
     WCHAR *mb_long_path = zalloc(buffer_size);
     if (!mb_long_path) {
-        printf("[XPRC] failed to allocate %lu bytes for path string conversion\r\n", buffer_size);
+        RCLOG_WARN("failed to allocate %lu bytes for path string conversion", buffer_size);
         free(long_path);
         return false;
     }
@@ -388,7 +389,7 @@ bool check_file_exists(char *path) {
 
     if (res <= 0) {
         unsigned long err = GetLastError();
-        printf("[XPRC] string conversion failed late with error %lu: \"%s\"\r\n", err, long_path);
+        RCLOG_WARN("string conversion failed late with error %lu: \"%s\"", err, long_path);
         free(mb_long_path);
         free(long_path);
         return false;

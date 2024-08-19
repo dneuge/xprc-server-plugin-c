@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "logger.h"
 #include "password.h"
 
 /* Repeatedly calls generate_password() and prints the resulting strings for manual testing.
@@ -15,16 +16,19 @@ int main(int argc, char **argv) {
         num_iterations = atoi(argv[1]);
     }
 
+    xprc_log_init();
+    xprc_set_min_log_level_console(RCLOG_LEVEL_TRACE);
+
     unsigned long count[256] = {0,};
 
     for (int i=0; i<num_iterations; i++) {
         char *pwd = generate_password();
         if (!pwd) {
-            printf("-- error: generated password is NULL\n");
+            RCLOG_ERROR("generated password is NULL");
             return 1;
         }
 
-        printf("%s\n", pwd);
+        RCLOG_INFO("generated: %s", pwd);
 
         // increase the count for that character
         for (int j=0; j<strlen(pwd); j++) {
@@ -35,7 +39,7 @@ int main(int argc, char **argv) {
         free(pwd);
     }
 
-    printf("\nCount Char  Expected\n");
+    RCLOG_INFO("Count Char  Expected");
     for (int i=0; i<256; i++) {
         unsigned long occurrences = count[i];
         unsigned char ch = i;
@@ -48,11 +52,13 @@ int main(int argc, char **argv) {
         }
 
         if (is_printable) {
-            printf("%5ld %03d %c %s\n", occurrences, ch, ch, is_expected ? "OK" : "Unexpected");
+            RCLOG_INFO("%5ld %03d %c %s", occurrences, ch, ch, is_expected ? "OK" : "Unexpected");
         } else {
-            printf("%5ld %03d   %s\n", occurrences, ch, is_expected ? "OK" : "Unexpected");
+            RCLOG_INFO("%5ld %03d   %s", occurrences, ch, is_expected ? "OK" : "Unexpected");
         }
     }
+
+    xprc_log_destroy();
 
     return 0;
 }

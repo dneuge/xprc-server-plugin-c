@@ -1,8 +1,9 @@
-#include <stdio.h>
 #include <stdlib.h>
 
+#include "logger.h"
 #include "utils.h"
 #include "xpqueue.h"
+
 #include "xptypes.h"
 
 error_t create_xpqueue(xpqueue_t **queue) {
@@ -54,12 +55,12 @@ error_t destroy_xpqueue(xpqueue_t *queue) {
 
     err = lock_xpqueue(queue);
     if (err != ERROR_NONE) {
-        printf("[XPRC] [xpqueue] failed to lock queue for destruction, error %d\n", err);
+        RCLOG_ERROR("[xpqueue] failed to lock queue for destruction, error %d", err);
         return err;
     }
 
     if (queue->has_pending_tasks || (queue->list->size > 0)) {
-        printf("[XPRC] [xpqueue] unable to destroy, queue has %d pending tasks remaining\n", queue->list->size);
+        RCLOG_ERROR("[xpqueue] unable to destroy, queue has %d pending tasks remaining", queue->list->size);
         unlock_xpqueue(queue);
         return ERROR_UNSPECIFIC;
     }
@@ -68,7 +69,7 @@ error_t destroy_xpqueue(xpqueue_t *queue) {
     unlock_xpqueue(queue);
 
     if (mtx_lock(&queue->mutex) != thrd_success) {
-        printf("[XPRC] [xpqueue] failed to relock queue for destruction, continuing anyway\n");
+        RCLOG_WARN("[xpqueue] failed to relock queue for destruction, continuing anyway");
     } else {
         mtx_unlock(&queue->mutex);
     }
@@ -124,7 +125,7 @@ error_t flush_xpqueue(xpqueue_t *queue) {
     error_t out_err = ERROR_NONE;
     
     if (!queue) {
-        printf("[XPRC] [xpqueue] flush called with NULL queue\n");
+        RCLOG_WARN("[xpqueue] flush called with NULL queue");
         return ERROR_UNSPECIFIC;
     }
 
@@ -152,7 +153,7 @@ error_t flush_xpqueue(xpqueue_t *queue) {
     if (queue->list->size == 0) {
         queue->has_pending_tasks = false;
     } else {
-        printf("[XPRC] [xpqueue] flush incomplete, %d items remaining\n", queue->list->size);
+        RCLOG_WARN("[xpqueue] flush incomplete, %d items remaining", queue->list->size);
         out_err = ERROR_UNSPECIFIC;
     }
 

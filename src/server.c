@@ -5,6 +5,8 @@
 #include "password.h"
 #include "requests.h"
 #include "server.h"
+
+#include "logger.h"
 #include "session.h"
 #include "utils.h"
 
@@ -23,14 +25,14 @@ static void send_or_close(network_connection_t *connection, char *format, ...) {
     va_end(args);
     
     if (!msg) {
-        printf("[XPRC] terminating connection because formatting channel message failed: %s\n", format);
+        RCLOG_WARN("terminating connection because formatting channel message failed: %s", format);
         close_network_connection(connection);
         return;
     }
     
     error_t err = send_to_network(connection, msg, NETWORK_SEND_COMPLETE_STRING);
     if (err != ERROR_NONE) {
-        printf("[XPRC] terminating connection because sending channel message failed: %s\n", msg);
+        RCLOG_WARN("terminating connection because sending channel message failed: %s", msg);
         close_network_connection(connection);
     }
 
@@ -65,13 +67,13 @@ static void handle_command_request(session_t *session, request_t *request) {
         // already by the command that just failed to be created
         err = error_channel(session, channel->id, CURRENT_TIME_REFERENCE, "command creation failed");
         if (err != ERROR_NONE && err != SESSION_ERROR_INVALID_CHANNEL_STATE) {
-            printf("[XPRC] terminating connection because sending channel error failed after failed command creation\n");
+            RCLOG_WARN("terminating connection because sending channel error failed after failed command creation");
             close_network_connection(session->connection);
             return;
         }
         
         if (!pop_channel(session->channels, channel->id)) {
-            printf("[XPRC] failed to clear dead channel %s after command creation failed, closing connection\n", channel_name);
+            RCLOG_WARN("failed to clear dead channel %s after command creation failed, closing connection", channel_name);
             close_network_connection(session->connection);
         }
     }
@@ -89,14 +91,14 @@ static void handle_termination_request(session_t *session, request_t *request) {
 
     error_t err = channel->command->terminate(channel->command_ref);
     if (err != ERROR_NONE) {
-        printf("[XPRC] command termination for channel %s failed (error %d), closing connection\n", channel_name, err);
+        RCLOG_WARN("command termination for channel %s failed (error %d), closing connection", channel_name, err);
         close_network_connection(session->connection);
     }
 }    
 
 static void handle_request(session_t *session, request_t *request) {
     if (!lock_session(session)) {
-        printf("[XPRC] failed to lock session for request; closing connection\n");
+        RCLOG_WARN("failed to lock session for request; closing connection");
         close_network_connection(session->connection);
         return;
     }
@@ -123,13 +125,13 @@ static error_t new_connection(network_connection_t *connection, void **handler_r
 
     err = register_session(server, session);
     if (err != ERROR_NONE) {
-        printf("[XPRC] failed to register session \n");
+        RCLOG_WARN("failed to register session");
         return err;
     }
     
     err = send_to_network(connection, "XPRC;version,password\n", NETWORK_SEND_COMPLETE_STRING);
     if (err != ERROR_NONE) {
-        printf("[XPRC] failed to send handshake\n");
+        RCLOG_WARN("failed to send handshake");
         return err;
     }
     
@@ -158,14 +160,14 @@ static void on_line_received(void *handler_reference, char *line, int length) {
     } else if (session->phase == SESSION_PHASE_AWAIT_VERSION) {
         if (length < 2 || line[0] != 'v') {
             session->phase = SESSION_PHASE_FAILED;
-            printf("[XPRC] connection failed due to bad syntax on handshake line while expecting version\n");
+            RCLOG_WARN("connection failed due to bad syntax on handshake line while expecting version");
             close_network_connection(session->connection);
             return;
         }
             
         session->client_version = atoi(&(line[1]));
         if (num_digits(session->client_version) != (length-1)) {
-            printf("[XPRC] connection failed due to syntactically invalid version number during handshake\n");
+            RCLOG_WARN("connection failed due to syntactically invalid version number during handshake");
             session->phase = SESSION_PHASE_FAILED;
             close_network_connection(session->connection);
             return;
@@ -174,7 +176,7 @@ static void on_line_received(void *handler_reference, char *line, int length) {
         session->phase = SESSION_PHASE_AWAIT_PASSWORD;
     } else if (session->phase == SESSION_PHASE_AWAIT_PASSWORD) {
         if (length <= 0) {
-            printf("[XPRC] connection failed due to zero password received\n");
+            RCLOG_WARN("connection failed due to zero password received");
             session->phase = SESSION_PHASE_FAILED;
             close_network_connection(session->connection);
             return;
@@ -182,14 +184,14 @@ static void on_line_received(void *handler_reference, char *line, int length) {
 
         int expected_password_length = strlen(session->server->config.password);
         if (length != expected_password_length || strncmp(line, session->server->config.password, expected_password_length)) {
-            printf("[XPRC] connection failed due to wrong password\n");
+            RCLOG_WARN("connection failed due to wrong password");
             session->phase = SESSION_PHASE_FAILED;
             close_network_connection(session->connection);
             return;
         }
 
         if (session->client_version != SERVER_PROTOCOL_VERSION) {
-            printf("[XPRC] connection failed due to client reporting unsupported protocol version %d\n", session->client_version);
+            RCLOG_WARN("connection failed due to client reporting unsupported protocol version %d", session->client_version);
             session->phase = SESSION_PHASE_FAILED;
             send_to_network(session->connection, "v" STR(SERVER_PROTOCOL_VERSION) ";ERR:unsupported protocol version\n", NETWORK_SEND_COMPLETE_STRING);
             close_network_connection(session->connection);
@@ -197,7 +199,7 @@ static void on_line_received(void *handler_reference, char *line, int length) {
         }
 
         if (!timespec_get(&session->reference_time, TIME_UTC)) {
-            printf("[XPRC] connection failed because reference timestamp could not be set\n");
+            RCLOG_WARN("connection failed because reference timestamp could not be set");
             session->phase = SESSION_PHASE_FAILED;
             send_to_network(session->connection, "v" STR(SERVER_PROTOCOL_VERSION) ";ERR:internal server error\n", NETWORK_SEND_COMPLETE_STRING);
             close_network_connection(session->connection);
@@ -206,7 +208,7 @@ static void on_line_received(void *handler_reference, char *line, int length) {
 
         session->reference_millis = millis_of_timespec(&session->reference_time);
         if (session->reference_millis < 0) {
-            printf("[XPRC] connection failed because reference timestamp is negative\n");
+            RCLOG_WARN("connection failed because reference timestamp is negative");
             session->phase = SESSION_PHASE_FAILED;
             send_to_network(session->connection, "v" STR(SERVER_PROTOCOL_VERSION) ";ERR:internal server error\n", NETWORK_SEND_COMPLETE_STRING);
             close_network_connection(session->connection);
@@ -215,7 +217,7 @@ static void on_line_received(void *handler_reference, char *line, int length) {
         
         char coarse_timestamp[REFERENCE_COARSE_TIMESTAMP_BUFFER_SIZE] = {0};
         if (!strftime(coarse_timestamp, REFERENCE_COARSE_TIMESTAMP_BUFFER_SIZE-1, "%Y-%m-%dT%H:%M:%S", gmtime(&session->reference_time.tv_sec))) {
-            printf("[XPRC] connection failed because reference coarse timestamp could not be formatted\n");
+            RCLOG_WARN("connection failed because reference coarse timestamp could not be formatted");
             session->phase = SESSION_PHASE_FAILED;
             send_to_network(session->connection, "v" STR(SERVER_PROTOCOL_VERSION) ";ERR:internal server error\n", NETWORK_SEND_COMPLETE_STRING);
             close_network_connection(session->connection);
@@ -227,7 +229,7 @@ static void on_line_received(void *handler_reference, char *line, int length) {
         char handshake_completion_buffer[HANDSHAKE_COMPLETION_BUFFER_SIZE] = {0};
         int res = snprintf(handshake_completion_buffer, HANDSHAKE_COMPLETION_BUFFER_SIZE, "v%d;OK;%s.%03d+00:00\n", SERVER_PROTOCOL_VERSION, coarse_timestamp, timestamp_millis);
         if (res < 0 || res >= HANDSHAKE_COMPLETION_BUFFER_SIZE) {
-            printf("[XPRC] connection failed because handshake completion could not be encoded\n");
+            RCLOG_WARN("connection failed because handshake completion could not be encoded");
             session->phase = SESSION_PHASE_FAILED;
             send_to_network(session->connection, "v" STR(SERVER_PROTOCOL_VERSION) ";ERR:internal server error\n", NETWORK_SEND_COMPLETE_STRING);
             close_network_connection(session->connection);
@@ -236,7 +238,7 @@ static void on_line_received(void *handler_reference, char *line, int length) {
 
         error_t err = send_to_network(session->connection, handshake_completion_buffer, NETWORK_SEND_COMPLETE_STRING);
         if (err != ERROR_NONE) {
-            printf("[XPRC] connection failed because handshake completion could not be sent\n");
+            RCLOG_WARN("connection failed because handshake completion could not be sent");
             session->phase = SESSION_PHASE_FAILED;
             close_network_connection(session->connection);
             return;
@@ -253,7 +255,7 @@ static void on_connection_closing(void *handler_reference) {
     
     error_t err = unregister_session(session->server, session);
     if (err != ERROR_NONE) {
-        printf("[XPRC] failed to unregister session from server: %d\n", err);
+        RCLOG_WARN("failed to unregister session from server: %d", err);
     }
     
     destroy_session(session);
@@ -262,7 +264,7 @@ static void on_connection_closing(void *handler_reference) {
 error_t start_server(server_t **server, server_config_t *config) {
     // TODO: check password after copy
     if (!config || !validate_password(config->password)) {
-        printf("[XPRC] bad password, refusing to start\n");
+        RCLOG_WARN("bad password, refusing to start");
         return ERROR_UNSPECIFIC;
     }
 
@@ -367,14 +369,14 @@ static void destroy_pending_channels(channels_table_t *channels) {
             if (channel->command && channel->command->destroy) {
                 error_t err = channel->command->destroy(channel->command_ref);
                 if (err != ERROR_NONE) {
-                    printf("[XPRC] channel command destruction failed (error %d)\n", err);
+                    RCLOG_WARN("channel command destruction failed (error %d)", err);
                     return;
                 }
             }
 
             // FIXME: potential memleak - pop_channel returns the channel reference, we don't free it
             if (!pop_channel(channels, channel->id)) {
-                printf("[XPRC] failed to remove channel after command destruction\n");
+                RCLOG_WARN("failed to remove channel after command destruction");
                 return;
             }
 

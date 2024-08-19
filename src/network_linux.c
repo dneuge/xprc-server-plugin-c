@@ -44,7 +44,7 @@ list_t* get_network_interfaces(bool include_ipv6) {
         if (inet_ntop(family, sys_addr, ntop_buffer, NTOP_BUFFER_SIZE - 1)) {
             if (!is_ip_address(ntop_buffer)) {
                 // avoid errors in caller; we are supposed to only return what we understand as IP addresses ourselves
-                printf("[XPRC] get_network_interfaces: IP address is not recognized as valid, skipping: \"%s\"\r\n", ntop_buffer);
+                RCLOG_WARN("get_network_interfaces: IP address is not recognized as valid, skipping: \"%s\"", ntop_buffer);
             } else {
                 // valid IP address
                 name = copy_string(ntop_buffer);
@@ -98,7 +98,7 @@ static struct sockaddr* create_address_ipv6(network_server_config_t *config) {
         address->sin6_addr = in6addr_loopback;
     } else {
         // TODO: support selection of specific interface to bind to
-        printf("unable to resolve interface \"%s\"\n", config->interface_address); // TODO: log
+        RCLOG_WARN("unable to resolve interface \"%s\"", config->interface_address);
         free(address);
         return NULL;
     }

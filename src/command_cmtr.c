@@ -1,12 +1,11 @@
 #include "command_cmtr.h"
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include <XPLMUtilities.h>
 
 #include "lists.h"
+#include "logger.h"
 #include "session.h"
 #include "utils.h"
 #include "xptypes.h"
@@ -83,7 +82,7 @@ static void destroy_entry(void *value) {
 }
 
 static error_t cmtr_destroy(void *command_ref) {
-    printf("[XPRC] [CMTR] destroy\n"); // DEBUG
+    RCLOG_TRACE("[CMTR] destroy");
     
     if (!command_ref) {
         return ERROR_UNSPECIFIC;
@@ -97,7 +96,7 @@ static error_t cmtr_destroy(void *command_ref) {
         while (item) {
             cmtr_entry_t *entry = item->value;
             if (entry->held) {
-                printf("[XPRC] [CMTR] destroying list although XP command is still being held: %s\n", entry->name);
+                RCLOG_WARN("[CMTR] destroying list although XP command is still being held: %s", entry->name);
             }
             item = item->next;
         }
@@ -106,10 +105,10 @@ static error_t cmtr_destroy(void *command_ref) {
         command->entries = NULL;
     }
 
-    printf("[XPRC] [CMTR] destroy: freeing command\n"); // DEBUG
+    RCLOG_TRACE("[CMTR] destroy: freeing command");
     free(command);
     
-    printf("[XPRC] [CMTR] destroy: done\n"); // DEBUG
+    RCLOG_TRACE("[CMTR] destroy: done");
 
     return ERROR_NONE;
 }
@@ -128,11 +127,11 @@ static error_t cmtr_unschedule(command_cmtr_t *command) {
     }
         
     if (err != ERROR_NONE) {
-        printf("[XPRC] [CMTR] failed to unschedule task: %d\n", err); // DEBUG
+        RCLOG_WARN("[CMTR] failed to unschedule task: %d", err);
         return err;
     }
         
-    printf("[XPRC] [CMTR] freeing task\n"); // DEBUG
+    RCLOG_TRACE("[CMTR] freeing task");
     free(command->task);
     command->task = NULL;
 
@@ -140,7 +139,7 @@ static error_t cmtr_unschedule(command_cmtr_t *command) {
 }
 
 static error_t cmtr_terminate(void *command_ref) {
-    printf("[XPRC] [CMTR] terminate\n"); // DEBUG
+    RCLOG_TRACE("[CMTR] terminate");
     
     if (!command_ref) {
         return ERROR_UNSPECIFIC;
@@ -154,7 +153,7 @@ static error_t cmtr_terminate(void *command_ref) {
 
     err = cmtr_unschedule(command);
     if (err != ERROR_NONE) {
-        printf("[XPRC] [CMTR] terminate failed to unschedule task: %d\n", err); // DEBUG
+        RCLOG_WARN("[CMTR] terminate failed to unschedule task: %d", err);
         return err;
     }
     
@@ -174,7 +173,7 @@ static error_t cmtr_terminate(void *command_ref) {
                 // although we failed it makes more sense trying to release the remaining commands
                 // we still hold, even if that changes the order in which we release them
                 // (otherwise we may never release them which could cause even more severe issues)
-                printf("[XPRC] [CMTR] failed to queue XPLMCommandEnd (error %d) for: %s\n", err, entry->name);
+                RCLOG_WARN("[CMTR] failed to queue XPLMCommandEnd (error %d) for: %s", err, entry->name);
 
                 failed_to_release++;
             }
@@ -184,13 +183,13 @@ static error_t cmtr_terminate(void *command_ref) {
     }
 
     if (failed_to_release > 0) {
-        printf("[XPRC] [CMTR] %d commands could not be queued for release\n", failed_to_release);
+        RCLOG_WARN("[CMTR] %d commands could not be queued for release", failed_to_release);
         return ERROR_UNSPECIFIC;
     }
 
     channel_id_t channel_id = command->channel_id;
     
-    printf("[XPRC] [CMTR] terminate: poisoning channel ID\n"); // DEBUG
+    RCLOG_TRACE("[CMTR] terminate: poisoning channel ID");
     command->channel_id = BAD_CHANNEL_ID;
     
     request_channel_destruction(command->session->channels, channel_id);
@@ -206,7 +205,7 @@ static bool cmtr_initialize(command_cmtr_t *command) {
         entry->xp_ref = XPLMFindCommand(entry->name);
         if (entry->xp_ref == NO_XP_COMMAND) {
             command->failed = true;
-            printf("[XPRC] [CMTR] XP command not found: %s\n", entry->name);
+            RCLOG_DEBUG("[CMTR] XP command not found: %s", entry->name);
             error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "XP command not found");
             return false;
         }
@@ -283,7 +282,7 @@ static inline void hold_all_xprefs(command_cmtr_t *command) {
 
 static inline void trigger_all_xprefs(command_cmtr_t *command, bool is_last_action) {
     if (command->holding) {
-        printf("[XPRC] [CMTR] attempted to trigger while holding - this should not happen!\n");
+        RCLOG_WARN("[CMTR] attempted to trigger while holding - this should not happen!");
         return;
     }
     
@@ -310,7 +309,7 @@ static void cmtr_process_flightloop(command_cmtr_t *command) {
     bool should_release_before = false; // "before" because it controls release before hold/trigger
     if (!command->initialized) {
         if (!cmtr_initialize(command)) {
-            printf("[XPRC] [CMTR] initialization failed\n");
+            RCLOG_WARN("[CMTR] initialization failed");
             return;
         }
         

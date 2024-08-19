@@ -1,8 +1,8 @@
-#include <stdio.h>
-
+#include "logger.h"
 #include "utils.h"
 
 #include "xpcommands.h"
+
 #include "xptypes.h"
 
 error_t create_xpcommand_registry(xpcommand_registry_t **registry) {
@@ -40,7 +40,7 @@ error_t destroy_xpcommand_registry(xpcommand_registry_t *registry) {
 
     if (registry->commands->size != 0) {
         mtx_unlock(&registry->mutex);
-        printf("[XPRC] [xpcommands] commands are still registered, unable to destroy registry\n");
+        RCLOG_ERROR("[xpcommands] commands are still registered, unable to destroy registry");
         return ERROR_UNSPECIFIC;
     }
     
@@ -49,7 +49,7 @@ error_t destroy_xpcommand_registry(xpcommand_registry_t *registry) {
     // relock so all threads had a chance to see pending destruction
     mtx_unlock(&registry->mutex);
     if (mtx_lock(&registry->mutex) != thrd_success) {
-        printf("[XPRC] [xpcommands] failed to regain lock during destruction, will continue anyway\n");
+        RCLOG_WARN("[xpcommands] failed to regain lock during destruction, will continue anyway");
     } else {
         mtx_unlock(&registry->mutex);
     }
@@ -63,7 +63,7 @@ error_t destroy_xpcommand_registry(xpcommand_registry_t *registry) {
 
 error_t lock_xpcommand_registry(xpcommand_registry_t *registry) {
     if (!registry) {
-        printf("[XPRC] [xpcommands] lock_xpcommand_registry called with NULL\n");
+        RCLOG_WARN("[xpcommands] lock_xpcommand_registry called with NULL");
         return ERROR_UNSPECIFIC;
     }
     
@@ -85,7 +85,7 @@ error_t lock_xpcommand_registry(xpcommand_registry_t *registry) {
 
 void unlock_xpcommand_registry(xpcommand_registry_t *registry) {
     if (!registry) {
-        printf("[XPRC] [xpcommands] unlock_xpcommand_registry called with NULL\n");
+        RCLOG_WARN("[xpcommands] unlock_xpcommand_registry called with NULL");
         return;
     }
     
@@ -94,7 +94,7 @@ void unlock_xpcommand_registry(xpcommand_registry_t *registry) {
 
 error_t lock_xpcommand(xpcommand_t *proxy) {
     if (!proxy) {
-        printf("[XPRC] [xpcommands] lock_xpcommand called with NULL\n");
+        RCLOG_WARN("[xpcommands] lock_xpcommand called with NULL");
         return ERROR_UNSPECIFIC;
     }
     
@@ -107,7 +107,7 @@ error_t lock_xpcommand(xpcommand_t *proxy) {
 
 void unlock_xpcommand(xpcommand_t *proxy) {
     if (!proxy) {
-        printf("[XPRC] [xpcommands] unlock_xpcommand called with NULL\n");
+        RCLOG_WARN("[xpcommands] unlock_xpcommand called with NULL");
         return;
     }
     
@@ -172,40 +172,40 @@ xpcommand_t* create_xpcommand(xpcommand_registry_t *registry, char *name, char *
 }
 
 static int xp_command_handler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase, void *inRefcon) {
-    printf("[XPRC] [xpcommands] xp_command_handler inCommand=%p, inPhase=%d, inRefcon=%p\n", inCommand, inPhase, inRefcon); // DEBUG
+    RCLOG_TRACE("[xpcommands] xp_command_handler inCommand=%p, inPhase=%d, inRefcon=%p", inCommand, inPhase, inRefcon);
     
     xpcommand_t *proxy = inRefcon;
     if (!proxy) {
-        printf("[XPRC] [xpcommands] xp_command_handler called without inRefcon\n");
+        RCLOG_WARN("[xpcommands] xp_command_handler called without inRefcon");
         return XPCOMMAND_PROPAGATE_CONTINUE;
     }
 
     if (lock_xpcommand(proxy) != ERROR_NONE) {
-        printf("[XPRC] [xpcommands] xp_command_handler failed to lock\n");
+        RCLOG_WARN("[xpcommands] xp_command_handler failed to lock");
         return XPCOMMAND_PROPAGATE_CONTINUE;
     }
 
     if (proxy->state != XPCOMMAND_STATE_REGISTERED) {
-        printf("[XPRC] [xpcommands] xp_command_handler called in bad state (%d): %s\n", proxy->state, proxy->name);
+        RCLOG_WARN("[xpcommands] xp_command_handler called in bad state (%d): %s", proxy->state, proxy->name);
         unlock_xpcommand(proxy);
         return XPCOMMAND_PROPAGATE_CONTINUE;
     }
     
     if (inCommand != proxy->xp_ref) {
-        printf("[XPRC] [xpcommands] xp_command_handler called with non-matching inRefcon: %s\n", proxy->name);
+        RCLOG_WARN("[xpcommands] xp_command_handler called with non-matching inRefcon: %s", proxy->name);
         unlock_xpcommand(proxy);
         return XPCOMMAND_PROPAGATE_CONTINUE;
     }
 
     if (!proxy->callback) {
-        printf("[XPRC] [xpcommands] xp_command_handler no callback: %s\n", proxy->name);
+        RCLOG_WARN("[xpcommands] xp_command_handler no callback: %s", proxy->name);
         unlock_xpcommand(proxy);
         return XPCOMMAND_PROPAGATE_CONTINUE;
     }
     
-    printf("[XPRC] [xpcommands] xp_command_handler calling into %p with %p for %s\n", proxy->callback, proxy->callback_ref, proxy->name); // DEBUG
+    RCLOG_TRACE("[xpcommands] xp_command_handler calling into %p with %p for %s", proxy->callback, proxy->callback_ref, proxy->name);
     proxy->callback(proxy->callback_ref, inPhase);
-    printf("[XPRC] [xpcommands] xp_command_handler call returned\n"); // DEBUG
+    RCLOG_TRACE("[xpcommands] xp_command_handler call returned");
     
     xpcommand_propagation_t propagate = proxy->propagate;
     
@@ -217,41 +217,41 @@ static int xp_command_handler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase
 error_t register_xpcommand(xpcommand_t *proxy) {
     error_t err = ERROR_NONE;
 
-    printf("[XPRC] [xpcommands] register_xpcommand will lock\n"); // DEBUG
+    RCLOG_TRACE("[xpcommands] register_xpcommand will lock");
     err = lock_xpcommand(proxy);
-    printf("[XPRC] [xpcommands] register_xpcommand locked\n"); // DEBUG
+    RCLOG_TRACE("[xpcommands] register_xpcommand locked");
     if (err != ERROR_NONE) {
         return err;
     }
 
     if (proxy->state != XPCOMMAND_STATE_CREATED) {
-        printf("[XPRC] [xpcommands] register_xpcommand bad state %d\n", proxy->state); // DEBUG
+        RCLOG_WARN("[xpcommands] register_xpcommand bad state %d", proxy->state);
         unlock_xpcommand(proxy);
         return ERROR_UNSPECIFIC;
     }
 
-    printf("[XPRC] [xpcommands] register_xpcommand will call XPLMFindCommand(%s)\n", proxy->name); // DEBUG
+    RCLOG_TRACE("[xpcommands] register_xpcommand will call XPLMFindCommand(%s)", proxy->name);
     proxy->xp_ref = XPLMFindCommand(proxy->name);
     if (proxy->xp_ref != NO_XP_COMMAND) {
-        printf("[XPRC] [xpcommands] register_xpcommand found existing command %p\n", proxy->xp_ref); // DEBUG
+        RCLOG_DEBUG("[xpcommands] register_xpcommand found existing command %p", proxy->xp_ref);
     } else {
-        printf("[XPRC] [xpcommands] register_xpcommand not found, will call XPLMCreateCommand(%s, %s)\n", proxy->name, proxy->description); // DEBUG
+        RCLOG_TRACE("[xpcommands] register_xpcommand not found, will call XPLMCreateCommand(%s, %s)", proxy->name, proxy->description);
         proxy->xp_ref = XPLMCreateCommand(proxy->name, proxy->description);
         if (proxy->xp_ref == NO_XP_COMMAND) {
-            printf("[XPRC] [xpcommands] register_xpcommand command creation failed\n"); // DEBUG
+            RCLOG_WARN("[xpcommands] register_xpcommand command creation failed");
             unlock_xpcommand(proxy);
             return ERROR_UNSPECIFIC;
         }
     }
 
-    printf("[XPRC] [xpcommands] register_xpcommand will call XPLMRegisterCommandHandler(%p, %p, %d, %p)\n", proxy->xp_ref, xp_command_handler, proxy->phase, proxy); // DEBUG
+    RCLOG_TRACE("[xpcommands] register_xpcommand will call XPLMRegisterCommandHandler(%p, %p, %d, %p)", proxy->xp_ref, xp_command_handler, proxy->phase, proxy);
     XPLMRegisterCommandHandler(proxy->xp_ref, xp_command_handler, proxy->phase, proxy);
-    printf("[XPRC] [xpcommands] register_xpcommand registered\n"); // DEBUG
+    RCLOG_TRACE("[xpcommands] register_xpcommand registered");
     proxy->state = XPCOMMAND_STATE_REGISTERED;
     
     unlock_xpcommand(proxy);
 
-    printf("[XPRC] [xpcommands] register_xpcommand done\n"); // DEBUG
+    RCLOG_TRACE("[xpcommands] register_xpcommand done");
     
     return ERROR_NONE;
 }
@@ -324,7 +324,7 @@ error_t unregister_dropped_xpcommands(xpcommand_registry_t *registry) {
         if (proxy->state == XPCOMMAND_STATE_DROPPED) {
             err = _unregister_destroy_xpcommand(proxy, item);
             if (err != ERROR_NONE) {
-                printf("[XPRC] [xpcommands] failed to unregister dropped command (error %d): %s\n", err, proxy->name);
+                RCLOG_WARN("[xpcommands] failed to unregister dropped command (error %d): %s", err, proxy->name);
                 out_err = ERROR_UNSPECIFIC;
             }
         }

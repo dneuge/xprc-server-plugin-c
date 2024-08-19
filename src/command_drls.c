@@ -1,12 +1,9 @@
 #include "command_drls.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include <XPLMDataAccess.h>
 
 #include "arrays.h"
+#include "logger.h"
 #include "session.h"
 #include "utils.h"
 
@@ -20,7 +17,7 @@ static const char *drls_supported_options[] = {
 };
 
 static error_t drls_destroy(void *command_ref) {
-    printf("[XPRC] [DRLS] destroy\n"); // DEBUG
+    RCLOG_TRACE("[DRLS] destroy");
     
     if (!command_ref) {
         return ERROR_UNSPECIFIC;
@@ -34,16 +31,16 @@ static error_t drls_destroy(void *command_ref) {
         drls_unspecific_destroy(command);
     }
     
-    printf("[XPRC] [DRLS] destroy: freeing command\n"); // DEBUG
+    RCLOG_TRACE("[DRLS] destroy: freeing command");
     free(command);
     
-    printf("[XPRC] [DRLS] destroy: done\n"); // DEBUG
+    RCLOG_TRACE("[DRLS] destroy: done");
 
     return ERROR_NONE;
 }
 
 static error_t drls_terminate(void *command_ref) {
-    printf("[XPRC] [DRLS] terminate\n"); // DEBUG
+    RCLOG_TRACE("[DRLS] terminate");
     
     if (!command_ref) {
         return ERROR_UNSPECIFIC;
@@ -56,7 +53,7 @@ static error_t drls_terminate(void *command_ref) {
     finish_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, NULL);
 
     if (command->task) {
-        printf("[XPRC] [DRLS] terminate: have task, unscheduling\n"); // DEBUG
+        RCLOG_TRACE("[DRLS] terminate: have task, unscheduling");
         task_schedule_t *task_schedule = command->session->server->config.task_schedule;
         
         err = lock_schedule(task_schedule);
@@ -66,18 +63,18 @@ static error_t drls_terminate(void *command_ref) {
         }
         
         if (err != ERROR_NONE) {
-            printf("[XPRC] [DRLS] terminate failed to unschedule task: %d\n", err); // DEBUG
+            RCLOG_WARN("[DRLS] terminate failed to unschedule task: %d", err);
             return err;
         }
         
-        printf("[XPRC] [DRLS] terminate: freeing task\n"); // DEBUG
+        RCLOG_TRACE("[DRLS] terminate: freeing task");
         free(command->task);
         command->task = NULL;
     }
 
     channel_id_t channel_id = command->channel_id;
     
-    printf("[XPRC] [DRLS] terminate: poisoning channel ID\n"); // DEBUG
+    RCLOG_TRACE("[DRLS] terminate: poisoning channel ID");
     command->channel_id = BAD_CHANNEL_ID;
     
     request_channel_destruction(command->session->channels, channel_id);

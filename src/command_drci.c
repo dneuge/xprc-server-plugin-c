@@ -1,8 +1,6 @@
 #include "command_drci.h"
 
 #include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #ifndef NEED_C11_THREADS_WRAPPER
@@ -16,6 +14,7 @@
 
 #include "arrays.h"
 #include "dataproxy.h"
+#include "logger.h"
 #include "protocol.h"
 #include "session.h"
 #include "utils.h"
@@ -122,7 +121,7 @@ static const char *drci_supported_options[] = {
 };
 
 static error_t drci_destroy(void *command_ref) {
-    //printf("[XPRC] [DRCI] destroy\n"); // DEBUG
+    RCLOG_TRACE("[DRCI] destroy");
     
     if (!command_ref) {
         return ERROR_UNSPECIFIC;
@@ -160,16 +159,16 @@ static error_t drci_destroy(void *command_ref) {
         command->ranges = NULL;
     }
     
-    //printf("[XPRC] [DRCI] destroy: freeing command\n"); // DEBUG
+    RCLOG_TRACE("[DRCI] destroy: freeing command");
     free(command);
     
-    //printf("[XPRC] [DRCI] destroy: done\n"); // DEBUG
+    RCLOG_TRACE("[DRCI] destroy: done");
 
     return ERROR_NONE;
 }
 
 static error_t drci_terminate(void *command_ref) {
-    //printf("[XPRC] [DRCI] terminate\n"); // DEBUG
+    RCLOG_TRACE("[DRCI] terminate");
     
     if (!command_ref) {
         return ERROR_UNSPECIFIC;
@@ -182,7 +181,7 @@ static error_t drci_terminate(void *command_ref) {
     finish_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, NULL);
 
     if (command->registration_task) {
-        //printf("[XPRC] [DRCI] terminate: have registration task, unscheduling\n"); // DEBUG
+        RCLOG_TRACE("[DRCI] terminate: have registration task, unscheduling");
         task_schedule_t *task_schedule = command->session->server->config.task_schedule;
         
         err = lock_schedule(task_schedule);
@@ -192,11 +191,11 @@ static error_t drci_terminate(void *command_ref) {
         }
         
         if (err != ERROR_NONE) {
-            printf("[XPRC] [DRCI] terminate failed to unschedule registration task: %d\n", err);
+            RCLOG_WARN("[DRCI] terminate failed to unschedule registration task: %d", err);
             return err;
         }
         
-        //printf("[XPRC] [DRCI] terminate: freeing registration task\n"); // DEBUG
+        RCLOG_TRACE("[DRCI] terminate: freeing registration task");
         free(command->registration_task);
         command->registration_task = NULL;
     }
@@ -206,7 +205,7 @@ static error_t drci_terminate(void *command_ref) {
         // we need to rely on deferred deregistration by dropping the proxy instead
         err = drop_dataproxy(command->proxy);
         if (err != ERROR_NONE) {
-            printf("[XPRC] [DRCI] failed to drop dataproxy: %d\n", err);
+            RCLOG_WARN("[DRCI] failed to drop dataproxy: %d", err);
             return err;
         }
         
@@ -215,7 +214,7 @@ static error_t drci_terminate(void *command_ref) {
 
     channel_id_t channel_id = command->channel_id;
     
-    //printf("[XPRC] [DRCI] terminate: poisoning channel ID\n"); // DEBUG
+    RCLOG_TRACE("[DRCI] terminate: poisoning channel ID");
     command->channel_id = BAD_CHANNEL_ID;
     
     request_channel_destruction(command->session->channels, channel_id);
@@ -239,7 +238,7 @@ static void drci_process_flightloop(command_drci_t *command) {
 
     error_t err = register_dataproxy(command->proxy);
     if (err != ERROR_NONE) {
-        printf("[XPRC] [DRCI] failed to register dataref for %s (error %d)\n", command->dataref_name, err);
+        RCLOG_WARN("[DRCI] failed to register dataref for %s (error %d)", command->dataref_name, err);
         command->failed = true;
         error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "dataref could not be registered");
         return;
@@ -249,7 +248,7 @@ static void drci_process_flightloop(command_drci_t *command) {
 
     err = confirm_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, NULL);
     if (err != ERROR_NONE) {
-        printf("[XPRC] [DRCI] failed to send confirmation for %s (error %d)\n", command->dataref_name, err);
+        RCLOG_WARN("[DRCI] failed to send confirmation for %s (error %d)", command->dataref_name, err);
         command->failed = true;
     }
 
@@ -285,7 +284,7 @@ static void drci_process_post(command_drci_t *command) {
     if (err == ERROR_NONE) {
         command->registration_task = NULL;
     } else {
-        printf("[XPRC] [DRCI] failed to unschedule registration task for %s (error %d)\n", command->dataref_name, err);
+        RCLOG_WARN("[DRCI] failed to unschedule registration task for %s (error %d)", command->dataref_name, err);
         command->failed = true;
     }
 }
@@ -366,7 +365,7 @@ static drci_rangefit_mode_t parse_rangefit_mode(char *s, int count) {
 }
 
 static error_t parse_variable_value(drci_vartype_t *var, XPLMDataTypeID type, char *s) {
-    //printf("[XPRC] [DRCI] parse_variable_value \"%s\"\n", s); // DEBUG
+    RCLOG_TRACE("[DRCI] parse_variable_value \"%s\"", s);
     
     var->type = type;
     
@@ -399,7 +398,7 @@ static error_t parse_range(command_drci_t *command, drci_range_t *range, char *r
     int num_separators = count_chars(range_option, DRCI_SUBITEM_SEPARATOR[0], count);
     bool has_previous_type = ((*type_carry & simple_types) != 0);
     bool omits_type = (num_separators == 1);
-    //printf("[XPRC] [DRCI] parse_range range=%p, count=%d, type_carry=%d, range_option: %s\n", range, count, *type_carry, range_option); // DEBUG
+    RCLOG_TRACE("[DRCI] parse_range range=%p, count=%d, type_carry=%d, range_option: %s", range, count, *type_carry, range_option);
     if (omits_type) {
         if (!has_previous_type) {
             error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "range value type must be specified at least once");
@@ -411,9 +410,9 @@ static error_t parse_range(command_drci_t *command, drci_range_t *range, char *r
     }
 
     int min_offset = omits_type ? 0 : strpos(range_option, DRCI_SUBITEM_SEPARATOR, 0) + 1;
-    //printf("[XPRC] [DRCI] parse_range min_offset=%d @ %s\n", min_offset, &range_option[min_offset]); // DEBUG
+    RCLOG_TRACE("[DRCI] parse_range min_offset=%d @ %s", min_offset, &range_option[min_offset]);
     int max_offset = strpos(range_option, DRCI_SUBITEM_SEPARATOR, min_offset) + 1;
-    //printf("[XPRC] [DRCI] parse_range max_offset=%d @ %s\n", max_offset, &range_option[max_offset]); // DEBUG
+    RCLOG_TRACE("[DRCI] parse_range max_offset=%d @ %s", max_offset, &range_option[max_offset]);
     range->minimum_bound = ((max_offset - min_offset) > 1);
     range->maximum_bound = (max_offset < count);
 
@@ -550,14 +549,13 @@ static error_t parse_ranges(command_drci_t *command, char *range_option, char *r
         range_option += range_separator + 1;
     }
 
-    /*
-    // DEBUG
-    printf("[XPRC] [DRCI] parsed %d ranges\n", num_ranges);
-    for (int i=0; i<num_ranges; i++) {
-        drci_range_t *range = dynamic_array_get_pointer(command->ranges, i);
-        printf("[XPRC] [DRCI] range #%d: fit_mode=%d, min_bound=%d, minimum=[type=%d, int:%d, float:%f, double:%f], max_bound=%d, maximum=[type=%d, int:%d, float:%f, double:%f])\n", i, range->fit_mode, range->minimum_bound, range->minimum.type, range->minimum.int_value, range->minimum.float_value, range->minimum.double_value, range->maximum_bound, range->maximum.type, range->maximum.int_value, range->maximum.float_value, range->maximum.double_value);
+    if (RCLOG_IS_TRACE_ENABLED()) {
+        RCLOG_TRACE("[DRCI] parsed %d ranges", num_ranges);
+        for (int i=0; i<num_ranges; i++) {
+            drci_range_t *range = dynamic_array_get_pointer(command->ranges, i);
+            RCLOG_TRACE("[DRCI] range #%d: fit_mode=%d, min_bound=%d, minimum=[type=%d, int:%d, float:%f, double:%f], max_bound=%d, maximum=[type=%d, int:%d, float:%f, double:%f])", i, range->fit_mode, range->minimum_bound, range->minimum.type, range->minimum.int_value, range->minimum.float_value, range->minimum.double_value, range->maximum_bound, range->maximum.type, range->maximum.int_value, range->maximum.float_value, range->maximum.double_value);
+        }
     }
-    */
 
     return ERROR_NONE;
 }
@@ -579,7 +577,7 @@ static drci_stepfit_mode_t parse_stepfit_mode(char *s, int count) {
 static error_t parse_step(command_drci_t *command, drci_step_t *step, char *step_option, int count, XPLMDataTypeID *type_carry) {
     bool disable_step = (count == 1) && !strncmp(step_option, DRCI_STEP_DISABLE, count);
     if (disable_step) {
-        //printf("[XPRC] [DRCI] parse_step disabled, step_option: %s\n", step_option); // DEBUG
+        RCLOG_TRACE("[DRCI] parse_step disabled, step_option: %s", step_option);
         return ERROR_NONE;
     }
     step->enabled = true;
@@ -587,7 +585,7 @@ static error_t parse_step(command_drci_t *command, drci_step_t *step, char *step
     int num_separators = count_chars(step_option, DRCI_SUBITEM_SEPARATOR[0], count);
     bool has_previous_type = ((*type_carry & simple_types) != 0);
     bool omits_type = (num_separators == 0);
-    //printf("[XPRC] [DRCI] parse_step step=%p, count=%d, type_carry=%d, step_option: %s\n", step, count, *type_carry, step_option); // DEBUG
+    RCLOG_TRACE("[DRCI] parse_step step=%p, count=%d, type_carry=%d, step_option: %s", step, count, *type_carry, step_option);
     
     if (omits_type) {
         if (!has_previous_type) {
@@ -700,15 +698,14 @@ static error_t parse_steps(command_drci_t *command, char *step_option, char *ste
         step_option += step_separator + 1;
     }
 
-    /*
-    // DEBUG
-    printf("[XPRC] [DRCI] parsed %d steps\n", num_steps);
-    for (int i=0; i<num_steps; i++) {
-        drci_step_t *step = dynamic_array_get_pointer(command->steps, i);
-        printf("[XPRC] [DRCI] step #%d: enabled=%d, fit_mode=%d, step=[type=%d, int:%d, float:%f, double:%f]\n", i, step->enabled, step->fit_mode, step->interval.type, step->interval.int_value, step->interval.float_value, step->interval.double_value);
+    if (RCLOG_IS_TRACE_ENABLED()) {
+        RCLOG_TRACE("[DRCI] parsed %d steps", num_steps);
+        for (int i=0; i<num_steps; i++) {
+            drci_step_t *step = dynamic_array_get_pointer(command->steps, i);
+            RCLOG_TRACE("[DRCI] step #%d: enabled=%d, fit_mode=%d, step=[type=%d, int:%d, float:%f, double:%f]", i, step->enabled, step->fit_mode, step->interval.type, step->interval.int_value, step->interval.float_value, step->interval.double_value);
+        }
     }
-    */
-    
+
     return ERROR_NONE;
 }
 
@@ -814,7 +811,7 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
         : offset_name_separator - offset_type_separator - 1; // name goes only to length separator
 
     command->types = xprc_parse_types(parameter->parameter, offset_type_separator);
-    //printf("[XPRC] [DRCI] parsed types %d\n", command->types); // DEBUG
+    RCLOG_TRACE("[DRCI] parsed types %d", command->types);
 
     bool has_simple_type = ((command->types & simple_types) != 0);
     bool has_array_type = ((command->types & array_types) != 0);
@@ -877,17 +874,17 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     
     // TODO: check if intConv with range leads to valid results
 
-    //printf("[XPRC] [DRCI] copy name\n"); // DEBUG
+    RCLOG_TRACE("[DRCI] copy name");
     command->dataref_name = copy_partial_unescaped_string(&parameter->parameter[offset_type_separator+1], escaped_name_length);
     if (!command->dataref_name) {
-        //printf("[XPRC] [DRCI] copy failed\n"); // DEBUG
+        RCLOG_WARN("[DRCI] copy failed");
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "dataref name could not be copied");
         out_error = ERROR_MEMORY_ALLOCATION;
         goto error;
     }
-    //printf("[XPRC] [DRCI] copy succeeded\n"); // DEBUG
+    RCLOG_TRACE("[DRCI] copy succeeded");
 
-    //printf("[XPRC] [DRCI] array length: %d\n", command->array_length); // DEBUG
+    RCLOG_TRACE("[DRCI] array length: %d", command->array_length);
     
     if ((command->types & xplmType_IntArray) != 0) {
         command->values_int = create_dynamic_array(SIZE_XPLM_INT, command->array_length);
@@ -916,14 +913,14 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
         }
     }
     
-    //printf("[XPRC] [DRCI] reserving proxy\n"); // DEBUG
+    RCLOG_TRACE("[DRCI] reserving proxy");
     command->proxy = reserve_dataproxy(session->server->config.dataproxy_registry, command->dataref_name, command->types, write_permission, command, session, drci_dataproxy_operations);
     if (!command->proxy) {
-        //printf("[XPRC] [DRCI] failed to reserve proxy\n"); // DEBUG
+        RCLOG_TRACE("[DRCI] failed to reserve proxy");
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "dataproxy could not be reserved (is the dataref already claimed?)");
         goto error;
     }
-    //printf("[XPRC] [DRCI] proxy reserved\n"); // DEBUG
+    RCLOG_TRACE("[DRCI] proxy reserved");
     
     task_t *task = zalloc(sizeof(task_t));
     if (!task) {
@@ -933,7 +930,7 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     task->on_processing = drci_process;
     task->reference = command;
 
-    //printf("[XPRC] [DRCI] scheduling task\n"); // DEBUG
+    RCLOG_TRACE("[DRCI] scheduling task");
 
     err = lock_schedule(session->server->config.task_schedule);
     if (err == ERROR_NONE) {
@@ -952,17 +949,18 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
 
     *command_ref = command;
     
-    //printf("[XPRC] [DRCI] create done\n"); // DEBUG
+    RCLOG_TRACE("[DRCI] create done");
     
     return ERROR_NONE;
 
  error:
-    //printf("[XPRC] [DRCI] create error handling\n"); // DEBUG
+    // FIXME: log specific warnings if something goes wrong
+    RCLOG_TRACE("[DRCI] create error handling");
     if (command) {
         if (command->proxy) {
             err = release_dataproxy(command->proxy);
             if (err != ERROR_NONE) {
-                printf("[XPRC] [DRCI] failed to release dataproxy on error handling during creation: %d\n", err);
+                RCLOG_WARN("[DRCI] failed to release dataproxy on error handling during creation: %d", err);
             }
             command->proxy = NULL;
         }
@@ -1263,7 +1261,7 @@ static error_t drci_array_get(void *ref, XPLMDataTypeID type, void *dest, int *n
         type_size = 1;
     }
 
-    //printf("[XPRC] [DRCI] drci_array_get: arr=%p, type_size=%d\n", arr, type_size); // DEBUG
+    RCLOG_TRACE("[DRCI] drci_array_get: arr=%p, type_size=%d", arr, type_size);
 
     if (!arr) {
         out_err = ERROR_UNSPECIFIC;
@@ -1272,7 +1270,7 @@ static error_t drci_array_get(void *ref, XPLMDataTypeID type, void *dest, int *n
         out_err = get_actual_count(&actual_count, arr->length, offset, count);
         
         void *src = dynamic_array_get_pointer(arr, offset);
-        //printf("[XPRC] [DRCI] drci_array_get: src=%p, actual_count=%d\n", src, actual_count); // DEBUG
+        RCLOG_TRACE("[DRCI] drci_array_get: src=%p, actual_count=%d", src, actual_count);
         if ((out_err == ERROR_NONE) && src && (actual_count > 0)) {
             memcpy(dest, src, actual_count * type_size);
             *num_copied = actual_count;
@@ -1283,7 +1281,7 @@ static error_t drci_array_get(void *ref, XPLMDataTypeID type, void *dest, int *n
     
     mtx_unlock(&command->mutex);
     
-    //printf("[XPRC] [DRCI] drci_array_get: out_err=%d, num_copied=%d\n", out_err, *num_copied); // DEBUG
+    RCLOG_TRACE("[DRCI] drci_array_get: out_err=%d, num_copied=%d", out_err, *num_copied);
     
     return out_err;
 }
@@ -1292,7 +1290,7 @@ static error_t drci_array_length(void *ref, XPLMDataTypeID type, int *length) {
     command_drci_t *command = ref;
     error_t out_err = ERROR_NONE;
 
-    //printf("[XPRC] [DRCI] drci_array_length\n"); // DEBUG
+    RCLOG_TRACE("[DRCI] drci_array_length");
     
     if (((command->types & type) == 0) || !length) {
         return ERROR_UNSPECIFIC;
@@ -1312,10 +1310,10 @@ static error_t drci_array_length(void *ref, XPLMDataTypeID type, int *length) {
     }
 
     if (!arr) {
-        //printf("[XPRC] [DRCI] drci_array_length: no array\n"); // DEBUG
+        RCLOG_WARN("[DRCI] drci_array_length: no array");
         out_err = ERROR_UNSPECIFIC;
     } else {
-        //printf("[XPRC] [DRCI] drci_array_length: %d\n", arr->length); // DEBUG
+        RCLOG_TRACE("[DRCI] drci_array_length: %d", arr->length);
         *length = arr->length;
     }
     
@@ -1328,30 +1326,30 @@ static error_t drci_array_update(void *ref, XPLMDataTypeID type, void *values, i
     command_drci_t *command = ref;
     error_t out_err = ERROR_NONE;
 
-    //printf("[XPRC] [DRCI] drci_array_update: type=%d, values=%p, offset=%d, count=%d, source_session=%p\n", type, values, offset, count, source_session); // DEBUG
+    RCLOG_TRACE("[DRCI] drci_array_update: type=%d, values=%p, offset=%d, count=%d, source_session=%p", type, values, offset, count, source_session);
     
     if (((command->types & type) == 0) || (command->array_length < 0) || !values || offset < 0 || count < 0) {
-        //printf("[XPRC] [DRCI] drci_array_update: bad precondition\n"); // DEBUG
+        RCLOG_WARN("[DRCI] drci_array_update: bad precondition");
         return ERROR_UNSPECIFIC;
     }
 
     if (count == 0) {
-        //printf("[XPRC] [DRCI] drci_array_update: count 0\n"); // DEBUG
+        RCLOG_TRACE("[DRCI] drci_array_update: count 0");
         return ERROR_NONE;
     }
 
     if (mtx_lock(&command->mutex) != thrd_success) {
-        //printf("[XPRC] [DRCI] drci_array_update: lock failed\n"); // DEBUG
+        RCLOG_WARN("[DRCI] drci_array_update: lock failed");
         return ERROR_MUTEX_FAILED;
     }
 
     int actual_count = 0;
     out_err = get_actual_count(&actual_count, command->array_length, offset, count);
 
-    //printf("[XPRC] [DRCI] drci_array_update: out_err=%d, actual_count=%d\n", out_err, actual_count); // DEBUG
+    RCLOG_TRACE("[DRCI] drci_array_update: out_err=%d, actual_count=%d", out_err, actual_count);
     
     if ((out_err != ERROR_NONE) || (actual_count <= 0)) {
-        //printf("[XPRC] [DRCI] drci_array_update: early quit\n"); // DEBUG
+        RCLOG_WARN("[DRCI] drci_array_update: early quit");
         mtx_unlock(&command->mutex);
         return out_err;
     }
@@ -1360,32 +1358,32 @@ static error_t drci_array_update(void *ref, XPLMDataTypeID type, void *values, i
         // blobs do not support any type of value conversion and are mutually exclusive to other types
         // so the data can be copied directly
         void *dest = dynamic_array_get_pointer(command->blob, offset);
-        //printf("[XPRC] [DRCI] drci_array_update: copy blob to %p\n", dest); // DEBUG
+        RCLOG_TRACE("[DRCI] drci_array_update: copy blob to %p", dest);
         memcpy(dest, values, actual_count);
     } else {
         int end = offset + actual_count;
         void *src = values;
         XPLMDataTypeID src_type = (type == xplmType_FloatArray) ? xplmType_Float : xplmType_Int;
-        //printf("[XPRC] [DRCI] drci_array_update: copy values from src=%p, end=%d, src_type=%d\n", src, end, src_type); // DEBUG
+        RCLOG_TRACE("[DRCI] drci_array_update: copy values from src=%p, end=%d, src_type=%d", src, end, src_type);
         for (int i=offset; i<end; i++) {
             void *dest_int = command->values_int ? dynamic_array_get_pointer(command->values_int, i) : NULL;
             void *dest_float = command->values_float ? dynamic_array_get_pointer(command->values_float, i) : NULL;
-            //printf("[XPRC] [DRCI] drci_array_update: copy value from src=%p (i=%d) to dest_int=%p, dest_float=%p\n", src, i, dest_int, dest_float); // DEBUG
+            RCLOG_TRACE("[DRCI] drci_array_update: copy value from src=%p (i=%d) to dest_int=%p, dest_float=%p", src, i, dest_int, dest_float);
             apply_value(src_type, src, dest_int, dest_float, NULL, command->intconv_mode);
             src += SIZE_XPLM_INT_FLOAT;
         }
     }
     
-    //printf("[XPRC] [DRCI] drci_array_update: copy complete\n"); // DEBUG
+    RCLOG_TRACE("[DRCI] drci_array_update: copy complete");
 
     if (should_echo(command, source_session)) {
-        //printf("[XPRC] [DRCI] drci_array_update: dumping\n"); // DEBUG
+        RCLOG_TRACE("[DRCI] drci_array_update: dumping");
         dump_values(command);
     }
     
     mtx_unlock(&command->mutex);
     
-    //printf("[XPRC] [DRCI] drci_array_update: done\n"); // DEBUG
+    RCLOG_TRACE("[DRCI] drci_array_update: done");
     
     return out_err;
 }

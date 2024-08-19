@@ -1,7 +1,7 @@
-#include <stdlib.h>
 #include <string.h>
 
 #include "gui_utils.h"
+#include "../logger.h"
 #include "../network.h"
 #include "../utils.h"
 
@@ -46,7 +46,7 @@ static bool update_network_interfaces(settings_window_t *settings_window) {
     // get all available specific addresses
     list_t *interfaces_addresses = get_network_interfaces(settings->network_enable_ipv6);
     if (!interfaces_addresses) {
-        printf("[XPRC] failed to copy retrieve network interfaces\n");
+        RCLOG_WARN("failed to copy retrieve network interfaces");
         return false;
     }
 
@@ -117,11 +117,11 @@ error:
 }
 
 static void copy_from_settings(settings_window_t *settings_window) {
-    printf("[XPRC] copy_from_settings\n"); // DEBUG
+    RCLOG_DEBUG("copy_from_settings");
 
     error_t err = copy_settings_from_manager(settings_window->settings_manager, settings_window->settings, SETTINGS_COPY_PASSWORD);
     if (err != ERROR_NONE) {
-        printf("[XPRC] failed to copy settings from manager to window: %d\n", err);
+        RCLOG_WARN("failed to copy settings from manager to window: %d", err);
         settings_window->dirty = true;
         return;
     }
@@ -301,7 +301,7 @@ static void handle_view_state(settings_window_t *settings_window) {
     if (settings_window->btn_network_reset_state) {
         error_t err = reset_network_settings(settings_window->settings);
         if (err != ERROR_NONE) {
-            printf("[XPRC] failed to reset network settings to default\n");
+            RCLOG_WARN("failed to reset network settings to default");
         } else {
             settings_window->dirty = true;
         }
@@ -332,7 +332,7 @@ static bool imgui_show(img_window window, void *ref) {
 
     // window was not on screen before; take that chance to update/reset
     // to actual current settings (discarding any previous changes)
-    printf("[XPRC] settings window will be shown, reading settings\n");
+    RCLOG_DEBUG("settings window will be shown, reading settings");
     copy_from_settings(settings_window);
 
     return true;
@@ -348,7 +348,7 @@ settings_window_t* create_settings_window(settings_manager_t *settings_manager) 
 
     settings_window->settings = create_settings();
     if (!settings_window->settings) {
-        printf("[XPRC] failed to create settings for settings window\n");
+        RCLOG_WARN("failed to create settings for settings window");
         goto error;
     }
 
@@ -358,7 +358,7 @@ settings_window_t* create_settings_window(settings_manager_t *settings_manager) 
 
     settings_window->window = create_centered_window(655, 485,imgui_update, imgui_show, settings_window);
     if (!settings_window->window) {
-        printf("[XPRC] failed to create settings window\n");
+        RCLOG_WARN("failed to create settings window");
         goto error;
     }
 

@@ -1,8 +1,7 @@
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "img_window.h"
+#include "../logger.h"
 #include "../utils.h"
 
 #include "gui.h"
@@ -19,26 +18,26 @@ static void xp_menu_callback(void *inMenuRef, void *inItemRef) {
     menu_item_t menu_item = (menu_item_t) inItemRef;
 
     if (!gui) {
-        printf("[XPRC] menu handler called without GUI menu reference\n");
+        RCLOG_ERROR("menu handler called without GUI menu reference");
         return;
     }
 
     switch (menu_item) {
         case MENU_ITEM_TOGGLE:
-            printf("[XPRC] menu handler called for toggle\n"); // FIXME: implement
+            RCLOG_DEBUG("menu handler called for toggle"); // FIXME: implement
             break;
 
         case MENU_ITEM_SETTINGS:
-            printf("[XPRC] menu handler called for settings\n");
+            RCLOG_DEBUG("menu handler called for settings");
             open_settings_window(gui->settings_window);
             break;
 
         case MENU_ITEM_ABOUT:
-            printf("[XPRC] menu handler called for about\n"); // FIXME: implement
+            RCLOG_DEBUG("menu handler called for about"); // FIXME: implement
             break;
 
         default:
-            printf("[XPRC] menu handler called for unhandled item %lu\n", menu_item);
+            RCLOG_WARN("menu handler called for unhandled item %lu", menu_item);
             return;
     }
 }
@@ -62,19 +61,19 @@ gui_t* gui_create(settings_manager_t *settings_manager) {
 
     gui->xp_plugins_menu_id = XPLMFindPluginsMenu();
     if (!gui->xp_plugins_menu_id) {
-        printf("[XPRC] plugins menu not found\n");
+        RCLOG_ERROR("plugins menu not found");
         goto error;
     }
 
     gui->plugins_menu_subitem_index = XPLMAppendMenuItem(gui->xp_plugins_menu_id, PLUGIN_MENU_XPRC_NAME, NULL, 0);
     if (gui->plugins_menu_subitem_index < 0) {
-        printf("[XPRC] appending to plugin menu failed: %d\n", gui->plugins_menu_subitem_index);
+        RCLOG_ERROR("appending to plugin menu failed: %d", gui->plugins_menu_subitem_index);
         goto error;
     }
 
     gui->menu_id = XPLMCreateMenu(PLUGIN_MENU_XPRC_NAME, gui->xp_plugins_menu_id, gui->plugins_menu_subitem_index, xp_menu_callback, gui);
     if (!gui->menu_id) {
-        printf("[XPRC] handler registration to plugin menu failed\n");
+        RCLOG_ERROR("handler registration to plugin menu failed");
         goto error;
     }
 
@@ -82,19 +81,19 @@ gui_t* gui_create(settings_manager_t *settings_manager) {
 
     xprc_subitem_index = XPLMAppendMenuItem(gui->menu_id, "Start/stop server", (void*) MENU_ITEM_TOGGLE, 0);
     if (xprc_subitem_index < 0) {
-        printf("[XPRC] appending toggle menu item failed: %d\n", xprc_subitem_index);
+        RCLOG_ERROR("appending toggle menu item failed: %d", xprc_subitem_index);
         goto error;
     }
 
     xprc_subitem_index = XPLMAppendMenuItem(gui->menu_id, "Settings", (void*) MENU_ITEM_SETTINGS, 0);
     if (xprc_subitem_index < 0) {
-        printf("[XPRC] appending settings menu item failed: %d\n", xprc_subitem_index);
+        RCLOG_ERROR("appending settings menu item failed: %d", xprc_subitem_index);
         goto error;
     }
 
     xprc_subitem_index = XPLMAppendMenuItem(gui->menu_id, "About", (void*) MENU_ITEM_ABOUT, 0);
     if (xprc_subitem_index < 0) {
-        printf("[XPRC] appending about menu item failed: %d\n", xprc_subitem_index);
+        RCLOG_ERROR("appending about menu item failed: %d", xprc_subitem_index);
         goto error;
     }
 

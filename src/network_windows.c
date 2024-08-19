@@ -48,7 +48,7 @@ error_t initialize_os_network_apis() {
     uint16_t requested_winsock_version = (MAJOR_WINSOCK_VERSION << 8) | MINOR_WINSOCK_VERSION;
     res = WSAStartup(requested_winsock_version, &wsadata);
     if (res) {
-        printf("[XPRC] WSAStartup failed, res=%lu\r\n", res);
+        RCLOG_WARN("WSAStartup failed, res=%lu", res);
         return ERROR_UNSPECIFIC;
     }
 
@@ -98,8 +98,8 @@ list_t* get_network_interfaces(bool include_ipv6) {
             // the suggested size for the next attempt.
             // We only retry if that requested size is actually larger than before and while it is within limit.
             if ((result_buffer_size <= original_result_buffer_size) || (result_buffer_size > MAX_ADDRESS_RESULT_BUFFER_SIZE)) {
-                printf(
-                    "[XPRC] GetAdaptersAddresses unreasonable ERROR_BUFFER_OVERFLOW; result_buffer_size=%lu, original_result_buffer_size=%lu\r\n",
+                RCLOG_WARN(
+                    "GetAdaptersAddresses unreasonable ERROR_BUFFER_OVERFLOW; result_buffer_size=%lu, original_result_buffer_size=%lu",
                     res,
                     result_buffer_size,
                     original_result_buffer_size
@@ -111,7 +111,7 @@ list_t* get_network_interfaces(bool include_ipv6) {
         }
 
         // something went wrong; abort
-        printf("[XPRC] GetAdaptersAddresses generic error res=%lu\r\n", res);
+        RCLOG_WARN("GetAdaptersAddresses generic error res=%lu", res);
         goto error;
     }
 
@@ -136,7 +136,7 @@ list_t* get_network_interfaces(bool include_ipv6) {
             long unsigned int address_string_length = ADDRESS_STRING_BUFFER_SIZE;
             char *address_string = zalloc(address_string_length * 4);
             if (!address_string) {
-                printf("[XPRC] failed to allocate address_string\r\n");
+                RCLOG_WARN("failed to allocate address_string");
                 goto error;
             }
 
@@ -152,22 +152,22 @@ list_t* get_network_interfaces(bool include_ipv6) {
                 // error
                 res = WSAGetLastError();
                 if (res == WSANOTINITIALISED) {
-                    printf("[XPRC] WSAAddressToString error decoded: WSANOTINITIALISED\r\n");
+                    RCLOG_WARN("WSAAddressToString error decoded: WSANOTINITIALISED");
                 } else if (res == WSAENOBUFS) {
-                    printf("[XPRC] WSAAddressToString error decoded: WSAENOBUFS\r\n");
+                    RCLOG_WARN("WSAAddressToString error decoded: WSAENOBUFS");
                 } else if (res == WSAEINVAL) {
-                    printf("[XPRC] WSAAddressToString error decoded: WSAEINVAL\r\n");
+                    RCLOG_WARN("WSAAddressToString error decoded: WSAEINVAL");
                 } else if (res == WSAEFAULT) {
-                    printf("[XPRC] WSAAddressToString error decoded: WSAEFAULT\r\n");
+                    RCLOG_WARN("WSAAddressToString error decoded: WSAEFAULT");
                 } else {
-                    printf("[XPRC] WSAAddressToString unknown error: %lu\r\n", res);
+                    RCLOG_WARN("WSAAddressToString unknown error: %lu", res);
                 }
 
                 free(address_string);
                 address_string = NULL;
             } else if (!is_ip_address(address_string)) {
                 // avoid errors in caller; we are supposed to only return what we understand as IP addresses ourselves
-                printf("[XPRC] get_network_interfaces: IP address is not recognized as valid, skipping: \"%s\"\r\n", address_string);
+                RCLOG_WARN("get_network_interfaces: IP address is not recognized as valid, skipping: \"%s\"", address_string);
                 free(address_string);
                 address_string = NULL;
             } else {
@@ -177,12 +177,12 @@ list_t* get_network_interfaces(bool include_ipv6) {
                 address_string = NULL;
 
                 if (!copy) {
-                    printf("[XPRC] WSAAddressToString failed copy\r\n");
+                    RCLOG_WARN("WSAAddressToString failed copy");
                     goto error;
                 }
 
                 if (!list_append(out, copy)) {
-                    printf("[XPRC] WSAAddressToString failed append\r\n");
+                    RCLOG_WARN("WSAAddressToString failed append");
                     free(copy);
                     goto error;
                 }
@@ -207,7 +207,7 @@ error:
         free(result_buffer);
     }
 
-    printf("[XPRC] get_network_interfaces aborted\r\n");
+    RCLOG_WARN("get_network_interfaces aborted");
 
     return NULL;
 }
@@ -234,7 +234,7 @@ static struct sockaddr* create_address_ipv6(network_server_config_t *config) {
         address->sin6_addr = in6addr_loopback;
     } else {
         // TODO: support selection of specific interface to bind to
-        printf("unable to resolve interface \"%s\"\n", config->interface_address); // TODO: log
+        RCLOG_WARN("unable to resolve interface \"%s\"", config->interface_address);
         free(address);
         return NULL;
     }

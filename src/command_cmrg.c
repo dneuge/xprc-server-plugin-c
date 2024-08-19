@@ -1,12 +1,11 @@
 #include "command_cmrg.h"
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include <XPLMUtilities.h>
 
 #include "arrays.h"
+#include "logger.h"
 #include "protocol.h"
 #include "session.h"
 #include "utils.h"
@@ -44,7 +43,7 @@ static const char *cmrg_supported_options[] = {
 };
 
 static error_t cmrg_destroy(void *command_ref) {
-    printf("[XPRC] [CMRG] destroy\n"); // DEBUG
+    RCLOG_TRACE("[CMRG] destroy");
     
     if (!command_ref) {
         return ERROR_UNSPECIFIC;
@@ -52,16 +51,16 @@ static error_t cmrg_destroy(void *command_ref) {
     
     command_cmrg_t *command = command_ref;
     
-    printf("[XPRC] [CMRG] destroy: freeing command\n"); // DEBUG
+    RCLOG_TRACE("[CMRG] destroy: freeing command");
     free(command);
     
-    printf("[XPRC] [CMRG] destroy: done\n"); // DEBUG
+    RCLOG_TRACE("[CMRG] destroy: done");
 
     return ERROR_NONE;
 }
 
 static error_t cmrg_terminate(void *command_ref) {
-    printf("[XPRC] [CMRG] terminate\n"); // DEBUG
+    RCLOG_TRACE("[CMRG] terminate");
     
     if (!command_ref) {
         return ERROR_UNSPECIFIC;
@@ -76,7 +75,7 @@ static error_t cmrg_terminate(void *command_ref) {
     if (command->xpcmd) {
         err = drop_xpcommand(command->xpcmd);
         if (err != ERROR_NONE) {
-            printf("[XPRC] [CMRG] terminate: failed to drop XP command, unable to terminate: %s\n", command->xpcmd->name);
+            RCLOG_WARN("[CMRG] terminate: failed to drop XP command, unable to terminate: %s", command->xpcmd->name);
             return err;
         }
     }
@@ -91,13 +90,13 @@ static error_t cmrg_terminate(void *command_ref) {
         unlock_schedule(command->session->server->config.task_schedule);
     }
     if (err != ERROR_NONE) {
-        printf("[XPRC] [CMRG] terminate: failed to unschedule task (error %d) for %s\n", err, command->xpcmd->name);
+        RCLOG_WARN("[CMRG] terminate: failed to unschedule task (error %d) for %s", err, command->xpcmd->name);
         return err;
     }
     
     channel_id_t channel_id = command->channel_id;
     
-    printf("[XPRC] [CMRG] terminate: poisoning channel ID\n"); // DEBUG
+    RCLOG_TRACE("[CMRG] terminate: poisoning channel ID");
     command->channel_id = BAD_CHANNEL_ID;
     
     request_channel_destruction(command->session->channels, channel_id);
@@ -106,10 +105,10 @@ static error_t cmrg_terminate(void *command_ref) {
 }
 
 static void cmrg_initialize(command_cmrg_t *command) {
-    printf("[CMRG] initializing %s\n", command->xpcmd->name); // DEBUG
+    RCLOG_TRACE("[CMRG] initializing %s", command->xpcmd->name);
     
     error_t err = register_xpcommand(command->xpcmd);
-    printf("[CMRG] registration %d\n", err); // DEBUG
+    RCLOG_TRACE("[CMRG] registration %d", err);
     if (err != ERROR_NONE) {
         error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "failed to register command");
         command->failed = true;
@@ -126,7 +125,7 @@ static void cmrg_initialize(command_cmrg_t *command) {
         command->initialized = true;
     }
 
-    printf("[CMRG] done: initialized=%d, failed=%d\n", command->initialized, command->failed); // DEBUG
+    RCLOG_TRACE("[CMRG] done: initialized=%d, failed=%d", command->initialized, command->failed);
 }
 
 static void cmrg_process(task_t *task, task_schedule_phase_t phase) {
@@ -158,7 +157,7 @@ static void cmrg_handle_event(void *ref, XPLMCommandPhase xp_phase) {
             msg = (xp_phase == xplm_CommandBegin) ? "HOLD" : "RELEASE";
         }
     } else {
-        printf("[CMRG] unhandled XPLMCommandPhase %d: %s\n", xp_phase, command->xpcmd->name);
+        RCLOG_WARN("[CMRG] unhandled XPLMCommandPhase %d: %s", xp_phase, command->xpcmd->name);
         command->failed = true;
     }
     
@@ -167,7 +166,7 @@ static void cmrg_handle_event(void *ref, XPLMCommandPhase xp_phase) {
     }
     
     if (continue_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, msg) != ERROR_NONE) {
-        printf("[CMRG] failed to notify: %s\n", command->xpcmd->name);
+        RCLOG_WARN("[CMRG] failed to notify: %s", command->xpcmd->name);
         error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, NULL);
         command->failed = true;
     }

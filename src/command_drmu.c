@@ -1,13 +1,12 @@
 #include "command_drmu.h"
 
 #include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include <XPLMDataAccess.h>
 
 #include "arrays.h"
+#include "logger.h"
 #include "protocol.h"
 #include "session.h"
 #include "utils.h"
@@ -157,7 +156,7 @@ static error_t drmu_terminate(void *command_ref) {
         }
         
         if (err != ERROR_NONE) {
-            printf("[XPRC] [DRMU] terminate failed to unschedule task: %d\n", err);
+            RCLOG_WARN("[DRMU] terminate failed to unschedule task: %d", err);
             return err;
         }
         
@@ -182,7 +181,7 @@ static bool drmu_initialize(command_drmu_t *command) {
     while (dataref) {
         dataref->xp_ref = XPLMFindDataRef(dataref->name);
         if (!dataref->xp_ref) {
-            printf("[XPRC] [DRMU] XP did not find dataref: \"%s\"\n", dataref->name); // DEBUG
+            RCLOG_DEBUG("[DRMU] XP did not find dataref: \"%s\"", dataref->name);
             error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "dataref does not exist");
             command->failed = true;
             return false;
@@ -190,7 +189,7 @@ static bool drmu_initialize(command_drmu_t *command) {
 
         XPLMDataTypeID available_types = XPLMGetDataRefTypes(dataref->xp_ref);
         if (!(available_types & dataref->type)) {
-            printf("[XPRC] [DRMU] wanted type %d, got types %d\n", dataref->type, available_types); // DEBUG
+            RCLOG_DEBUG("[DRMU] wanted type %d, got types %d", dataref->type, available_types);
             error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "type is not available from dataref");
             command->failed = true;
             return false;
@@ -234,45 +233,45 @@ static bool read_dataref(drmu_dataref_t *dataref, dynamic_array_t *dest_arr) {
     bool success = true;
     error_t err = ERROR_NONE;
 
-    printf("[XPRC] [DRMU] read_dataref dataref=%p, type=%d, dest_arr=%p\n", dataref, dataref->type, dest_arr); // DEBUG
+    RCLOG_TRACE("[DRMU] read_dataref dataref=%p, type=%d, dest_arr=%p", dataref, dataref->type, dest_arr);
 
     bool is_simple_type = ((simple_types & dataref->type) != 0);
     
     void *dest = dynamic_array_get_pointer(dest_arr, 0);
     if (!dest) {
-        printf("[XPRC] [DRMU] read_dataref no dest\n"); // DEBUG
+        RCLOG_TRACE("[DRMU] read_dataref no dest");
         return false;
     }
     
-    printf("[XPRC] [DRMU] read_dataref dest_arr[length=%d, capacity=%d, item_size=%ld]\n", dest_arr->length, dest_arr->capacity, dest_arr->item_size); // DEBUG
+    RCLOG_TRACE("[DRMU] read_dataref dest_arr[length=%d, capacity=%d, item_size=%ld]", dest_arr->length, dest_arr->capacity, dest_arr->item_size);
 
     // retrieve internally if available
     if (dataref->proxy) {
-        printf("[XPRC] [DRMU] read_dataref read via proxy\n"); // DEBUG
+        RCLOG_TRACE("[DRMU] read_dataref read via proxy");
         if (is_simple_type) {
-            printf("[XPRC] [DRMU] read_dataref simple via proxy\n"); // DEBUG
+            RCLOG_TRACE("[DRMU] read_dataref simple via proxy");
             err = dataproxy_simple_get(dataref->proxy, dataref->type, dest);
         } else {
-            printf("[XPRC] [DRMU] read_dataref array via proxy\n"); // DEBUG
+            RCLOG_TRACE("[DRMU] read_dataref array via proxy");
             int num_copied = 0;
             err = dataproxy_array_get(dataref->proxy, dataref->type, dest, &num_copied, dataref->target_array_offset, dest_arr->length);
             if ((err == ERROR_NONE) && (num_copied != dest_arr->length)) {
-                printf("[XPRC] [DRMU] read_dataref setting length\n"); // DEBUG
+                RCLOG_TRACE("[DRMU] read_dataref setting length");
                 if (!dynamic_array_set_length(dest_arr, num_copied)) {
                     // this error cannot be recovered from by retrying through X-Plane
-                    printf("[XPRC] [DRMU] read_dataref failed to change array size to %d (dest_arr->length: %d)\n", num_copied, dest_arr->length);
+                    RCLOG_WARN("[DRMU] read_dataref failed to change array size to %d (dest_arr->length: %d)", num_copied, dest_arr->length);
                     return false;
                 }
             }
         }
-        printf("[XPRC] [DRMU] read_dataref retrieved via proxy\n"); // DEBUG
+        RCLOG_TRACE("[DRMU] read_dataref retrieved via proxy");
 
         if (err == ERROR_NONE) {
             return true;
         }
 
         // in case we failed to retrieve the value directly from the proxy we will retry through X-Plane
-        printf("[XPRC] [DRMU] read_dataref fallback to X-Plane API for %s (proxy error: %d)\n", dataref->name, err); // DEBUG
+        RCLOG_DEBUG("[DRMU] read_dataref fallback to X-Plane API for %s (proxy error: %d)", dataref->name, err);
 
         return false; // DEBUG
     }
@@ -280,7 +279,7 @@ static bool read_dataref(drmu_dataref_t *dataref, dynamic_array_t *dest_arr) {
     // FIXME: accessing a proxied dataref through X-Plane may deadlock
 
     // retrieve via X-Plane API
-    printf("[XPRC] [DRMU] read_dataref read via X-Plane\n"); // DEBUG
+    RCLOG_TRACE("[DRMU] read_dataref read via X-Plane");
     if (dataref->type == xplmType_Int) {
         *((xpint_t*) dest) = XPLMGetDatai(dataref->xp_ref);
     } else if (dataref->type == xplmType_Float) {
@@ -294,11 +293,11 @@ static bool read_dataref(drmu_dataref_t *dataref, dynamic_array_t *dest_arr) {
     } else if (dataref->type == xplmType_Data) {
         success = read_xplm_dataref_array(dataref, dest, (xplm_dataref_array_getter_f) XPLMGetDatab);
     } else {
-        printf("[XPRC] [DRMU] read_dataref called with unsupported type %d\n", dataref->type);
+        RCLOG_WARN("[DRMU] read_dataref called with unsupported type %d", dataref->type);
         return false;
     }
 
-    printf("[XPRC] [DRMU] read_dataref done\n"); // DEBUG
+    RCLOG_TRACE("[DRMU] read_dataref done");
     return success;
 }
 
@@ -325,7 +324,7 @@ static bool write_dataref(command_drmu_t *command, drmu_dataref_t *dataref, dyna
         }
 
         // in case we failed to write the value directly to the proxy we will retry through X-Plane
-        printf("[XPRC] [DRMU] write_dataref fallback to X-Plane API for %s (proxy error: %d)\n", dataref->name, err); // DEBUG
+        RCLOG_DEBUG("[DRMU] write_dataref fallback to X-Plane API for %s (proxy error: %d)", dataref->name, err);
 
         return false; // DEBUG
     }
@@ -346,7 +345,7 @@ static bool write_dataref(command_drmu_t *command, drmu_dataref_t *dataref, dyna
     } else if (dataref->type == xplmType_Data) {
         success = write_xplm_dataref_array(dataref, values, (xplm_dataref_array_setter_f) XPLMSetDatab);
     } else {
-        printf("[XPRC] [DRMU] write_dataref called with unsupported type %d\n", dataref->type);
+        RCLOG_WARN("[DRMU] write_dataref called with unsupported type %d", dataref->type);
         return false;
     }
 
@@ -482,7 +481,7 @@ static void drmu_process_flightloop(command_drmu_t *command) {
     int64_t millis_since_base = now - command->base_time_millis;
     if (millis_since_base < 0) {
         // TODO: we may want to skip this iteration?
-        printf("[XPRC] [DRMU] time has moved backwards? base_time_millis=%ld, now=%ld, diff=%ld\n", command->base_time_millis, now, millis_since_base);
+        RCLOG_WARN("[DRMU] time has moved backwards? base_time_millis=%ld, now=%ld, diff=%ld", command->base_time_millis, now, millis_since_base);
         millis_since_base = 0;
     }
 
@@ -510,7 +509,7 @@ static void drmu_process_flightloop(command_drmu_t *command) {
     }
 
     if (restart) {
-        printf("[XPRC] [DRMU] restart\n"); // DEBUG
+        RCLOG_TRACE("[DRMU] restart");
         command->cycle_complete = false;
         command->duration_frames = 0; // TODO: 0 or -1? will increment below
         command->update_base_values = command->has_fetch_based_datarefs;
@@ -520,7 +519,7 @@ static void drmu_process_flightloop(command_drmu_t *command) {
         millis_since_base = now - command->base_time_millis;
         if (millis_since_base < 0) {
             // this *really* should not happen
-            printf("[XPRC] [DRMU] negative millis_since_base while resetting: interval=%d, base_time_millis=%ld, now=%ld, millis_since_base=%ld\n", command->interval, command->base_time_millis, now, millis_since_base);
+            RCLOG_ERROR("[DRMU] negative millis_since_base while resetting: interval=%d, base_time_millis=%ld, now=%ld, millis_since_base=%ld", command->interval, command->base_time_millis, now, millis_since_base);
             millis_since_base = 0;
         }
     }
@@ -537,20 +536,20 @@ static void drmu_process_flightloop(command_drmu_t *command) {
 
         if (progress < 0.0) {
             // this shouldn't really be possible but it's better to protect from that case nevertheless
-            printf("[XPRC] [DRMU] limiting progress=%f to zero\n", progress);
+            RCLOG_WARN("[DRMU] limiting progress=%f to zero", progress);
             progress = 0.0;
         }
     }
     
     if (command->has_proxied_datarefs) {
-        printf("[XPRC] [DRMU] locking dataproxy registry\n"); // DEBUG
+        RCLOG_TRACE("[DRMU] locking dataproxy registry");
         err = lock_dataproxy_registry(command->session->server->config.dataproxy_registry);
         if (err != ERROR_NONE) {
             error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "failed to lock dataproxy registry");
             goto error;
         }
         locked_proxy_registry = true;
-        printf("[XPRC] [DRMU] locked dataproxy registry\n"); // DEBUG
+        RCLOG_TRACE("[DRMU] locked dataproxy registry");
     }
 
     // update data
@@ -560,22 +559,22 @@ static void drmu_process_flightloop(command_drmu_t *command) {
     while (dataref) {
         bool success = true;
 
-        printf("[XPRC] [DRMU] dataref name=\"%s\", proxy=%p, xp_ref=%p\n", dataref->name, dataref->proxy, dataref->xp_ref); // DEBUG
+        RCLOG_TRACE("[DRMU] dataref name=\"%s\", proxy=%p, xp_ref=%p", dataref->name, dataref->proxy, dataref->xp_ref);
         
         if (success && command->update_base_values && dataref->base_on_dataref) {
-            printf("[XPRC] [DRMU] updating base values\n"); // DEBUG
+            RCLOG_TRACE("[DRMU] updating base values");
 
             if (success && !read_dataref(dataref, dataref->base_values)) {
-                printf("[XPRC] [DRMU] failed to update base values for %s (type %d, offset %d)\n", dataref->name, dataref->type, dataref->target_array_offset);
+                RCLOG_WARN("[DRMU] failed to update base values for %s (type %d, offset %d)", dataref->name, dataref->type, dataref->target_array_offset);
                 success = false;
             }
 
             if (success && (dataref->base_values->length != dataref->target_values->length)) {
-                printf("[XPRC] [DRMU] base values length mismatch for %s (type %d, offset %d): expected %d, got %d\n", dataref->name, dataref->type, dataref->target_array_offset, dataref->target_values->length, dataref->base_values->length);
+                RCLOG_WARN("[DRMU] base values length mismatch for %s (type %d, offset %d): expected %d, got %d", dataref->name, dataref->type, dataref->target_array_offset, dataref->target_values->length, dataref->base_values->length);
                 success = false;
             }
             
-            printf("[XPRC] [DRMU] base values updated\n"); // DEBUG
+            RCLOG_TRACE("[DRMU] base values updated");
         }
 
         dynamic_array_t *submit_values = dataref->buffer_values;
@@ -587,7 +586,7 @@ static void drmu_process_flightloop(command_drmu_t *command) {
                 command->cycle_complete = true;
                 command->done = (command->interval <= 0);
 
-                printf("[XPRC] [DRMU] immediate or done, progress=%f\n", progress); // DEBUG
+                RCLOG_DEBUG("[DRMU] immediate or done, progress=%f", progress);
                 
                 if (command->monitor_mode != DRMU_MONITOR_NONE) {
                     // monitor values will still be read from buffer_values so we need to copy them
@@ -599,32 +598,32 @@ static void drmu_process_flightloop(command_drmu_t *command) {
                                                                          DYNAMIC_ARRAY_ALLOW_LENGTH_CHANGE
                                                                         );
                     if (!monitor_copy_success) {
-                        printf("[XPRC] [DRMU] failed to copy target to monitor data\n");
+                        RCLOG_WARN("[DRMU] failed to copy target to monitor data");
                     }
                 }
             } else if (command->method == DRMU_METHOD_LINEAR) {
-                printf("[XPRC] [DRMU] linear, progress=%f\n", progress); // DEBUG
+                RCLOG_DEBUG("[DRMU] linear, progress=%f", progress);
                 if (!calculate_linear_values(dataref, progress)) {
-                    printf("[XPRC] [DRMU] failed to calculate linear values: progress=%f, type=%d\n", progress, dataref->type);
+                    RCLOG_WARN("[DRMU] failed to calculate linear values: progress=%f, type=%d", progress, dataref->type);
                     success = false;
                 }
             } else {
                 // ... this shouldn't ever happen but we need to abort in that case
-                printf("[XPRC] [DRMU] unsupported method %d during computation\n", command->method);
+                RCLOG_WARN("[DRMU] unsupported method %d during computation", command->method);
                 success = false;
             }
         }
         
-        printf("[XPRC] [DRMU] writing results\n"); // DEBUG
+        RCLOG_TRACE("[DRMU] writing results");
         if (success && !write_dataref(command, dataref, submit_values)) {
-            printf("[XPRC] [DRMU] failed to update %s (type %d, offset %d)\n", dataref->name, dataref->type, dataref->target_array_offset);
+            RCLOG_WARN("[DRMU] failed to update %s (type %d, offset %d)", dataref->name, dataref->type, dataref->target_array_offset);
             success = false;
         }
 
         if (success && (command->monitor_mode == DRMU_MONITOR_GET)) {
-            printf("[XPRC] [DRMU] updating monitor values\n"); // DEBUG
+            RCLOG_TRACE("[DRMU] updating monitor values");
             if (!read_dataref(dataref, dataref->buffer_values)) {
-                printf("[XPRC] [DRMU] failed to read monitor values for %s (type %d, offset %d)\n", dataref->name, dataref->type, dataref->target_array_offset);
+                RCLOG_WARN("[DRMU] failed to read monitor values for %s (type %d, offset %d)", dataref->name, dataref->type, dataref->target_array_offset);
                 success = false;
             }
         }
@@ -632,7 +631,7 @@ static void drmu_process_flightloop(command_drmu_t *command) {
         dataref = dataref->next;
         all_success &= success && monitor_copy_success;
         
-        printf("[XPRC] [DRMU] dataref complete (all_success=%d, success=%d, monitor_copy_success=%d)\n", all_success, success, monitor_copy_success); // DEBUG
+        RCLOG_TRACE("[DRMU] dataref complete (all_success=%d, success=%d, monitor_copy_success=%d)", all_success, success, monitor_copy_success);
     }
 
     if (!all_success) {
@@ -644,7 +643,7 @@ static void drmu_process_flightloop(command_drmu_t *command) {
 
  exit:
     if (locked_proxy_registry) {
-        printf("[XPRC] [DRMU] unlocking dataproxy registry\n"); // DEBUG
+        RCLOG_TRACE("[DRMU] unlocking dataproxy registry");
         unlock_dataproxy_registry(command->session->server->config.dataproxy_registry);
     }
 
@@ -840,7 +839,7 @@ static error_t complete_without_schedule(command_drmu_t *command) {
         if (err != ERROR_NONE) {
             // in case setting failed we still want to continue with the remaining datarefs
             success = false;
-            printf("[XPRC] [DRMU] complete_without_schedule setting value failed (type %d, offset %d, error %d): %s\n", dataref->type, dataref->target_array_offset, err, dataref->name);
+            RCLOG_WARN("[DRMU] complete_without_schedule setting value failed (type %d, offset %d, error %d): %s", dataref->type, dataref->target_array_offset, err, dataref->name);
         }
         
         if (success) {
@@ -854,7 +853,7 @@ static error_t complete_without_schedule(command_drmu_t *command) {
                                                         DYNAMIC_ARRAY_ALLOW_LENGTH_CHANGE
                                                        );
                 if (!success) {
-                    printf("[XPRC] [DRMU] complete_without_schedule failed to copy target to monitor data\n");
+                    RCLOG_WARN("[DRMU] complete_without_schedule failed to copy target to monitor data");
                 }
             } else if (command->monitor_mode == DRMU_MONITOR_GET) {
                 void *dest = dynamic_array_get_pointer(dataref->buffer_values, 0);
@@ -872,7 +871,7 @@ static error_t complete_without_schedule(command_drmu_t *command) {
                         if (!dynamic_array_set_length(dataref->buffer_values, num_copied)) {
                             // still continue trying to set other datarefs; monitor will be skipped
                             success = false;
-                            printf("[XPRC] [DRMU] complete_without_schedule failed to reduce monitor array size to %d (target length: %d)\n", num_copied, dataref->target_values->length);
+                            RCLOG_WARN("[DRMU] complete_without_schedule failed to reduce monitor array size to %d (target length: %d)", num_copied, dataref->target_values->length);
                         }
                     }
                 }
@@ -880,7 +879,7 @@ static error_t complete_without_schedule(command_drmu_t *command) {
                 if (err != ERROR_NONE) {
                     // still continue trying to set other datarefs; monitor will be skipped
                     success = false;
-                    printf("[XPRC] [DRMU] complete_without_schedule failed to get monitor data (type %d, offset %d, error %d): %s\n", dataref->type, dataref->target_array_offset, err, dataref->name);
+                    RCLOG_WARN("[DRMU] complete_without_schedule failed to get monitor data (type %d, offset %d, error %d): %s", dataref->type, dataref->target_array_offset, err, dataref->name);
                 }
             }
         }
@@ -951,11 +950,11 @@ static drmu_monitor_mode_t parse_monitor_mode(char *s) {
 /*
 static void debug_dump(char *prefix, XPLMDataTypeID type, dynamic_array_t *arr) {
     if (!arr) {
-        printf("%s is null\n", prefix);
+        RCLOG_TRACE("%s is null", prefix);
         return;
     }
 
-    printf("%s has length %d\n", prefix, arr->length);
+    RCLOG_TRACE("%s has length %d", prefix, arr->length);
     if (arr->length <= 0) {
         return;
     }
@@ -969,22 +968,22 @@ static void debug_dump(char *prefix, XPLMDataTypeID type, dynamic_array_t *arr) 
     if ((type & array_types) != 0) {
         char *s = xprc_encode_array(type, arr);
         if (!s) {
-            printf("%s encoding failed\n", prefix);
+            RCLOG_TRACE("%s encoding failed", prefix);
             return;
         }
 
-        printf("%s: %s\n", prefix, s);
+        RCLOG_TRACE("%s: %s", prefix, s);
         free(s);
         return;
     }
     
     if (type != xplmType_Double) {
-        printf("%s has unhandled type for debug output: %d\n", prefix, type);
+        RCLOG_TRACE("%s has unhandled type for debug output: %d", prefix, type);
         return;
     }
 
     for (int i=0; i<arr->length; i++) {
-        printf("%s[%d] = %f\n", prefix, i, dynamic_array_get_item(xpdouble_t, arr, i));
+        RCLOG_TRACE("%s[%d] = %f", prefix, i, dynamic_array_get_item(xpdouble_t, arr, i));
     }
 }
 */
@@ -1060,7 +1059,7 @@ static error_t drmu_create(void **command_ref, session_t *session, request_t *re
         goto error;
     }
 
-    //printf("[XPRC] [DRMU] create: phase=%d, interval=%d (frames? %d), duration=%d (frames? %d), method=%d, monitor=%d\n", command->phase, command->interval, command->is_interval_frames, command->duration, command->is_duration_frames, command->method, command->monitor_mode); // DEBUG
+    RCLOG_DEBUG("[DRMU] create: phase=%d, interval=%d (frames? %d), duration=%d (frames? %d), method=%d, monitor=%d", command->phase, command->interval, command->is_interval_frames, command->duration, command->is_duration_frames, command->method, command->monitor_mode); // DEBUG
 
     command_parameter_t *parameter = request->parameters;
     if (!parameter) {
@@ -1190,7 +1189,7 @@ static error_t drmu_create(void **command_ref, session_t *session, request_t *re
             goto error;
         }
         
-        //printf("[XPRC] [DRMU] create, dataref: name=\"%s\", type=%d, target_array_offset=%d\n", dataref->name, dataref->type, dataref->target_array_offset); // DEBUG
+        RCLOG_TRACE("[DRMU] create, dataref: name=\"%s\", type=%d, target_array_offset=%d", dataref->name, dataref->type, dataref->target_array_offset);
 
         *dataref_ref = dataref;
 
@@ -1214,7 +1213,7 @@ static error_t drmu_create(void **command_ref, session_t *session, request_t *re
             goto error;
         }
 
-        //debug_dump("[XPRC] [DRMU] create, dataref target_values", dataref->type, dataref->target_values); // DEBUG
+        //debug_dump("[DRMU] create, dataref target_values", dataref->type, dataref->target_values); // DEBUG
 
         dataref->buffer_values = create_dynamic_array(type_size, dataref->target_values->length);
         if (!dataref->buffer_values || !dynamic_array_set_length(dataref->buffer_values, dataref->target_values->length)) {
@@ -1255,7 +1254,7 @@ static error_t drmu_create(void **command_ref, session_t *session, request_t *re
             }
         }
 
-        //debug_dump("[XPRC] [DRMU] create, dataref base_values", dataref->type, dataref->base_values); // DEBUG
+        //debug_dump("[DRMU] create, dataref base_values", dataref->type, dataref->base_values); // DEBUG
 
         dataref->proxy = find_registered_dataproxy(session->server->config.dataproxy_registry, dataref->name);
         if (dataref->proxy) {
@@ -1279,7 +1278,7 @@ static error_t drmu_create(void **command_ref, session_t *session, request_t *re
         }
         has_only_internal_datarefs &= (dataref->proxy != NULL);
 
-        //printf("[XPRC] [DRMU] create, dataref proxy=%p\n", dataref->proxy); // DEBUG
+        RCLOG_TRACE("[DRMU] create, dataref proxy=%p", dataref->proxy);
 
         parameter = parameter->next;
         dataref_ref = &dataref->next;
@@ -1289,7 +1288,7 @@ static error_t drmu_create(void **command_ref, session_t *session, request_t *re
 
     bool needs_timing = (command->method != DRMU_METHOD_IMMEDIATE) || (command->interval != 0);
     bool needs_scheduling = needs_timing || !has_only_internal_datarefs;
-    //printf("[XPRC] [DRMU] create needs_timing=%d, needs_scheduling=%d\n", needs_timing, needs_scheduling); // DEBUG
+    RCLOG_TRACE("[DRMU] create needs_timing=%d, needs_scheduling=%d", needs_timing, needs_scheduling);
     if (!needs_scheduling) {
         return complete_without_schedule(command);
     }

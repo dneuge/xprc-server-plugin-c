@@ -10,6 +10,7 @@
 #include <c11/threads.h>
 #endif
 
+#include "logger.h"
 #include "network.h"
 #include "utils.h"
 
@@ -27,7 +28,7 @@ typedef struct {
 static int new_connection(network_connection_t *connection, void **handler_reference, void *constructor_reference) {
     myref_t *myref = malloc(sizeof(myref_t));
     if (!myref) {
-        printf("failed to allocate handler reference\n");
+        RCLOG_WARN("failed to allocate handler reference");
         return ERROR_UNSPECIFIC;
     }
     *handler_reference = myref;
@@ -40,7 +41,7 @@ static int new_connection(network_connection_t *connection, void **handler_refer
     snprintf(msg, 2047, "connected as #%d\n", myref->id);
     int res = send_to_network(myref->connection, msg, strlen(msg));
     if (res != ERROR_NONE) {
-        printf("send failed with %d\n", res);
+        RCLOG_WARN("send failed with %d", res);
     }
     
     return ERROR_NONE;
@@ -56,22 +57,22 @@ static void on_line_received(void *handler_reference, char *line, int length) {
     
     char *copy = copy_partial_string(line, length);
     if (!copy) {
-        printf("#%d received something but copy failed\n", myref->id);
+        RCLOG_WARN("#%d received something but copy failed", myref->id);
         snprintf(msg, 2047, "you are #%d, %d lines remaining. no echo\n", myref->id, myref->remaining);
         res = send_to_network(myref->connection, msg, strlen(msg));
     } else {
-        printf("#%d received: \"%s\"\n", myref->id, copy);
+        RCLOG_INFO("#%d received: \"%s\"", myref->id, copy);
         snprintf(msg, 2047, "you are #%d, %d lines remaining. echo: %s\n", myref->id, myref->remaining, copy);
         res = send_to_network(myref->connection, msg, strlen(msg));
         free(copy);
     }
     
     if (res != ERROR_NONE) {
-        printf("#%d failed to send: %d\n", myref->id, res);
+        RCLOG_WARN("#%d failed to send: %d", myref->id, res);
     }
 
     if (myref->remaining <= 0) {
-        printf("#%d received maximum number of lines, closing\n", myref->id);
+        RCLOG_WARN("#%d received maximum number of lines, closing", myref->id);
         close_network_connection(myref->connection);
     }
 }
@@ -79,7 +80,7 @@ static void on_line_received(void *handler_reference, char *line, int length) {
 static void on_connection_closing(void *handler_reference) {
     myref_t *myref = handler_reference;
 
-    printf("#%d is closing\n", myref->id);
+    RCLOG_INFO("#%d is closing", myref->id);
     free(handler_reference);
 }
 
@@ -93,9 +94,12 @@ void signal_shutdown() {
 int main(int argc, char **argv) {
     int res;
 
+    xprc_log_init();
+    xprc_set_min_log_level_console(RCLOG_LEVEL_TRACE);
+
     error_t err = initialize_os_network_apis();
     if (err != ERROR_NONE) {
-        printf("failed to initialize OS network APIs: %d\n", err);
+        RCLOG_ERROR("failed to initialize OS network APIs: %d", err);
         return 1;
     }
 
@@ -114,10 +118,10 @@ int main(int argc, char **argv) {
     server = NULL;
     res = create_network_server(&server, &config, handler);
     if (res != ERROR_NONE) {
-        printf("server could not be created: %d\n", res);
+        RCLOG_ERROR("server could not be created: %d", res);
         return 1;
     }
-    printf("waiting for connections on port %d\n", PORT);
+    RCLOG_INFO("waiting for connections on port %d", PORT);
 
     signal(SIGTERM, signal_shutdown);
     signal(SIGINT, signal_shutdown);
@@ -130,12 +134,14 @@ int main(int argc, char **argv) {
         thrd_sleep(&(struct timespec){.tv_sec=1,.tv_nsec=0}, NULL);
     }
 
-    printf("program terminates\n");
+    RCLOG_INFO("program terminates");
     if (server) {
-        printf("destroying server\n");
+        RCLOG_DEBUG("destroying server");
         destroy_network_server(server); // TODO: use return value
     }
-    printf("complete\n");
+    RCLOG_INFO("complete");
+
+    xprc_log_destroy();
 
     return 0;
 }

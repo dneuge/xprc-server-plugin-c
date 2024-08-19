@@ -4,6 +4,8 @@
 
 #include "channels.h"
 #include "session.h"
+
+#include "logger.h"
 #include "utils.h"
 
 #define CHANNEL_ACTION_ERR 0
@@ -158,7 +160,7 @@ static error_t send_channel(session_t *session, channel_t *channel, channel_acti
 }
 
 error_t confirm_channel(session_t *session, channel_id_t channel_id, int64_t timestamp, char *message) {
-    printf("[XPRC] confirm_channel: %s\n", message); // DEBUG
+    RCLOG_TRACE("confirm_channel: %s", message);
     
     if (!lock_session(session)) {
         return ERROR_MUTEX_FAILED;
@@ -176,12 +178,12 @@ error_t confirm_channel(session_t *session, channel_id_t channel_id, int64_t tim
     
     unlock_session(session);
     
-    printf("[XPRC] confirm_channel done with %d\n", err); // DEBUG
+    RCLOG_TRACE("confirm_channel done with %d", err);
     return err;
 }
 
 error_t continue_channel(session_t *session, channel_id_t channel_id, int64_t timestamp, char *message) {
-    //printf("[XPRC] continue_channel: %s\n", message); // DEBUG
+    RCLOG_TRACE("continue_channel: %s", message);
     
     if (!lock_session(session)) {
         return ERROR_MUTEX_FAILED;
@@ -199,12 +201,12 @@ error_t continue_channel(session_t *session, channel_id_t channel_id, int64_t ti
     
     unlock_session(session);
     
-    //printf("[XPRC] continue_channel done with %d\n", err); // DEBUG
+    RCLOG_TRACE("continue_channel done with %d", err);
     return err;
 }
 
 error_t finish_channel(session_t *session, channel_id_t channel_id, int64_t timestamp, char *message) {
-    printf("[XPRC] finish_channel: %s\n", message); // DEBUG
+    RCLOG_TRACE("finish_channel: %s", message);
 
     if (!lock_session(session)) {
         return ERROR_MUTEX_FAILED;
@@ -224,12 +226,12 @@ error_t finish_channel(session_t *session, channel_id_t channel_id, int64_t time
 
     unlock_session(session);
 
-    printf("[XPRC] finish_channel done with %d\n", err); // DEBUG
+    RCLOG_TRACE("finish_channel done with %d", err);
     return err;
 }
 
 error_t error_channel(session_t *session, channel_id_t channel_id, int64_t timestamp, char *message) {
-    printf("[XPRC] error_channel: %s\n", message); // DEBUG
+    RCLOG_TRACE("error_channel: %s", message);
 
     if (!lock_session(session)) {
         return ERROR_MUTEX_FAILED;
@@ -244,12 +246,12 @@ error_t error_channel(session_t *session, channel_id_t channel_id, int64_t times
 
     unlock_session(session);
 
-    printf("[XPRC] error_channel done with %d\n", err); // DEBUG
+    RCLOG_TRACE("error_channel done with %d", err);
     return err;
 }
 
 static void destroy_session_channel(channel_t *channel, void *ref) {
-    printf("[XPRC] destroy_session_channel\n"); // DEBUG
+    RCLOG_TRACE("destroy_session_channel");
     
     session_t *session = ref;
 
@@ -269,9 +271,9 @@ static void destroy_session_channel(channel_t *channel, void *ref) {
         channel->command->destroy(channel->command_ref);
     }
 
-    printf("[XPRC] destroy_session_channel: freeing channel\n"); // DEBUG
+    RCLOG_TRACE("destroy_session_channel: freeing channel");
     free(channel);
-    printf("[XPRC] destroy_session_channel: done\n"); // DEBUG
+    RCLOG_TRACE("destroy_session_channel: done");
 }
 
 void destroy_session(session_t *session) {

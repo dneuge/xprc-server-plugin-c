@@ -1,5 +1,7 @@
 #include "img_window.h"
 
+#include "../logger.h"
+
 ImgWindowWrapper::ImgWindowWrapper(int left, int top, int right, int bottom, XPLMWindowDecoration decoration,
                                    XPLMWindowLayer layer, img_window_build_interface_f build_interface,
                                    img_window_on_show_f on_show, void *ref) : ImgWindow(left, top, right, bottom,
@@ -8,19 +10,19 @@ ImgWindowWrapper::ImgWindowWrapper(int left, int top, int right, int bottom, XPL
     this->on_show = on_show;
     this->ref = ref;
 
-    //printf("[XPRC] ImgWindowWrapper::ImgWindowWrapper done\n"); // DEBUG
+    RCLOG_TRACE("ImgWindowWrapper::ImgWindowWrapper done");
 }
 
 ImgWindowWrapper::~ImgWindowWrapper() = default;
 
 void ImgWindowWrapper::buildInterface() {
-    //printf("[XPRC] ImgWindowWrapper::buildInterface()\n"); // DEBUG
+    RCLOG_TRACE("ImgWindowWrapper::buildInterface()");
 
     this->build_interface(this, this->ref);
 }
 
 bool ImgWindowWrapper::onShow() {
-    //printf("[XPRC] ImgWindowWrapper::onShow()\n"); // DEBUG
+    RCLOG_TRACE("ImgWindowWrapper::onShow()");
 
     if (this->on_show) {
         return this->on_show(this, this->ref);
@@ -37,19 +39,19 @@ void ImgWindowWrapper::_setWindowTitle(const std::string &title) {
 }
 
 void img_window_init_globals() {
-    //printf("[XPRC] img_window_init_globals()\n"); // DEBUG
+    RCLOG_TRACE("img_window_init_globals()");
     ImgWindow::sFontAtlas = std::make_shared<ImgFontAtlas>();
-    //printf("[XPRC] img_window_init_globals done\n"); // DEBUG
+    RCLOG_TRACE("img_window_init_globals done");
 }
 
 void img_window_destroy_globals() {
-    //printf("[XPRC] img_window_destroy_globals()\n"); // DEBUG
+    RCLOG_TRACE("img_window_destroy_globals()");
     ImgWindow::sFontAtlas.reset();
-    //printf("[XPRC] img_window_destroy_globals done\n"); // DEBUG
+    RCLOG_TRACE("img_window_destroy_globals done");
 }
 
 img_window img_window_create(int left, int top, int right, int bottom, XPLMWindowDecoration decoration, XPLMWindowLayer layer, img_window_build_interface_f build_interface, img_window_on_show_f on_show, void *ref) {
-    //printf("[XPRC] img_window_create(%d, %d, %d, %d, %d, %d, %p, %p, %p)\n", left, top, right, bottom, decoration, layer, build_interface, on_show, ref); // DEBUG
+    RCLOG_TRACE("img_window_create(%d, %d, %d, %d, %d, %d, %p, %p, %p)", left, top, right, bottom, decoration, layer, build_interface, on_show, ref);
 
     if (!build_interface) {
         return nullptr;
@@ -84,7 +86,7 @@ void img_window_set_title(img_window window, char *title) {
 }
 
 void img_window_set_visible(img_window window, bool visible) {
-    //printf("[XPRC] img_window_set_visible(%p, %d)\n", window, visible); // DEBUG
+    RCLOG_TRACE("img_window_set_visible(%p, %d)", window, visible);
 
     if (!window) {
         return;
@@ -98,7 +100,7 @@ void img_window_set_visible(img_window window, bool visible) {
 }
 
 void img_window_safe_destroy(img_window window) {
-    //printf("[XPRC] img_window_safe_destroy(%p)\n", window); // DEBUG
+    RCLOG_TRACE("img_window_safe_destroy(%p)", window);
 
     if (!window) {
         return;
@@ -110,11 +112,11 @@ void img_window_safe_destroy(img_window window) {
         // do nothing
     }
 
-    //printf("[XPRC] img_window_safe_destroy: done\n"); // DEBUG
+    RCLOG_TRACE("img_window_safe_destroy: done");
 }
 
 void img_window_destroy(img_window window) {
-    //printf("[XPRC] img_window_destroy(%p)\n", window); // DEBUG
+    RCLOG_TRACE("img_window_destroy(%p)", window);
 
     if (!window) {
         return;
@@ -126,5 +128,5 @@ void img_window_destroy(img_window window) {
         // do nothing
     }
 
-    //printf("[XPRC] img_window_destroy: done\n"); // DEBUG
+    RCLOG_TRACE("img_window_destroy: done");
 }

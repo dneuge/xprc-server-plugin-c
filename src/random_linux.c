@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "logger.h"
 #include "utils.h"
 
 int* get_random_ints(int count, int min, int max) {
@@ -29,7 +30,7 @@ int* get_random_ints(int count, int min, int max) {
         usable_max = usable_max << 1;
     }
     usable_max--; // last value would result in modulo 0
-    //printf("get_random_ints: min=%d, max=%d, span=%d, usable_max=%d\n", min, max, span, usable_max); // DEBUG
+    //RCLOG_TRACE("get_random_ints: min=%d, max=%d, span=%d, usable_max=%d", min, max, span, usable_max); // DEBUG: only for development, does not change at runtime
 
     int *out = NULL;
 
@@ -51,7 +52,7 @@ int* get_random_ints(int count, int min, int max) {
         }
 
         if (b > usable_max) {
-            //printf("get_random_ints: wasted %d\n", b); // DEBUG
+            //RCLOG_TRACE("get_random_ints: wasted %d", b); // DEBUG: only for development, does not change at runtime
             continue;
         }
 

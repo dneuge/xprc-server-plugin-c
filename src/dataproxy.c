@@ -1,10 +1,11 @@
-#include <stdio.h>
 #include <string.h>
 
 #include "utils.h"
 #include "xptypes.h"
 
 #include "dataproxy.h"
+
+#include "logger.h"
 
 error_t create_dataproxy_registry(dataproxy_registry_t **registry) {
     *registry = zalloc(sizeof(dataproxy_registry_t));
@@ -32,7 +33,7 @@ error_t create_dataproxy_registry(dataproxy_registry_t **registry) {
 
 static void destroy_dataproxy(dataproxy_t *proxy) {
     if (proxy->state != DATAPROXY_STATE_INACTIVE) {
-        printf("[XPRC] dataproxy is active and must not be destroyed; this is a memleak and may be followed by a crash: %s\n", proxy->dataref_name);
+        RCLOG_ERROR("dataproxy is active and must not be destroyed; this is a memleak and may be followed by a crash: %s", proxy->dataref_name);
         return;
     }
 
@@ -85,7 +86,7 @@ error_t destroy_dataproxy_registry(dataproxy_registry_t *registry) {
 
 error_t lock_dataproxy_registry(dataproxy_registry_t *registry) {
     if (!registry) {
-        printf("[XPRC] [dataproxy] lock_dataproxy_registry called with NULL\n"); // DEBUG
+        RCLOG_ERROR("[dataproxy] lock_dataproxy_registry called with NULL");
         return ERROR_UNSPECIFIC;
     }
     
@@ -111,7 +112,7 @@ void unlock_dataproxy_registry(dataproxy_registry_t *registry) {
 
 error_t lock_dataproxy(dataproxy_t *proxy) {
     if (!proxy) {
-        printf("[XPRC] [dataproxy] lock_dataproxy called with NULL\n"); // DEBUG
+        RCLOG_ERROR("[dataproxy] lock_dataproxy called with NULL");
         return ERROR_UNSPECIFIC;
     }
     
@@ -174,32 +175,32 @@ static bool has_all_operations(dataproxy_operations_t *operations) {
 }
 
 dataproxy_t* reserve_dataproxy(dataproxy_registry_t *registry, char *dataref_name, XPLMDataTypeID types, dataproxy_permission_t write_permission, void *operations_ref, session_t *session, dataproxy_operations_t operations) {
-    printf("[XPRC] [dataproxy] reserve\n"); // DEBUG
+    RCLOG_TRACE("[dataproxy] reserve");
     
     bool is_valid = is_valid_combined_type(types) && is_valid_write_permission(write_permission) && has_all_operations(&operations);
     if (!is_valid) {
-        printf("[XPRC] [dataproxy] reserve: invalid\n"); // DEBUG
+        RCLOG_DEBUG("[dataproxy] reserve: invalid");
         return NULL;
     }
 
-    printf("[XPRC] [dataproxy] reserve: locking\n"); // DEBUG
+    RCLOG_TRACE("[dataproxy] reserve: locking");
     if (lock_dataproxy_registry(registry) != ERROR_NONE) {
-        printf("[XPRC] [dataproxy] reserve: lock failed\n"); // DEBUG
+        RCLOG_WARN("[dataproxy] reserve: lock failed");
         return NULL;
     }
 
-    printf("[XPRC] [dataproxy] reserve: get existing proxy\n"); // DEBUG
+    RCLOG_TRACE("[dataproxy] reserve: get existing proxy");
     
     dataproxy_t *proxy = hashmap_get(registry->by_dataref_name, dataref_name);
     if (!proxy) {
-        printf("[XPRC] [dataproxy] reserve: no proxy found\n"); // DEBUG
+        RCLOG_TRACE("[dataproxy] reserve: no proxy found");
         proxy = create_dataproxy(registry, dataref_name);
         if (!proxy) {
             unlock_dataproxy_registry(registry);
             return NULL;
         }
 
-        printf("[XPRC] [dataproxy] reserve: putting proxy to map\n"); // DEBUG
+        RCLOG_TRACE("[dataproxy] reserve: putting proxy to map");
         dataproxy_t *old_proxy = NULL;
         if (!hashmap_put(registry->by_dataref_name, dataref_name, proxy, (void**) &old_proxy)) {
             unlock_dataproxy_registry(registry);
@@ -209,24 +210,24 @@ dataproxy_t* reserve_dataproxy(dataproxy_registry_t *registry, char *dataref_nam
 
         if (old_proxy) {
             // there's no reasonable way to rollback and abort, just log
-            printf("[XPRC] dataproxy registry detected concurrent modification during reservation; expect memleak and crash: %s\n", dataref_name);
+            RCLOG_ERROR("dataproxy registry detected concurrent modification during reservation; expect memleak and crash: %s", dataref_name);
         }
     }
 
     if (proxy->state == DATAPROXY_STATE_DROPPED) {
         // previous dataref is still registered after owner dropped it,
         // we need to unregister the dataref before we can redefine it
-        printf("[XPRC] [dataproxy] reserve: proxy was dropped, unregistering\n"); // DEBUG
+        RCLOG_DEBUG("[dataproxy] reserve: proxy was dropped, unregistering");
         error_t err = unregister_dataproxy(proxy);
         if (err != ERROR_NONE) {
-            printf("[XPRC] [dataproxy] reserve: unregistering dropped proxy failed: %d\n", err); // DEBUG
+            RCLOG_WARN("[dataproxy] reserve: unregistering dropped proxy failed: %d", err);
             unlock_dataproxy_registry(registry);
             return NULL;
         }
     }
 
     if (proxy->state != DATAPROXY_STATE_INACTIVE) {
-        printf("[XPRC] [dataproxy] reserve: bad state: %d\n", proxy->state); // DEBUG
+        RCLOG_WARN("[dataproxy] reserve: bad state: %d", proxy->state);
         unlock_dataproxy_registry(registry);
         return NULL;
     }
@@ -240,7 +241,7 @@ dataproxy_t* reserve_dataproxy(dataproxy_registry_t *registry, char *dataref_nam
     
     unlock_dataproxy_registry(registry);
 
-    printf("[XPRC] [dataproxy] reserve: done\n"); // DEBUG
+    RCLOG_TRACE("[dataproxy] reserve: done");
     
     return proxy;
 }
@@ -320,17 +321,17 @@ static int dataproxy_xp_get_data_array(void *inRefcon, XPLMDataTypeID type, void
 
     int out = 0;
 
-    //printf("[XPRC] [dataproxy] dataproxy_xp_get_data_array type=%d, outValues=%p, inOffset=%d, inMax=%d\n", type, outValues, inOffset, inMax);
+    RCLOG_TRACE("[dataproxy] dataproxy_xp_get_data_array type=%d, outValues=%p, inOffset=%d, inMax=%d", type, outValues, inOffset, inMax);
     
     if (outValues) {
-        //printf("[XPRC] [dataproxy] dataproxy_xp_get_data_array => dataproxy_array_get\n");
+        RCLOG_TRACE("[dataproxy] dataproxy_xp_get_data_array => dataproxy_array_get");
         err = dataproxy_array_get(proxy, type, outValues, &out, inOffset, inMax);
     } else {
-        //printf("[XPRC] [dataproxy] dataproxy_xp_get_data_array => dataproxy_array_length\n");
+        RCLOG_TRACE("[dataproxy] dataproxy_xp_get_data_array => dataproxy_array_length");
         err = dataproxy_array_length(proxy, type, &out);
     }
     
-    //printf("[XPRC] [dataproxy] dataproxy_xp_get_data_array: out=%d, err=%d\n", out, err);
+    RCLOG_TRACE("[dataproxy] dataproxy_xp_get_data_array: out=%d, err=%d", out, err);
     
     if (err != ERROR_NONE) {
         return 0;
@@ -749,7 +750,7 @@ error_t unregister_dropped_dataproxies(dataproxy_registry_t *registry) {
     error_t err = ERROR_NONE;
     error_t out_err = ERROR_NONE;
     
-    printf("[XPRC] [dataproxy] unregister_dropped_dataproxies\n"); // DEBUG
+    RCLOG_TRACE("[dataproxy] unregister_dropped_dataproxies");
        
     err = lock_dataproxy_registry(registry);
     if (err != ERROR_NONE) {
@@ -758,7 +759,7 @@ error_t unregister_dropped_dataproxies(dataproxy_registry_t *registry) {
 
     prealloc_list_t *list = list_dataproxies_with_state(registry, DATAPROXY_STATE_DROPPED);
     if (!list) {
-        printf("[XPRC] [dataproxy] unregister_dropped_dataproxies: failed listing\n"); // DEBUG
+        RCLOG_WARN("[dataproxy] unregister_dropped_dataproxies: failed listing");
         unlock_dataproxy_registry(registry);
         return ERROR_MEMORY_ALLOCATION;
     }
@@ -769,7 +770,7 @@ error_t unregister_dropped_dataproxies(dataproxy_registry_t *registry) {
         if (proxy && proxy->state == DATAPROXY_STATE_DROPPED) {
             err = unregister_dataproxy(proxy);
             if (err != ERROR_NONE) {
-                printf("[XPRC] [dataproxy] failed to unregister dropped dataproxy %s (error %d)\n", proxy->dataref_name, err);
+                RCLOG_WARN("[dataproxy] failed to unregister dropped dataproxy %s (error %d)", proxy->dataref_name, err);
                 out_err = ERROR_UNSPECIFIC;
             }
         }
@@ -779,7 +780,7 @@ error_t unregister_dropped_dataproxies(dataproxy_registry_t *registry) {
 
     unlock_dataproxy_registry(registry);
 
-    printf("[XPRC] [dataproxy] unregister_dropped_dataproxies: done\n"); // DEBUG
+    RCLOG_TRACE("[dataproxy] unregister_dropped_dataproxies: done");
     
     return out_err;
 }

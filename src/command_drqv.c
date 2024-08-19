@@ -1,12 +1,11 @@
 #include "command_drqv.h"
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include <XPLMDataAccess.h>
 
 #include "arrays.h"
+#include "logger.h"
 #include "protocol.h"
 #include "session.h"
 #include "utils.h"
@@ -54,7 +53,7 @@ static const char *drqv_supported_options[] = {
 };
 
 static error_t drqv_destroy(void *command_ref) {
-    printf("[XPRC] [DRQV] destroy\n"); // DEBUG
+    RCLOG_TRACE("[DRQV] destroy");
     
     if (!command_ref) {
         return ERROR_UNSPECIFIC;
@@ -68,30 +67,30 @@ static error_t drqv_destroy(void *command_ref) {
         drqv_dataref_t *next_dataref = dataref->next;
         
         if (dataref->name) {
-            printf("[XPRC] [DRQV] destroy: freeing dataref name\n"); // DEBUG
+            RCLOG_TRACE("[DRQV] destroy: freeing dataref name");
             free(dataref->name);
         }
 
         if (dataref->value_buffer) {
-            printf("[XPRC] [DRQV] destroy: freeing dataref buffer\n"); // DEBUG
+            RCLOG_TRACE("[DRQV] destroy: freeing dataref buffer");
             free(dataref->value_buffer);
         }
         
-        printf("[XPRC] [DRQV] destroy: freeing dataref\n"); // DEBUG
+        RCLOG_TRACE("[DRQV] destroy: freeing dataref");
         free(dataref);
         dataref = next_dataref;
     }
     
-    printf("[XPRC] [DRQV] destroy: freeing command\n"); // DEBUG
+    RCLOG_TRACE("[DRQV] destroy: freeing command");
     free(command);
     
-    printf("[XPRC] [DRQV] destroy: done\n"); // DEBUG
+    RCLOG_TRACE("[DRQV] destroy: done");
 
     return ERROR_NONE;
 }
 
 static error_t drqv_terminate(void *command_ref) {
-    printf("[XPRC] [DRQV] terminate\n"); // DEBUG
+    RCLOG_TRACE("[DRQV] terminate");
     
     if (!command_ref) {
         return ERROR_UNSPECIFIC;
@@ -104,7 +103,7 @@ static error_t drqv_terminate(void *command_ref) {
     finish_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, NULL);
 
     if (command->task) {
-        printf("[XPRC] [DRQV] terminate: have task, unscheduling\n"); // DEBUG
+        RCLOG_TRACE("[DRQV] terminate: have task, unscheduling");
         task_schedule_t *task_schedule = command->session->server->config.task_schedule;
         
         err = lock_schedule(task_schedule);
@@ -114,18 +113,18 @@ static error_t drqv_terminate(void *command_ref) {
         }
         
         if (err != ERROR_NONE) {
-            printf("[XPRC] [DRQV] terminate failed to unschedule task: %d\n", err); // DEBUG
+            RCLOG_WARN("[DRQV] terminate failed to unschedule task: %d", err);
             return err;
         }
         
-        printf("[XPRC] [DRQV] terminate: freeing task\n"); // DEBUG
+        RCLOG_TRACE("[DRQV] terminate: freeing task");
         free(command->task);
         command->task = NULL;
     }
 
     channel_id_t channel_id = command->channel_id;
     
-    printf("[XPRC] [DRQV] terminate: poisoning channel ID\n"); // DEBUG
+    RCLOG_TRACE("[DRQV] terminate: poisoning channel ID");
     command->channel_id = BAD_CHANNEL_ID;
     
     request_channel_destruction(command->session->channels, channel_id);
@@ -144,7 +143,7 @@ static bool drqv_initialize(command_drqv_t *command) {
         
         dataref->xp_ref = XPLMFindDataRef(dataref->name);
         if (!dataref->xp_ref) {
-            printf("[XPRC] [DRQV] XP did not find dataref: \"%s\"\n", dataref->name); // DEBUG
+            RCLOG_DEBUG("[DRQV] XP did not find dataref: \"%s\"", dataref->name);
             error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "dataref does not exist");
             command->failed = true;
             return false;
@@ -152,7 +151,7 @@ static bool drqv_initialize(command_drqv_t *command) {
 
         XPLMDataTypeID available_types = XPLMGetDataRefTypes(dataref->xp_ref);
         if (!(available_types & dataref->type)) {
-            printf("[XPRC] [DRQV] wanted type %d, got types %d\n", dataref->type, available_types); // DEBUG
+            RCLOG_DEBUG("[DRQV] wanted type %d, got types %d", dataref->type, available_types);
             error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "type is not available from dataref");
             command->failed = true;
             return false;
