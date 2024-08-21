@@ -360,12 +360,6 @@ error_t save_settings_without_password(settings_t *settings, char *filepath) {
         return ERROR_UNSPECIFIC;
     }
 
-    lines = create_list();
-    if (!lines) {
-        out_err = ERROR_MEMORY_ALLOCATION;
-        goto end;
-    }
-
     lines = serialize_settings(settings);
     if (!lines) {
         out_err = ERROR_UNSPECIFIC;
