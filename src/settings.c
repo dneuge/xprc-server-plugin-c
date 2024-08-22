@@ -227,12 +227,12 @@ static error_t deserialize_setting(settings_t *settings, settings_field_t *field
                 }
             }
 
+            RCLOG_TRACE("[settings] ... string value is \"%s\"", new_value_s);
+            *((char**) value_ref) = new_value_s;
+
             if (old_value_s) {
                 free(old_value_s);
             }
-
-            RCLOG_TRACE("[settings] ... string value is \"%s\"", new_value_s);
-            *((char**) value_ref) = new_value_s;
 
             return ERROR_NONE;
 
