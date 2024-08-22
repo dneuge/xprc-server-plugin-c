@@ -37,6 +37,13 @@
 #define ERROR_DESTRUCTION_PENDING 4
 
 /**
+ * The requested operation was partially completed but some part failed.
+ * This is used e.g. when loading a settings from a file where the format is valid but not all keys are understood
+ * due to a change in the plugin version or similar - the result may be still be usable to some extent.
+ */
+#define ERROR_INCOMPLETE 5
+
+/**
  * Start offset for errors related to the requests module, see: requests.h
  */
 #define REQUEST_ERROR_BASE 10

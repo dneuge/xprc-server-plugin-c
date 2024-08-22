@@ -243,10 +243,10 @@ static error_t deserialize_setting(settings_t *settings, settings_field_t *field
 }
 
 static error_t deserialize_settings(settings_t *settings, list_t *lines) {
+    error_t out_err = ERROR_NONE;
     error_t err = ERROR_NONE;
 
-    list_item_t *line_item = lines->head;
-    while (line_item) {
+    for (list_item_t *line_item = lines->head; line_item; line_item = line_item->next) {
         char *line = line_item->value;
 
         int separator = strpos(line, SETTINGS_SERIALIZATION_KEY_VALUE_SEPARATOR, 0);
@@ -255,6 +255,11 @@ static error_t deserialize_settings(settings_t *settings, list_t *lines) {
         }
 
         char *key_copy = copy_partial_string(line, separator);
+        if (!key_copy) {
+            RCLOG_WARN("[settings] failed to copy key from line");
+            return ERROR_MEMORY_ALLOCATION;
+        }
+
         char *value = line + separator + 1;
 
         settings_field_t *field = get_settings_field(key_copy);
@@ -264,17 +269,19 @@ static error_t deserialize_settings(settings_t *settings, list_t *lines) {
         // Only deserialize known fields; unknown fields loaded from file can be skipped, same as known fields that
         // are missing from the file - this will eventually happen as the plugin gets updated and users switch between
         // versions (both up and down). We want to load what we can and use defaults for the rest.
-        if (field) {
+        if (!field) {
+            RCLOG_WARN("[settings] unknown settings field: %s", line);
+            out_err = ERROR_INCOMPLETE;
+        } else {
             err = deserialize_setting(settings, field, value);
             if (err != ERROR_NONE) {
-                break;
+                RCLOG_WARN("[settings] failed to deserialize: %s", line);
+                out_err = ERROR_INCOMPLETE;
             }
         }
-
-        line_item = line_item->next;
     }
 
-    return err;
+    return out_err;
 }
 
 settings_t* create_settings() {
@@ -371,6 +378,7 @@ error_t load_settings_without_password(settings_t *dest, char *filepath) {
      * used for deserialization have already been modified.
      */
 
+    error_t out_err = ERROR_NONE;
     error_t err = ERROR_NONE;
 
     if (!dest || !filepath) {
@@ -389,13 +397,23 @@ error_t load_settings_without_password(settings_t *dest, char *filepath) {
     err = read_lines_from_file(&lines, filepath);
     if (err != ERROR_NONE) {
         RCLOG_WARN("[settings] failed to read lines from %s", filepath);
+        out_err = err;
         goto end;
     }
 
     err = deserialize_settings(settings, lines);
-    if (err != ERROR_NONE) {
+    if (err == ERROR_INCOMPLETE) {
+        RCLOG_WARN("[settings] some settings failed to deserialize; will still apply what could be read");
+        out_err = ERROR_INCOMPLETE;
+    } else if (err != ERROR_NONE) {
         RCLOG_WARN("[settings] deserialization failed; settings will remain unchanged");
+        out_err = err;
         goto end;
+    }
+
+    if (constrain_settings(settings)) {
+        RCLOG_WARN("[settings] some loaded settings had to be constrained");
+        out_err = ERROR_INCOMPLETE;
     }
 
     RCLOG_DEBUG("[settings] storing loaded settings");
@@ -405,7 +423,7 @@ end:
     destroy_settings(settings);
     settings = NULL;
 
-    return err;
+    return out_err;
 }
 
 error_t save_settings_without_password(settings_t *settings, char *filepath) {
