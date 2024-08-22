@@ -329,6 +329,8 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
 }
 
 PLUGIN_API int XPluginEnable() {
+    RCLOG_INFO("Enabling plugin...");
+
     error_t err = ERROR_NONE;
     
     if (fatal_error) {
@@ -382,6 +384,7 @@ PLUGIN_API int XPluginEnable() {
         return 1;
     }
 
+    RCLOG_DEBUG("Loading settings...");
     err = configure_settings_manager_from_storage(settings_manager);
     if (err != ERROR_NONE) {
         // TODO: inform user via popup according to error code

@@ -186,40 +186,58 @@ static settings_field_t* get_settings_field(char *key) {
 
 static error_t deserialize_setting(settings_t *settings, settings_field_t *field, char *s) {
     void *value_ref = (void*)settings + field->offset; // void* cast needed, else access gets multiplied by sizeof(settings_t)
-    char *old_value_s = NULL;
-    char *new_value_s = NULL;
 
+    RCLOG_TRACE("[settings] deserializing field key=%s, type=%d, s=\"%s\"", field->key, field->type, s);
     switch (field->type) {
         case SETTINGS_FIELD_TYPE_BOOLEAN:
             if (!strcmp(s, SETTINGS_SERIALIZATION_TRUE)) {
+                RCLOG_TRACE("[settings] ... boolean is true");
                 *((bool*) value_ref) = true;
             } else if (!strcmp(s, SETTINGS_SERIALIZATION_FALSE)) {
+                RCLOG_TRACE("[settings] ... boolean is false");
                 *((bool*) value_ref) = false;
             } else {
+                RCLOG_WARN("[settings] field \"%s\" holds no supported value for a boolean: \"%s\"", field->key, s);
                 return ERROR_UNSPECIFIC;
             }
             return ERROR_NONE;
 
         case SETTINGS_FIELD_TYPE_INTEGER:
-            return parse_int((int*) value_ref, s) ? ERROR_NONE : ERROR_UNSPECIFIC;
+            int int_value = 0;
+            error_t err = parse_int(&int_value, s);
+            if (err != ERROR_NONE) {
+                RCLOG_WARN("[settings] field \"%s\" holds invalid value for an integer: \"%s\" (error %d)", field->key, s, err);
+                return ERROR_UNSPECIFIC;
+            }
+            RCLOG_TRACE("[settings] ... integer value is %d", int_value);
+            *(int*)value_ref = int_value;
+            return ERROR_NONE;
 
         case SETTINGS_FIELD_TYPE_STRING:
-            old_value_s = *((char**) value_ref);
+            char *old_value_s = *((char**) value_ref);
+
+            char *new_value_s = NULL;
             if (strcmp(s, SETTINGS_SERIALIZATION_NULL) != 0) {
                 // string does NOT indicate null in this case
                 // in case it should indicate null (else) we keep new_value_s at NULL
                 new_value_s = copy_string(s);
                 if (!new_value_s) {
+                    RCLOG_WARN("[settings] failed to copy string for deserialization");
                     return ERROR_MEMORY_ALLOCATION;
                 }
             }
+
             if (old_value_s) {
                 free(old_value_s);
             }
+
+            RCLOG_TRACE("[settings] ... string value is \"%s\"", new_value_s);
             *((char**) value_ref) = new_value_s;
+
             return ERROR_NONE;
 
         default:
+            RCLOG_WARN("[settings] field \"%s\" has unhandled type %u, deserialization is not supported", field->key, field->type);
             return ERROR_UNSPECIFIC;
     }
 }
@@ -260,19 +278,26 @@ static error_t deserialize_settings(settings_t *settings, list_t *lines) {
 }
 
 settings_t* create_settings() {
+    RCLOG_TRACE("[settings] creating new instance");
+
     settings_t *out = zalloc(sizeof(settings_t));
     if (!out) {
+        RCLOG_WARN("[settings] failed to create settings (out of memory?)");
         return NULL;
     }
 
+    RCLOG_TRACE("[settings] copying default settings for new instance");
     error_t err = copy_settings(out, (settings_t*) &default_settings, SETTINGS_KEEP_PASSWORD);
     if (err != ERROR_NONE) {
+        RCLOG_WARN("[settings] failed to copy default settings to new instance; error %d", err);
         destroy_settings(out);
         return NULL;
     }
 
+    RCLOG_TRACE("[settings] generating password for new instance");
     out->password = generate_password();
     if (!out->password) {
+        RCLOG_WARN("[settings] failed to generate password for new instance");
         destroy_settings(out);
         return NULL;
     }
@@ -300,11 +325,13 @@ void destroy_settings(settings_t *settings) {
 
 error_t copy_settings(settings_t *dest, settings_t *src, bool copy_password) {
     if (!dest || !src || ((copy_password == SETTINGS_COPY_PASSWORD) && !src->password)) {
+        RCLOG_WARN("[settings] missing input to copy_settings: dest=%p, src=%p, copy_password=%d, src->password=%p", dest, src, copy_password, src ? src->password : NULL);
         return ERROR_UNSPECIFIC;
     }
 
     char *network_interface = copy_string(src->network_interface);
     if (src->network_interface && !network_interface) {
+        RCLOG_WARN("[settings] failed to copy network interface");
         return ERROR_MEMORY_ALLOCATION;
     }
 
@@ -312,6 +339,7 @@ error_t copy_settings(settings_t *dest, settings_t *src, bool copy_password) {
     if (copy_password == SETTINGS_COPY_PASSWORD) {
         password = copy_string(src->password);
         if (!password) {
+            RCLOG_WARN("[settings] failed to copy password");
             if (network_interface) {
                 free(network_interface);
             }
@@ -346,25 +374,31 @@ error_t load_settings_without_password(settings_t *dest, char *filepath) {
     error_t err = ERROR_NONE;
 
     if (!dest || !filepath) {
+        RCLOG_WARN("[settings] missing input for load_settings_without_password: dest=%p, filepath=%s", dest, filepath);
         return ERROR_UNSPECIFIC;
     }
 
     settings_t *settings = create_settings();
     if (!settings) {
+        RCLOG_WARN("[settings] failed to create settings for loading");
         return ERROR_MEMORY_ALLOCATION;
     }
 
+    RCLOG_DEBUG("[settings] loading settings from %s", filepath);
     list_t *lines = NULL;
     err = read_lines_from_file(&lines, filepath);
     if (err != ERROR_NONE) {
+        RCLOG_WARN("[settings] failed to read lines from %s", filepath);
         goto end;
     }
 
     err = deserialize_settings(settings, lines);
     if (err != ERROR_NONE) {
+        RCLOG_WARN("[settings] deserialization failed; settings will remain unchanged");
         goto end;
     }
 
+    RCLOG_DEBUG("[settings] storing loaded settings");
     err = copy_settings(dest, settings, SETTINGS_KEEP_PASSWORD);
 
 end:
