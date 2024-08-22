@@ -82,7 +82,7 @@ static const settings_field_t settings_fields[] = {
 };
 
 static char* serialize_setting(settings_t *settings, settings_field_t *field) {
-    void *value_ref = settings + field->offset;
+    void *value_ref = (void*)settings + field->offset; // void* cast needed, else access gets multiplied by sizeof(settings_t)
     char *s = NULL;
 
     if (!field->key) {
@@ -162,7 +162,7 @@ static settings_field_t* get_settings_field(char *key) {
 }
 
 static error_t deserialize_setting(settings_t *settings, settings_field_t *field, char *s) {
-    void *value_ref = settings + field->offset;
+    void *value_ref = (void*)settings + field->offset; // void* cast needed, else access gets multiplied by sizeof(settings_t)
     char *old_value_s = NULL;
     char *new_value_s = NULL;
 
