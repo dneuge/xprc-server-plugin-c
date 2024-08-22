@@ -83,39 +83,49 @@ static const settings_field_t settings_fields[] = {
 
 static char* serialize_setting(settings_t *settings, settings_field_t *field) {
     void *value_ref = (void*)settings + field->offset; // void* cast needed, else access gets multiplied by sizeof(settings_t)
-    char *s = NULL;
 
     if (!field->key) {
+        RCLOG_WARN("[settings] tried to serialize field without key");
         return NULL;
     }
 
     switch (field->type) {
         case SETTINGS_FIELD_TYPE_BOOLEAN:
+            RCLOG_TRACE("[settings] serializing boolean from %p", value_ref);
+            bool bool_value = *((bool*) value_ref);
+            RCLOG_TRACE("[settings] ... boolean value: %d", bool_value);
             return dynamic_sprintf(
                 "%s%s%s",
                 field->key,
                 SETTINGS_SERIALIZATION_KEY_VALUE_SEPARATOR,
-                *((bool*) value_ref) ? SETTINGS_SERIALIZATION_TRUE : SETTINGS_SERIALIZATION_FALSE
+                bool_value ? SETTINGS_SERIALIZATION_TRUE : SETTINGS_SERIALIZATION_FALSE
             );
 
         case SETTINGS_FIELD_TYPE_INTEGER:
+            RCLOG_TRACE("[settings] serializing int from %p: %d", value_ref, *((int*) value_ref));
+            int int_value = *((int*) value_ref);
+            RCLOG_TRACE("[settings] ... integer value: %d", int_value);
             return dynamic_sprintf(
                 "%s%s%d",
                 field->key,
                 SETTINGS_SERIALIZATION_KEY_VALUE_SEPARATOR,
-                *((int*) value_ref)
+                int_value
             );
 
         case SETTINGS_FIELD_TYPE_STRING:
-            s = *((char**) value_ref);
+            RCLOG_TRACE("[settings] serializing char* from %p", value_ref);
+            RCLOG_TRACE("[settings] ... pointer to: %p", *(void**)value_ref);
+            char *string_value = *((char**) value_ref);
+            RCLOG_TRACE("[settings] ... string value: %s", string_value);
             return dynamic_sprintf(
                 "%s%s%s",
                 field->key,
                 SETTINGS_SERIALIZATION_KEY_VALUE_SEPARATOR,
-                s ? s : SETTINGS_SERIALIZATION_NULL
+                string_value ? string_value : SETTINGS_SERIALIZATION_NULL
             );
 
         default:
+            RCLOG_WARN("[settings] unable to serialize \"%s\", type %u is not handled", field->key, field->type);
             return NULL;
     }
 }
@@ -123,6 +133,7 @@ static char* serialize_setting(settings_t *settings, settings_field_t *field) {
 static list_t* serialize_settings(settings_t *settings) {
     list_t *lines = create_list();
     if (!lines) {
+        RCLOG_WARN("[settings] failed to create list for serialization");
         return NULL;
     }
 
@@ -362,12 +373,14 @@ error_t save_settings_without_password(settings_t *settings, char *filepath) {
 
     lines = serialize_settings(settings);
     if (!lines) {
+        RCLOG_WARN("[settings] serialization failed");
         out_err = ERROR_UNSPECIFIC;
         goto end;
     }
 
     err = write_lines_to_file(lines, filepath);
     if (err != ERROR_NONE) {
+        RCLOG_WARN("[settings] could not write to file %s", filepath);
         out_err = err;
         goto end;
     }

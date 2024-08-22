@@ -244,11 +244,13 @@ end:
 
 error_t write_file(char *data, size_t length, char *path) {
     if (!data || !path) {
+        RCLOG_WARN("[fileio] write_file misses input: data=%p, length=$lu, path=%s", data, length, path);
         return ERROR_UNSPECIFIC;
     }
 
     FILE *fh = fopen(path, "w");
     if (!fh) {
+        RCLOG_WARN("[fileio] write_file failed to open file for write access: %s", path);
         return ERROR_UNSPECIFIC;
     }
 
@@ -256,7 +258,12 @@ error_t write_file(char *data, size_t length, char *path) {
 
     fclose(fh);
 
-    return (num_written == length) ? ERROR_NONE : ERROR_UNSPECIFIC;
+    if (num_written == length) {
+        return ERROR_NONE;
+    } else {
+        RCLOG_WARN("[fileio] invalid number of bytes written to %s, expected %lu, wrote %lu", path, length, num_written);
+        return ERROR_UNSPECIFIC;
+    }
 }
 
 error_t read_lines_from_file(list_t **lines, char *path) {
@@ -286,11 +293,13 @@ error_t read_lines_from_file(list_t **lines, char *path) {
 
 error_t write_lines_to_file(list_t *lines, char *path) {
     if (!lines || !path) {
+        RCLOG_WARN("[fileio] missing input: lines=%p, path=%s", lines, path);
         return ERROR_UNSPECIFIC;
     }
 
     char *s = join_lines(lines);
     if (!s) {
+        RCLOG_WARN("[fileio] failed to join lines");
         return ERROR_MEMORY_ALLOCATION;
     }
 
