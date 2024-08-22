@@ -185,6 +185,11 @@ static settings_field_t* get_settings_field(char *key) {
 }
 
 static error_t deserialize_setting(settings_t *settings, settings_field_t *field, char *s) {
+    // variables must be declared outside of case blocks to compile with MinGW
+    int int_value = 0;
+    char *old_value_s = NULL;
+    char *new_value_s = NULL;
+
     void *value_ref = (void*)settings + field->offset; // void* cast needed, else access gets multiplied by sizeof(settings_t)
 
     RCLOG_TRACE("[settings] deserializing field key=%s, type=%d, s=\"%s\"", field->key, field->type, s);
@@ -203,7 +208,6 @@ static error_t deserialize_setting(settings_t *settings, settings_field_t *field
             return ERROR_NONE;
 
         case SETTINGS_FIELD_TYPE_INTEGER:
-            int int_value = 0;
             if (!parse_int(&int_value, s)) {
                 RCLOG_WARN("[settings] field \"%s\" holds invalid value for an integer: \"%s\"", field->key, s);
                 return ERROR_UNSPECIFIC;
@@ -213,9 +217,8 @@ static error_t deserialize_setting(settings_t *settings, settings_field_t *field
             return ERROR_NONE;
 
         case SETTINGS_FIELD_TYPE_STRING:
-            char *old_value_s = *((char**) value_ref);
+            old_value_s = *((char**) value_ref);
 
-            char *new_value_s = NULL;
             if (strcmp(s, SETTINGS_SERIALIZATION_NULL) != 0) {
                 // string does NOT indicate null in this case
                 // in case it should indicate null (else) we keep new_value_s at NULL
