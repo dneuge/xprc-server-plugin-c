@@ -82,6 +82,11 @@ static const settings_field_t settings_fields[] = {
 };
 
 static char* serialize_setting(settings_t *settings, settings_field_t *field) {
+    if (!field) {
+        RCLOG_WARN("[settings] tried to serialize using NULL field descriptor");
+        return NULL;
+    }
+
     void *value_ref = (void*)settings + field->offset; // void* cast needed, else access gets multiplied by sizeof(settings_t)
 
     if (!field->key) {
