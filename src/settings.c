@@ -204,9 +204,8 @@ static error_t deserialize_setting(settings_t *settings, settings_field_t *field
 
         case SETTINGS_FIELD_TYPE_INTEGER:
             int int_value = 0;
-            error_t err = parse_int(&int_value, s);
-            if (err != ERROR_NONE) {
-                RCLOG_WARN("[settings] field \"%s\" holds invalid value for an integer: \"%s\" (error %d)", field->key, s, err);
+            if (!parse_int(&int_value, s)) {
+                RCLOG_WARN("[settings] field \"%s\" holds invalid value for an integer: \"%s\"", field->key, s);
                 return ERROR_UNSPECIFIC;
             }
             RCLOG_TRACE("[settings] ... integer value is %d", int_value);
