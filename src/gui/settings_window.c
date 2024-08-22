@@ -117,7 +117,7 @@ error:
 }
 
 static void copy_from_settings(settings_window_t *settings_window) {
-    RCLOG_DEBUG("copy_from_settings");
+    RCLOG_DEBUG("[settings window] copy_from_settings");
 
     error_t err = copy_settings_from_manager(settings_window->settings_manager, settings_window->settings, SETTINGS_COPY_PASSWORD);
     if (err != ERROR_NONE) {
@@ -135,14 +135,52 @@ static void copy_from_settings(settings_window_t *settings_window) {
 }
 
 static void apply_settings(settings_window_t *settings_window) {
+    error_t err = ERROR_NONE;
+    bool locked = false;
+
     // check again if settings are valid, refuse to apply if not
     validate(settings_window);
     if (!settings_window->valid) {
+        RCLOG_WARN("[settings window] selected settings are invalid, refusing to apply");
+        // TODO: notify user
         return;
     }
 
-    // FIXME: save settings
+    RCLOG_INFO("[settings window] applying settings");
+
+    RCLOG_DEBUG("[settings window] lock settings manager");
+    err = lock_settings_manager(settings_window->settings_manager);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("[settings window] failed to lock settings manager, unable to store/apply settings; error: %d", err);
+        // TODO: notify user
+        goto end;
+    }
+    locked = true;
+
+    RCLOG_DEBUG("[settings window] copy settings to manager");
+    err = copy_settings_to_manager(settings_window->settings_manager, settings_window->settings, SETTINGS_COPY_PASSWORD);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("[settings window] settings manager did not accept settings, error: %d", err);
+        // TODO: notify user
+        goto end;
+    }
+
+    RCLOG_DEBUG("[settings window] persist settings from manager");
+    err = persist_settings_from_manager(settings_window->settings_manager);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("[settings window] failed to persist settings, error: %d", err);
+        // TODO: notify user
+        goto end;
+    }
+
     // FIXME: trigger server restart if it was running
+
+end:
+    if (locked) {
+        RCLOG_DEBUG("[settings window] unlocking settings manager");
+        unlock_settings_manager(settings_window->settings_manager);
+        locked = false;
+    }
 
     // copy actual server settings in case they might be different from what we just set up
     copy_from_settings(settings_window);
