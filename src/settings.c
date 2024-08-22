@@ -375,17 +375,14 @@ error_t save_settings_without_password(settings_t *settings, char *filepath) {
     if (!lines) {
         RCLOG_WARN("[settings] serialization failed");
         out_err = ERROR_UNSPECIFIC;
-        goto end;
+    } else {
+        err = write_lines_to_file(lines, filepath);
+        if (err != ERROR_NONE) {
+            RCLOG_WARN("[settings] could not write to file %s", filepath);
+            out_err = err;
+        }
     }
 
-    err = write_lines_to_file(lines, filepath);
-    if (err != ERROR_NONE) {
-        RCLOG_WARN("[settings] could not write to file %s", filepath);
-        out_err = err;
-        goto end;
-    }
-
-end:
     if (lines) {
         destroy_list(lines, free);
         lines = NULL;
