@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "fileio.h"
+#include "logger.h"
 #include "network.h"
 #include "password.h"
 #include "utils.h"
@@ -142,19 +143,25 @@ static list_t* serialize_settings(settings_t *settings) {
         return NULL;
     }
 
+    RCLOG_TRACE("[settings] serializing fields from %p (size %lu)", settings_fields, sizeof(settings_field_t));
     settings_field_t *field = (settings_field_t*) &settings_fields;
     while (field->type != SETTINGS_FIELD_TYPE_END_OF_FIELDS) {
+        RCLOG_TRACE("[settings] serialization processes field: field=%p (type=%d, key=%s, offset=%lu)", field, field->type, field->key, field->offset);
+
         char *line = serialize_setting(settings, field);
         if (!line) {
+            RCLOG_WARN("[settings] failed to serialize field");
             goto error;
         }
+        RCLOG_TRACE("[settings] serialized field: %s", line);
 
         if (!list_append(lines, line)) {
+            RCLOG_WARN("[settings] failed to append serialized line");
             free(line);
             goto error;
         }
 
-        field += sizeof(settings_field_t);
+        field++; // this already increments by sizeof(settings_field_t) due to type
     }
 
     return lines;
@@ -171,7 +178,7 @@ static settings_field_t* get_settings_field(char *key) {
             return field;
         }
 
-        field += sizeof(settings_field_t);
+        field++; // this already increments by sizeof(settings_field_t) due to type
     }
 
     return NULL;
