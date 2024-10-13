@@ -19,6 +19,7 @@
 #include "lists.h"
 #include "logger.h"
 #include "server.h"
+#include "server_manager.h"
 #include "settings_manager.h"
 #include "task_schedule.h"
 #include "utils.h"
@@ -47,10 +48,9 @@ bool flight_loop_registered = false;
 command_factory_t *command_factory = NULL;
 
 settings_manager_t *settings_manager = NULL;
+server_manager_t *server_manager = NULL;
 
-server_t *server = NULL;
-server_config_t server_config = {0};
-bool server_started = false;
+server_config_t server_base_config = {0};
 
 dataproxy_registry_t *dataproxy_registry = NULL;
 xpcommand_registry_t *xpcommand_registry = NULL;
@@ -114,11 +114,11 @@ int run_post_processing_thread(void *arg) {
             unlock_schedule(task_schedule);
             has_lock = false;
             
-            err = maintain_server(server);
+            err = maintain_server_manager(server_manager);
             if (err != ERROR_NONE) {
-                RCLOG_WARN("server maintenance reported error %d", err);
+                RCLOG_WARN("server manager failed to perform maintenance; error %d", err);
             }
-            
+
             err = lock_schedule(task_schedule);
             if (err != ERROR_NONE) {
                 RCLOG_WARN("failed to regain lock on task schedule after server maintenance: %d", err);
@@ -313,15 +313,7 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
         return 1;
     }
 
-    // FIXME: load password from persistence and auto-generate if missing
-    server_config.password = "brwSrmyrKNnycC3cEt225NNbJRRaqm74";
-
-    // TODO: load network settings from persistence
-    server_config.network.enable_ipv6 = true;
-    server_config.network.interface_address = INTERFACE_LOCAL;
-    server_config.network.port = 23042;
-
-    server_config.command_factory = command_factory;
+    server_base_config.command_factory = command_factory;
 
     plugin_initialized = true;
     
@@ -338,8 +330,8 @@ PLUGIN_API int XPluginEnable() {
         return 1;
     }
 
-    if (server_started) {
-        RCLOG_ERROR("server is already/still running; did you install the plugin twice? simulator restart required");
+    if (server_manager) {
+        RCLOG_ERROR("server manager already/still exist; did you install the plugin twice? simulator restart required");
         fatal_error = true;
         return 1;
     }
@@ -391,9 +383,10 @@ PLUGIN_API int XPluginEnable() {
         RCLOG_WARN("configure_settings_manager_from_storage returned %d", err);
     }
 
-    server_config.password = copy_string(settings_manager->settings->password);
-    if (!server_config.password && settings_manager->settings->password) {
-        RCLOG_WARN("failed to copy password from settings manager");
+    server_manager = create_server_manager(settings_manager);
+    if (!server_manager) {
+        RCLOG_ERROR("failed to create server manager; plugin cannot run");
+        return 1;
     }
 
     gui = gui_create(settings_manager);
@@ -408,7 +401,7 @@ PLUGIN_API int XPluginEnable() {
         RCLOG_ERROR("failed to create XP queue: %d", err);
         return 1;
     }
-    server_config.xpqueue = xpqueue;
+    server_base_config.xpqueue = xpqueue;
 
     if (dataproxy_registry) {
         RCLOG_ERROR("dataproxy registry already exists; did you install the plugin twice? simulator restart required");
@@ -427,14 +420,14 @@ PLUGIN_API int XPluginEnable() {
         RCLOG_ERROR("failed to create dataproxy registry: %d", err);
         return 1;
     }
-    server_config.dataproxy_registry = dataproxy_registry;
+    server_base_config.dataproxy_registry = dataproxy_registry;
 
     err = create_xpcommand_registry(&xpcommand_registry);
     if (err != ERROR_NONE) {
         RCLOG_ERROR("failed to create XP command registry: %d", err);
         return 1;
     }
-    server_config.xpcommand_registry = xpcommand_registry;
+    server_base_config.xpcommand_registry = xpcommand_registry;
 
     cycles_until_xpref_maintenance = XPREF_MAINTENANCE_INTERVAL;
     
@@ -443,7 +436,7 @@ PLUGIN_API int XPluginEnable() {
         RCLOG_ERROR("failed to create task schedule: %d", err);
         return 1;
     }
-    server_config.task_schedule = task_schedule;
+    server_base_config.task_schedule = task_schedule;
 
     if (has_post_processing_thread) {
         RCLOG_ERROR("post-processing thread still exists; simulator restart required");
@@ -457,16 +450,21 @@ PLUGIN_API int XPluginEnable() {
         return 1;
     }
     has_post_processing_thread = true;
-    
-    err = start_server(&server, &server_config);
+
+    err = provide_managed_server_base_config(server_manager, &server_base_config);
     if (err != ERROR_NONE) {
-        RCLOG_ERROR("failed to start server: %d", err);
+        RCLOG_ERROR("failed to provide base server configuration to manager");
+        return 1;
+    }
+
+    err = start_managed_server(server_manager);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("failed to start server: %d", err);
         // FIXME: post-processing thread depends on task_schedule and has to be terminated first
         destroy_task_schedule(task_schedule);
         task_schedule = NULL;
         return 1;
     }
-    server_started = true;
 
     register_flight_loop(xplm_FlightLoop_Phase_BeforeFlightModel, process_flight_loop_before_flight_model, &flight_loop_before_flight_model_id);
     register_flight_loop(xplm_FlightLoop_Phase_AfterFlightModel,  process_flight_loop_after_flight_model,  &flight_loop_after_flight_model_id);
@@ -486,16 +484,21 @@ PLUGIN_API void XPluginDisable() {
     gui_destroy(gui);
     gui = NULL;
 
-    if (server_started) {
-        error_t err = stop_server(server);
+    if (server_manager) {
+        err = shutdown_managed_server(server_manager);
         if (err != ERROR_NONE) {
-            RCLOG_ERROR("server failed to stop: %d", err);
+            RCLOG_ERROR("failed to shut down server: %d", err);
             fatal_error = true;
             return;
         }
-        
-        server_started = false;
-        server = NULL;
+
+        err = destroy_server_manager(server_manager);
+        if (err != ERROR_NONE) {
+            RCLOG_ERROR("failed to destroy server manager: %d", err);
+            fatal_error = true;
+            return;
+        }
+        server_manager = NULL;
     }
 
     bool can_join_post_processing_thread = true;

@@ -42,6 +42,7 @@ SET(XPRC_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/plugin.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/server.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/server_manager.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/dataproxy.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/xpcommands.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/xpqueue.c
