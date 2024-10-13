@@ -109,6 +109,25 @@ typedef struct {
 } network_server_config_t;
 
 /**
+ * Copies a network configuration from given source onto the given, already allocated destination.
+ * Strings will be copied as new instances that need to be memory-managed.
+ *
+ * Result error code must be checked - the destination is left in an unclean state and should be restored
+ * or abandoned if copying fails.
+ * @param source original configuration to copy from
+ * @param destination allocated memory to write duplicate to
+ * @return result error code; ERROR_NONE if successful
+ */
+error_t copy_network_config_to(network_server_config_t *source, network_server_config_t *destination);
+
+/**
+ * Destroys the contents of the specified configuration instance.
+ * This frees any memory that has been dedicated to the instance but not the instance itself.
+ * @param config configuration to destroy contents of
+ */
+void destroy_network_config_contents(network_server_config_t *config);
+
+/**
  * Initializes network APIs provided by the operating system. This should probably not be called by the plugin but
  * is essential for standalone test applications.
  * @return error code; #ERROR_NONE on success

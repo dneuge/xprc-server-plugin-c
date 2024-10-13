@@ -37,6 +37,9 @@
 #include "logger.h"
 #include "network.h"
 
+#include "settings.h"
+#include "utils.h"
+
 #ifdef TARGET_LINUX
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -993,6 +996,33 @@ void close_network_connection(network_connection_t *connection) {
     connection->closing = true;
     close_socket(connection->sd);
 }
+
+error_t copy_network_config_to(network_server_config_t *source, network_server_config_t *destination) {
+    memcpy(destination, source, sizeof(network_server_config_t));
+
+    if (destination->interface_address) {
+        destination->interface_address = copy_string(destination->interface_address);
+        if (!destination->interface_address) {
+            RCLOG_WARN("[network] failed to copy interface address between configurations");
+            return ERROR_MEMORY_ALLOCATION;
+        }
+    }
+
+    return ERROR_NONE;
+}
+
+void destroy_network_config_contents(network_server_config_t *config) {
+    if (!config) {
+        return;
+    }
+
+    if (config->interface_address) {
+        free(config->interface_address);
+    }
+
+    memset(config, 0, sizeof(network_server_config_t));
+}
+
 
 #ifdef TARGET_LINUX
 #include "network_linux.c"
