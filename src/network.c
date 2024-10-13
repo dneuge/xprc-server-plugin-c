@@ -797,11 +797,20 @@ static struct sockaddr* create_address_ipv4(network_server_config_t *config) {
         address->sin_addr.s_addr = INADDR_ANY;
     } else if (!strcmp(config->interface_address, INTERFACE_LOCAL)) {
         address->sin_addr.s_addr = INADDR_LOOPBACK;
-    } else {
-        // TODO: support selection of specific interface to bind to
-        RCLOG_WARN("unable to resolve interface \"%s\"", config->interface_address);
+    } else if (!is_ipv4_address(config->interface_address)) {
+        RCLOG_WARN("Not a valid IPv4 address for interface: \"%s\"", config->interface_address);
         free(address);
         return NULL;
+    } else {
+        // FIXME: this is for Linux; seems to be the same on Windows but needs to be tested
+        // Microsoft API docs:
+        // [sdk-api] docs/sdk-api-src/content/ws2tcpip/nf-ws2tcpip-inet_pton.md
+        int res = inet_pton(AF_INET, config->interface_address, &address->sin_addr.s_addr);
+        if (res != 1) {
+            RCLOG_WARN("unable to resolve interface \"%s\" (system error %d)", config->interface_address, res);
+            free(address);
+            return NULL;
+        }
     }
 
     return (struct sockaddr*) address;
