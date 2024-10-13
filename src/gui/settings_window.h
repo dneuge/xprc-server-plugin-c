@@ -7,6 +7,7 @@
 
 #include "img_window.h"
 
+#include "../server_manager.h"
 #include "../settings_manager.h"
 
 #include "../lists.h"
@@ -24,6 +25,8 @@ typedef struct {
     // settings
     /// shared settings manager instance
     settings_manager_t *settings_manager;
+    /// shared server manager instance
+    server_manager_t *server_manager;
     /// locally editable settings instance
     settings_t *settings;
 
@@ -54,9 +57,10 @@ typedef struct {
 /**
  * Creates a new settings window instance.
  * @param settings_manager shared settings manager instance to connect with
+ * @param server_manager server manager to connect with
  * @return settings window instance; NULL on error
  */
-settings_window_t* create_settings_window(settings_manager_t *settings_manager);
+settings_window_t* create_settings_window(settings_manager_t *settings_manager, server_manager_t *server_manager);
 /**
  * Destroy a settings window instance.
  * @param settings_window settings window to destroy

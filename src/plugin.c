@@ -389,7 +389,7 @@ PLUGIN_API int XPluginEnable() {
         return 1;
     }
 
-    gui = gui_create(settings_manager);
+    gui = gui_create(settings_manager, server_manager);
     if (!gui) {
         RCLOG_ERROR("failed to initialize GUI - simulator restart required");
         fatal_error = true;

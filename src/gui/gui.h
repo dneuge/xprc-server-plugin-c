@@ -11,6 +11,7 @@
 
 typedef struct _gui_t gui_t;
 
+#include "../server_manager.h"
 #include "../settings_manager.h"
 #include "settings_window.h"
 
@@ -18,6 +19,9 @@ typedef struct _gui_t gui_t;
 typedef struct _gui_t {
     /// the window providing access to all XPRC settings
     settings_window_t *settings_window;
+
+    /// shared manager controlling server instances
+    server_manager_t *server_manager;
 
     /// X-Plane's plugin menu ID as presented to this plugin
     XPLMMenuID xp_plugins_menu_id;
@@ -30,9 +34,10 @@ typedef struct _gui_t {
 /**
  * Creates a new GUI root instance.
  * @param settings_manager shared settings manager instance to connect with
+ * @param server_manager shared server manager instance to connect with
  * @return GUI root instance; NULL on error
  */
-gui_t* gui_create(settings_manager_t *settings_manager);
+gui_t* gui_create(settings_manager_t *settings_manager, server_manager_t *server_manager);
 
 /**
  * Destroys the given GUI root instance.

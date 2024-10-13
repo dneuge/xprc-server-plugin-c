@@ -173,7 +173,19 @@ static void apply_settings(settings_window_t *settings_window) {
         goto end;
     }
 
-    // FIXME: trigger server restart if it was running
+    RCLOG_DEBUG("[settings window] unlocking settings manager");
+    unlock_settings_manager(settings_window->settings_manager);
+    locked = false;
+
+    if (!is_running_server_state(get_managed_server_state(settings_window->server_manager))) {
+        RCLOG_DEBUG("[settings window] server does not run; not restarting");
+    } else {
+        err = restart_managed_server(settings_window->server_manager);
+        if (err != ERROR_NONE) {
+            // TODO: notify user
+            RCLOG_WARN("[settings window] failed to restart server: %d", err);
+        }
+    }
 
 end:
     if (locked) {
@@ -308,7 +320,8 @@ static void update_view(settings_window_t *settings_window) {
 
     validate(settings_window); // must be checked before reaching the apply button
 
-    bool server_started = true; // FIXME: get from actual server
+    // FIXME: getting the server state here means locking the manager on every single frame; cache somehow?
+    bool server_started = is_running_server_state(get_managed_server_state(settings_window->server_manager));
     char *btn_apply_text = server_started ? "Apply & Restart" : "Apply";
 
     igTextColored(
@@ -376,13 +389,19 @@ static bool imgui_show(img_window window, void *ref) {
     return true;
 }
 
-settings_window_t* create_settings_window(settings_manager_t *settings_manager) {
+settings_window_t* create_settings_window(settings_manager_t *settings_manager, server_manager_t *server_manager) {
     settings_window_t *settings_window = zalloc(sizeof(settings_window_t));
     if (!settings_window) {
         return NULL;
     }
 
+    if (!settings_manager || !server_manager) {
+        RCLOG_ERROR("missing parameters to initialize settings window; settings_manager=%p, server_manager=%p", settings_manager, server_manager);
+        return NULL;
+    }
+
     settings_window->settings_manager = settings_manager;
+    settings_window->server_manager = server_manager;
 
     settings_window->settings = create_settings();
     if (!settings_window->settings) {
