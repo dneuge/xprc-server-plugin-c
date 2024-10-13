@@ -196,6 +196,8 @@ error_t shutdown_managed_server(server_manager_t *server_manager) {
 
 static error_t update_server_config(server_manager_t *server_manager) {
     error_t err = ERROR_NONE;
+    char *password_copy = NULL;
+    char *network_interface_copy = NULL;
 
     settings_t *settings = create_settings();
     if (!settings) {
@@ -209,9 +211,15 @@ static error_t update_server_config(server_manager_t *server_manager) {
         goto error;
     }
 
-    char *password_copy = copy_string(settings->password);
+    password_copy = copy_string(settings->password);
     if (!password_copy) {
         RCLOG_WARN("[server manager] failed to copy password from settings manager");
+        goto error;
+    }
+
+    network_interface_copy = copy_string(settings->network_interface);
+    if (!network_interface_copy && settings->network_interface) {
+        RCLOG_WARN("[server manager] failed to copy network interface from settings manager");
         goto error;
     }
 
@@ -221,9 +229,13 @@ static error_t update_server_config(server_manager_t *server_manager) {
         free(config->password);
     }
 
+    if (config->network.interface_address) {
+        free(config->network.interface_address);
+    }
+
     config->password = password_copy;
     config->network.enable_ipv6 = settings->network_enable_ipv6;
-    config->network.interface_address = settings->network_interface;
+    config->network.interface_address = network_interface_copy;
     config->network.port = settings->network_port;
 
     destroy_settings(settings);
@@ -233,6 +245,14 @@ static error_t update_server_config(server_manager_t *server_manager) {
 error:
     if (settings) {
         destroy_settings(settings);
+    }
+
+    if (password_copy) {
+        free(password_copy);
+    }
+
+    if (network_interface_copy) {
+        free(network_interface_copy);
     }
 
     return (err != ERROR_NONE) ? err : ERROR_UNSPECIFIC;
