@@ -794,9 +794,11 @@ static struct sockaddr* create_address_ipv4(network_server_config_t *config) {
     address->sin_port = htons(config->port);
 
     if (!config->interface_address) {
-        address->sin_addr.s_addr = INADDR_ANY;
+        // FIXME: re-test on Windows (Linux needs htonl)
+        address->sin_addr.s_addr = htonl(INADDR_ANY);
     } else if (!strcmp(config->interface_address, INTERFACE_LOCAL)) {
-        address->sin_addr.s_addr = INADDR_LOOPBACK;
+        // FIXME: re-test on Windows (Linux needs htonl)
+        address->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     } else if (!is_ipv4_address(config->interface_address)) {
         RCLOG_WARN("Not a valid IPv4 address for interface: \"%s\"", config->interface_address);
         free(address);
