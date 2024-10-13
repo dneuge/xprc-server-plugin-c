@@ -167,6 +167,7 @@ static error_t update_wanted_state_and_maintain(server_manager_t *server_manager
         return err;
     }
 
+    // FIXME: maintain_server_manager may defer actions for next call; call in a loop?
     err = maintain_server_manager(server_manager);
     if (err != ERROR_NONE) {
         RCLOG_WARN("[server manager] maintenance failed after updated state for %s: %d", description, err);
@@ -175,6 +176,7 @@ static error_t update_wanted_state_and_maintain(server_manager_t *server_manager
     return err;
 }
 
+// FIXME: transition states asynchronously whenever feasible; only call maintenance if that is insufficient
 error_t start_managed_server(server_manager_t *server_manager) {
     return update_wanted_state_and_maintain(server_manager, "start", true, true);
 }
@@ -346,3 +348,36 @@ end:
     unlock_server_manager(server_manager);
     return err;
 }
+
+bool is_running_server_state(managed_server_state_t state) {
+    return state == STARTED || state == RESTARTING;
+}
+
+managed_server_state_t get_managed_server_state(server_manager_t *server_manager) {
+    if (!server_manager) {
+        RCLOG_WARN("[server manager] get_managed_server_state called with NULL");
+        return UNKNOWN;
+    }
+
+    error_t err = lock_server_manager(server_manager);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("[server manager] get_managed_server_state failed to acquire lock: %d", err);
+        return UNKNOWN;
+    }
+
+    managed_server_state_t state = UNKNOWN;
+    if (server_manager->shutdown) {
+        state = SHUTDOWN;
+    } else if (server_manager->server) {
+        state = STARTED;
+    } else if (server_manager->change_state && (server_manager->wanted_state_first || server_manager->wanted_state_next)) {
+        state = RESTARTING;
+    } else {
+        state = STOPPED;
+    }
+
+    unlock_server_manager(server_manager);
+
+    return state;
+}
+
