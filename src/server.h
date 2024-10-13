@@ -52,6 +52,21 @@ typedef struct {
     xpqueue_t *xpqueue;
 } server_config_t;
 
+/**
+ * Copies the given server configuration. Linked instances are only copied as pointers at time of copy creation
+ * and will be shared.
+ * @param source configuration to copy from
+ * @return copied configuration; NULL on error
+ */
+server_config_t* copy_server_config(server_config_t *source);
+
+/**
+ * Frees the password and server configuration structure. Anything else (linked instances) remains in memory
+ * and has to be managed separately.
+ * @param config configuration to destroy
+ */
+void destroy_server_config(server_config_t *config);
+
 /// an XPRC server instance
 typedef struct _server_t {
     /// configuration and resources provided to the instance at time of creation

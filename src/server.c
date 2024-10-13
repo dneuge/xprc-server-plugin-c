@@ -261,6 +261,46 @@ static void on_connection_closing(void *handler_reference) {
     destroy_session(session);
 }
 
+server_config_t* copy_server_config(server_config_t *source) {
+    server_config_t *out = copy_memory(source, sizeof(server_config_t));
+
+    if (out->password) {
+        out->password = copy_string(out->password);
+        if (!out->password) {
+            RCLOG_WARN("[server] failed to copy password in server config");
+            free(out);
+            return NULL;
+        }
+    }
+
+    error_t err = copy_network_config_to(&out->network, &out->network);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("[server] failed to copy network config in server config");
+        if (out->password) {
+            free(out->password);
+        }
+        free(out);
+        return NULL;
+    }
+
+    return out;
+}
+
+void destroy_server_config(server_config_t *config) {
+    if (!config) {
+        return;
+    }
+
+    if (config->password) {
+        free(config->password);
+        config->password = NULL;
+    }
+
+    destroy_network_config_contents(&config->network);
+
+    free(config);
+}
+
 error_t start_server(server_t **server, server_config_t *config) {
     // TODO: check password after copy
     if (!config || !validate_password(config->password)) {
