@@ -457,13 +457,10 @@ PLUGIN_API int XPluginEnable() {
         return 1;
     }
 
+    // TODO: make auto-start a configurable option and let server manager handle startup
     err = start_managed_server(server_manager);
     if (err != ERROR_NONE) {
-        RCLOG_WARN("failed to start server: %d", err);
-        // FIXME: post-processing thread depends on task_schedule and has to be terminated first
-        destroy_task_schedule(task_schedule);
-        task_schedule = NULL;
-        return 1;
+        RCLOG_WARN("initial server start failed: %d", err);
     }
 
     register_flight_loop(xplm_FlightLoop_Phase_BeforeFlightModel, process_flight_loop_before_flight_model, &flight_loop_before_flight_model_id);
