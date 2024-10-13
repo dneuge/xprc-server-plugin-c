@@ -96,11 +96,18 @@ static struct sockaddr* create_address_ipv6(network_server_config_t *config) {
         address->sin6_addr = in6addr_any;
     } else if (!strcmp(config->interface_address, INTERFACE_LOCAL)) {
         address->sin6_addr = in6addr_loopback;
-    } else {
-        // TODO: support selection of specific interface to bind to
-        RCLOG_WARN("unable to resolve interface \"%s\"", config->interface_address);
+    } else if (!is_ipv6_address(config->interface_address)) {
+        RCLOG_WARN("Not a valid IPv6 address for interface: \"%s\"", config->interface_address);
         free(address);
         return NULL;
+    } else {
+        // FIXME: interface-local addresses (fe80::) need sin6_scope_id to be set as well, otherwise the socket fails to bind
+        int res = inet_pton(AF_INET6, config->interface_address, &address->sin6_addr);
+        if (res != 1) {
+            RCLOG_WARN("unable to resolve interface \"%s\" (system error %d)", config->interface_address, res);
+            free(address);
+            return NULL;
+        }
     }
 
     return (struct sockaddr*) address;
