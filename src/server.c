@@ -268,12 +268,10 @@ error_t start_server(server_t **server, server_config_t *config) {
         return ERROR_UNSPECIFIC;
     }
 
-    *server = malloc(sizeof(server_t));
+    *server = zalloc(sizeof(server_t));
     if (!(*server)) {
         return ERROR_MEMORY_ALLOCATION;
     }
-
-    memset(*server, 0, sizeof(server_t));
 
     // recursive mutex is needed because closing connections and maintenance may operate on the list
     // at the same time, requiring duplicate lock by the same thread, see maintain_server
