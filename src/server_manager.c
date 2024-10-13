@@ -6,19 +6,19 @@
 server_manager_t* create_server_manager(settings_manager_t *settings_manager) {
     if (!settings_manager) {
         RCLOG_WARN("[server manager] settings manager missing on creation");
-        return ERROR_UNSPECIFIC;
+        return NULL;
     }
 
     server_manager_t *out = zalloc(sizeof(server_manager_t));
     if (!out) {
         RCLOG_WARN("[server manager] creation failed (out of memory?)");
-        return ERROR_MEMORY_ALLOCATION;
+        return NULL;
     }
 
     if (mtx_init(&settings_manager->mutex, mtx_plain | mtx_recursive) != thrd_success) {
         RCLOG_WARN("[server manager] failed to initialize mutex during creation");
         free(out);
-        return ERROR_UNSPECIFIC;
+        return NULL;
     }
 
     out->settings_manager = settings_manager;
