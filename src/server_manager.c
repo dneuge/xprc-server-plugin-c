@@ -26,6 +26,12 @@ server_manager_t* create_server_manager(settings_manager_t *settings_manager) {
     return out;
 }
 
+static void unlock_server_manager(server_manager_t *server_manager) {
+    if (mtx_unlock(&server_manager->mutex) != thrd_success) {
+        RCLOG_ERROR("[server manager] failed to unlock mutex; proceeding anyway");
+    }
+}
+
 static error_t lock_server_manager(server_manager_t *server_manager) {
     if (server_manager->destruction_pending) {
         return ERROR_DESTRUCTION_PENDING;
@@ -36,17 +42,11 @@ static error_t lock_server_manager(server_manager_t *server_manager) {
     }
 
     if (server_manager->destruction_pending) {
-        unlock_settings_manager(server_manager);
+        unlock_server_manager(server_manager);
         return ERROR_DESTRUCTION_PENDING;
     }
 
     return ERROR_NONE;
-}
-
-static void unlock_server_manager(server_manager_t *server_manager) {
-    if (mtx_unlock(&server_manager->mutex) != thrd_success) {
-        RCLOG_ERROR("[server manager] failed to unlock mutex; proceeding anyway");
-    }
 }
 
 error_t destroy_server_manager(server_manager_t *server_manager) {
