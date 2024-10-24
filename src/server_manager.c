@@ -318,6 +318,10 @@ error_t maintain_server_manager(server_manager_t *server_manager) {
 
     managed_server_state_t entry_state = get_managed_server_state_locked(server_manager);
 
+    // workaround for MinGW error "a label can only be part of a statement and a declaration is not a statement"
+    // we simply declare the variable here so the label only does the later assignment
+    managed_server_state_t exit_state = entry_state;
+
     if (server_manager->server) {
         RCLOG_TRACE("[server manager] performing maintenance on server");
         err = maintain_server(server_manager->server);
@@ -380,7 +384,7 @@ error_t maintain_server_manager(server_manager_t *server_manager) {
 
 end:
     // notify listener about state change
-    managed_server_state_t exit_state = get_managed_server_state_locked(server_manager);
+    exit_state = get_managed_server_state_locked(server_manager);
     if ((entry_state != exit_state) && server_manager->state_listener) {
         RCLOG_TRACE("[server manager] state changed %d => %d, notifying listener %p", entry_state, exit_state, server_manager->state_listener);
         server_manager->state_listener(server_manager->state_listener_context, exit_state);
