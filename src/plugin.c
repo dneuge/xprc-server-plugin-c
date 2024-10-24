@@ -377,10 +377,15 @@ PLUGIN_API int XPluginEnable() {
     }
 
     RCLOG_DEBUG("Loading settings...");
+    bool auto_start = false;
     err = configure_settings_manager_from_storage(settings_manager);
     if (err != ERROR_NONE) {
         // TODO: inform user via popup according to error code
         RCLOG_WARN("configure_settings_manager_from_storage returned %d", err);
+    } else {
+        // it should be safe to access the internal settings object directly at this point as nothing else
+        // runs yet
+        auto_start = settings_manager->settings->auto_startup;
     }
 
     server_manager = create_server_manager(settings_manager);
@@ -457,10 +462,13 @@ PLUGIN_API int XPluginEnable() {
         return 1;
     }
 
-    // TODO: make auto-start a configurable option and let server manager handle startup
-    err = start_managed_server(server_manager);
-    if (err != ERROR_NONE) {
-        RCLOG_WARN("initial server start failed: %d", err);
+    if (!auto_start) {
+        RCLOG_INFO("server is not being started automatically");
+    } else {
+        err = start_managed_server(server_manager);
+        if (err != ERROR_NONE) {
+            RCLOG_WARN("initial server start failed: %d", err);
+        }
     }
 
     register_flight_loop(xplm_FlightLoop_Phase_BeforeFlightModel, process_flight_loop_before_flight_model, &flight_loop_before_flight_model_id);
