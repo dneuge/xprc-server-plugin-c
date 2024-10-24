@@ -29,6 +29,14 @@ typedef struct _gui_t {
     int plugins_menu_subitem_index;
     /// the ID of XPRC's plugin sub-menu where further items can be appended to
     XPLMMenuID menu_id;
+
+    /// index of the "Start/Stop Server" menu item
+    int start_stop_subitem_index;
+
+    // NOTE: updated without a mutex from different threads - this *should* be safe as it will still lead to eventual
+    //       consistency as the value is processed repeatedly and is only used for displaying the last seen state
+    managed_server_state_t processed_managed_server_state;
+    managed_server_state_t actual_managed_server_state;
 } gui_t;
 
 /**
@@ -44,5 +52,11 @@ gui_t* gui_create(settings_manager_t *settings_manager, server_manager_t *server
  * @param gui GUI root instance to destroy
  */
 void gui_destroy(gui_t *gui);
+
+/**
+ * Triggered within X-Plane context at regular intervals to perform maintenance.
+ * @param gui GUI root instance to maintain
+ */
+void maintain_gui(gui_t *gui);
 
 #endif

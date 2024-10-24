@@ -30,6 +30,7 @@
 #define SCHEDULE_CLEANING_INTERVAL 500
 #define SERVER_MAINTENANCE_INTERVAL 120
 #define XPREF_MAINTENANCE_INTERVAL 600
+#define GUI_MAINTENANCE_INTERVAL 300
 
 /// minimum path buffer size as documented in XP SDK
 #define XP_MINIMUM_PATH_BUFFER_SIZE 512
@@ -70,6 +71,7 @@ bool fatal_error = false;
 bool plugin_initialized = false;
 
 int cycles_until_xpref_maintenance = XPREF_MAINTENANCE_INTERVAL;
+int cycles_until_gui_maintenance = GUI_MAINTENANCE_INTERVAL;
 
 int run_post_processing_thread(void *arg) {
     error_t err = ERROR_NONE;
@@ -178,6 +180,15 @@ static float process_flight_loop_after_flight_model(float inElapsedSinceLastCall
         err = unregister_dropped_xpcommands(xpcommand_registry);
         if (err != ERROR_NONE) {
             RCLOG_WARN("error %d while unregistering dropped XP commands (maintenance)", err);
+        }
+    }
+
+    cycles_until_gui_maintenance--;
+    if (cycles_until_gui_maintenance <= 0) {
+        cycles_until_gui_maintenance = GUI_MAINTENANCE_INTERVAL;
+
+        if (gui) {
+            maintain_gui(gui);
         }
     }
 

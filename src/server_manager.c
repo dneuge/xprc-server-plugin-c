@@ -295,6 +295,18 @@ static error_t do_server_stop(server_manager_t *server_manager) {
     return ERROR_NONE;
 }
 
+static managed_server_state_t get_managed_server_state_locked(server_manager_t *server_manager) {
+    if (server_manager->shutdown) {
+        return SHUTDOWN;
+    } else if (server_manager->server) {
+        return STARTED;
+    } else if (server_manager->change_state && (server_manager->wanted_state_first || server_manager->wanted_state_next)) {
+        return RESTARTING;
+    } else {
+        return STOPPED;
+    }
+}
+
 error_t maintain_server_manager(server_manager_t *server_manager) {
     error_t err = ERROR_NONE;
 
@@ -303,6 +315,8 @@ error_t maintain_server_manager(server_manager_t *server_manager) {
         RCLOG_WARN("[server manager] maintenance failed: unable to lock manager");
         return err;
     }
+
+    managed_server_state_t entry_state = get_managed_server_state_locked(server_manager);
 
     if (server_manager->server) {
         RCLOG_TRACE("[server manager] performing maintenance on server");
@@ -365,6 +379,13 @@ error_t maintain_server_manager(server_manager_t *server_manager) {
     }
 
 end:
+    // notify listener about state change
+    managed_server_state_t exit_state = get_managed_server_state_locked(server_manager);
+    if ((entry_state != exit_state) && server_manager->state_listener) {
+        RCLOG_TRACE("[server manager] state changed %d => %d, notifying listener %p", entry_state, exit_state, server_manager->state_listener);
+        server_manager->state_listener(server_manager->state_listener_context, exit_state);
+    }
+
     unlock_server_manager(server_manager);
     return err;
 }
@@ -385,19 +406,65 @@ managed_server_state_t get_managed_server_state(server_manager_t *server_manager
         return UNKNOWN;
     }
 
-    managed_server_state_t state = UNKNOWN;
-    if (server_manager->shutdown) {
-        state = SHUTDOWN;
-    } else if (server_manager->server) {
-        state = STARTED;
-    } else if (server_manager->change_state && (server_manager->wanted_state_first || server_manager->wanted_state_next)) {
-        state = RESTARTING;
-    } else {
-        state = STOPPED;
-    }
+    managed_server_state_t state = get_managed_server_state_locked(server_manager);
 
     unlock_server_manager(server_manager);
 
     return state;
 }
 
+error_t register_server_state_listener(server_manager_t *server_manager, server_state_listener_f listener, void *context) {
+    // NOTE: Currently there is only a single listener (GUI), so implementation has been kept simple - there
+    //       is only a single slot that can be registered to. In case more are needed, implement a proper listener
+    //       management using a list instead.
+
+    error_t out_err = ERROR_NONE;
+
+    if (!server_manager || !listener) {
+        RCLOG_WARN("[server manager] register_server_state_listener called with NULL parameters: server_manager=%p, listener=%p", server_manager, listener);
+        return ERROR_UNSPECIFIC;
+    }
+
+    error_t err = lock_server_manager(server_manager);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("[server manager] failed to lock server manager for state listener registration: %d", err);
+        return ERROR_MUTEX_FAILED;
+    }
+
+    if (server_manager->state_listener) {
+        // as long as we only have a single slot, trying to register a second listener should fail
+        RCLOG_WARN("[server manager] attempted registration of state listener failed; another listener is already registered");
+        out_err = ERROR_UNSPECIFIC;
+    } else {
+        server_manager->state_listener = listener;
+        server_manager->state_listener_context = context;
+    }
+
+    unlock_server_manager(server_manager);
+
+    return out_err;
+}
+
+error_t unregister_server_state_listener(server_manager_t *server_manager, server_state_listener_f listener, void *context) {
+    if (!server_manager || !listener) {
+        RCLOG_WARN("[server manager] unregister_server_state_listener called with NULL parameters: server_manager=%p, listener=%p", server_manager, listener);
+        return ERROR_UNSPECIFIC;
+    }
+
+    error_t err = lock_server_manager(server_manager);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("[server manager] failed to lock server manager for state listener deregistration: %d", err);
+        return ERROR_MUTEX_FAILED;
+    }
+
+    if ((server_manager->state_listener != listener) || (server_manager->state_listener_context != context)) {
+        RCLOG_WARN("[server manager] attempted to unregister an already unregistered state listener");
+    } else {
+        server_manager->state_listener = NULL;
+        server_manager->state_listener_context = NULL;
+    }
+
+    unlock_server_manager(server_manager);
+
+    return ERROR_NONE;
+}
