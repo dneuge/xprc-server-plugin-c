@@ -35,7 +35,10 @@ typedef struct _gui_t {
 
     // NOTE: updated without a mutex from different threads - this *should* be safe as it will still lead to eventual
     //       consistency as the value is processed repeatedly and is only used for displaying the last seen state
+    /// last state that was applied to GUI (i.e. currently shown to user)
     managed_server_state_t processed_managed_server_state;
+    /// latest state to apply asynchronously; if another state is set before this one could be processed, the later one
+    /// will invalidate the older state, meaning there is not guarantee for a state change to get processed to GUI
     managed_server_state_t actual_managed_server_state;
 } gui_t;
 
