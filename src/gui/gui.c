@@ -107,8 +107,8 @@ gui_t* gui_create(settings_manager_t *settings_manager, server_manager_t *server
     gui->server_manager = server_manager;
     gui->plugins_menu_subitem_index = -1;
 
-    gui->processed_managed_server_state = UNKNOWN;
-    gui->actual_managed_server_state = UNKNOWN;
+    gui->processed_managed_server_state = SERVER_STATE_UNKNOWN;
+    gui->actual_managed_server_state = SERVER_STATE_UNKNOWN;
 
     img_window_init_globals();
 

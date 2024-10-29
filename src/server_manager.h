@@ -6,15 +6,15 @@
 
 typedef enum {
     /// placeholder for when the state is not known/has not been set yet
-    UNKNOWN = 0,
+    SERVER_STATE_UNKNOWN = 0,
     /// the server should be or has been stopped (completed)
-    STOPPED,
+    SERVER_STOPPED,
     /// the server should be or has been started (completed)
-    STARTED,
+    SERVER_STARTED,
     /// the server should be/is currently being restarted (ongoing)
-    RESTARTING,
+    SERVER_RESTARTING,
     /// the server should be or has been shut down (terminal operation to prepare destruction)
-    SHUTDOWN
+    SERVER_SHUTDOWN
 } managed_server_state_t;
 
 /**

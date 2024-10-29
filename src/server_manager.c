@@ -297,13 +297,13 @@ static error_t do_server_stop(server_manager_t *server_manager) {
 
 static managed_server_state_t get_managed_server_state_locked(server_manager_t *server_manager) {
     if (server_manager->shutdown) {
-        return SHUTDOWN;
+        return SERVER_SHUTDOWN;
     } else if (server_manager->server) {
-        return STARTED;
+        return SERVER_STARTED;
     } else if (server_manager->change_state && (server_manager->wanted_state_first || server_manager->wanted_state_next)) {
-        return RESTARTING;
+        return SERVER_RESTARTING;
     } else {
-        return STOPPED;
+        return SERVER_STOPPED;
     }
 }
 
@@ -395,19 +395,19 @@ end:
 }
 
 bool is_running_server_state(managed_server_state_t state) {
-    return state == STARTED || state == RESTARTING;
+    return state == SERVER_STARTED || state == SERVER_RESTARTING;
 }
 
 managed_server_state_t get_managed_server_state(server_manager_t *server_manager) {
     if (!server_manager) {
         RCLOG_WARN("[server manager] get_managed_server_state called with NULL");
-        return UNKNOWN;
+        return SERVER_STATE_UNKNOWN;
     }
 
     error_t err = lock_server_manager(server_manager);
     if (err != ERROR_NONE) {
         RCLOG_WARN("[server manager] get_managed_server_state failed to acquire lock: %d", err);
-        return UNKNOWN;
+        return SERVER_STATE_UNKNOWN;
     }
 
     managed_server_state_t state = get_managed_server_state_locked(server_manager);
