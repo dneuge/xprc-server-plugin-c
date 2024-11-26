@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <string.h>
 
 #include "utils.h"
@@ -15,13 +16,17 @@
 #endif
 
 static inline uint8_t ror8(uint8_t value, int num);
-#ifdef __GNUC__
+#if defined(__GNUC__) && (defined(__x86_64__) || defined(_X86_))
 #include <x86intrin.h>
 static inline uint8_t ror8(uint8_t value, int num) {
     return __rorb(value, num);
 }
 #else
-#error unsupported compiler/architecture
+#warning "using unoptimized ror8 operation"
+static inline uint8_t ror8(uint8_t value, int num) {
+    // FIXME: verify
+    return ((value >> (num%8)) & 0xFF) | ((value << (8-num%8)) & 0xFF);
+}
 #endif
 
 static HASH_TYPE compute_hash(char *key) {

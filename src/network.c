@@ -36,7 +36,7 @@
 #include "settings.h"
 #include "utils.h"
 
-#ifdef TARGET_LINUX
+#if defined(TARGET_LINUX) || defined(TARGET_MACOS)
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -1031,7 +1031,8 @@ void destroy_network_config_contents(network_server_config_t *config) {
 }
 
 
-#ifdef TARGET_LINUX
+#if defined(TARGET_LINUX) || defined(TARGET_MACOS)
+// FIXME: verify this actually works on MacOS an does not just compile
 #include "network_linux.c"
 #elif TARGET_WINDOWS
 #include "network_windows.c"

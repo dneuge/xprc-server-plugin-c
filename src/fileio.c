@@ -308,7 +308,7 @@ error_t write_lines_to_file(list_t *lines, char *path) {
     return err;
 }
 
-#ifdef TARGET_LINUX
+#if defined(TARGET_LINUX) || defined(TARGET_MACOS)
 #include <unistd.h>
 #include <errno.h>
 bool check_file_exists(char *path) {
