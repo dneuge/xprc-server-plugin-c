@@ -123,7 +123,7 @@ int strpos_unescaped(char *haystack, char *needle, int start) {
     return _strpos(haystack, needle, start, true);
 }
 
-void* zalloc(size_t size) {
+void* zmalloc(size_t size) {
     // prevent zero allocation requests as some malloc implementations may corrupt in that case
     if (size == 0) {
         return NULL;
@@ -134,6 +134,11 @@ void* zalloc(size_t size) {
         memset(addr, 0, size);
     }
     return addr;
+}
+
+inline void* zalloc(size_t size) {
+    // FIXME: migrate all calls to zmalloc, then delete
+    return zmalloc(size);
 }
 
 void* copy_memory(void *src, size_t size) {

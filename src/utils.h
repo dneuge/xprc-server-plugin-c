@@ -142,7 +142,14 @@ int count_chars(char *s, char needle, int length);
  * @param size number of bytes to allocate
  * @return pointer to start of zeroed memory; NULL if memory allocation failed
  */
-void* zalloc(size_t size); // FIXME: rename to zmalloc to avoid confusion with Linux zalloc which does something else
+void* zalloc(size_t size); // FIXME: migrate all calls to zmalloc, then delete
+
+/**
+ * Allocates memory of the specified size and zeroes it.
+ * @param size number of bytes to allocate
+ * @return pointer to start of zeroed memory; NULL if memory allocation failed
+ */
+void* zmalloc(size_t size);
 
 /**
  * Attempts to parse the given string to an integer; destination will only be manipulated if successful.
