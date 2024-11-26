@@ -3,11 +3,7 @@
 #include <math.h>
 #include <string.h>
 
-#ifndef NEED_C11_THREADS_WRAPPER
-#include <threads.h>
-#else
-#include <c11/threads.h>
-#endif
+#include "threads_compat.h"
 
 #include <XPLMDataAccess.h>
 #include <XPLMPlugin.h>

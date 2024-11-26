@@ -9,11 +9,7 @@
  * flushed during xplm_FlightLoop_Phase_AfterFlightModel which executes the actions only once.
  */
 
-#ifndef NEED_C11_THREADS_WRAPPER
-#include <threads.h>
-#else
-#include <c11/threads.h>
-#endif
+#include "threads_compat.h"
 
 #include <XPLMUtilities.h>
 

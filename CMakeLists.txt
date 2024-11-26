@@ -26,6 +26,7 @@ SET(COMMON_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/password.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/random.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/threads_compat.c
 )
 
 SET(XPRC_SOURCES
