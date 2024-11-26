@@ -117,7 +117,7 @@ function git_mirror {
     mirror_workdir="${script_dir}/lib/_downloads/.git_mirror_work"
     
     if [[ -e "${bundle_file}" ]] && [[ "${FETCHLIBS_UPDATE_MIRROR:-1}" -eq 0 ]]; then
-	echo "- bundle already exists and updates have been disabled, skipping..."
+        echo "- bundle already exists and updates have been disabled, skipping..."
         return
     fi
 
@@ -169,7 +169,7 @@ function git_unbundle {
 
     if [[ ! -f "_downloads/${filename}" ]]; then
         echo "Bundle is missing, Git needs to be mirrored first!"
-	exit 1
+        exit 1
     fi
 
     echo "- unbundling ${description} into ${extract_dir}"
