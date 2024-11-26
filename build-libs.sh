@@ -23,8 +23,7 @@ source ./_build_target.sh || die "Failed to include build target script"
 mkdir -p lib/_build
 mkdir -p "${script_dir}/lib/_build/GL" || die "Failed to create GL target directory"
 
-num_cpus=$(cat /proc/cpuinfo | grep -E 'processor\s*:' | nl | tail -n1 | sed -e 's/\s*\([0-9]\+\)\s.*/\1/')
-num_jobs=$(( $num_cpus + 1 ))
+num_jobs=$(( $NUM_CPUS + 1 ))
 
 # MinGW misses some C11 compatibility, most notably threads.h which is extensively used throughout XPRC
 # Mesa seems to have the best maintained C11 compatibility wrapper available, so we borrow that but only if we
@@ -68,6 +67,8 @@ echo
 
 if [[ "${BUILD_TARGET}" == "windows" ]]; then
     echo "===== Skipping Mesa GLU (not needed for Windows cross-compilation) ====="
+elif [[ "${BUILD_TARGET}" == "macos" ]]; then
+    echo "===== Skipping Mesa GLU (not needed for MacOS) ====="
 else
     echo "===== Building Mesa GLU ====="
     cd "${script_dir}/lib/mesa-glu"
@@ -186,12 +187,15 @@ TARGET_LIN=0
 TARGET_WIN=0
 if [[ "${BUILD_TARGET}" == "linux" ]]; then
     TARGET_LIN=1
-fi
-if [[ "${BUILD_TARGET}" == "windows" ]]; then
+elif [[ "${BUILD_TARGET}" == "windows" ]]; then
     TARGET_WIN=1
+elif [[ "${BUILD_TARGET}" == "macos" ]]; then
+    TARGET_OSX=1
+else
+    die "Unknown target system: ${BUILD_TARGET}"
 fi
-"${GCC_CPP_COMPILER}" -c -O2 -fPIC -I../_build/ -I../XPSDK/CHeaders/XPLM -DXPLM200=1 -DXPLM210=1 -DXPLM300=1 -DXPLM301=1 -DXPLM303=1 -DXPLM400=${XPLM400} -DAPL=${TARGET_OSX} -DIBM=${TARGET_WIN} -DLIN=${TARGET_LIN} ImgFontAtlas.cpp || die "Failed to compile ImgFontAtlas.cpp"
-"${GCC_CPP_COMPILER}" -c -O2 -fPIC -I../_build/ -I../XPSDK/CHeaders/XPLM -DXPLM200=1 -DXPLM210=1 -DXPLM300=1 -DXPLM301=1 -DXPLM303=1 -DXPLM400=${XPLM400} -DAPL=${TARGET_OSX} -DIBM=${TARGET_WIN} -DLIN=${TARGET_LIN} ImgWindow.cpp || die "Failed to compile ImgWindow.cpp"
+"${CPP_COMPILER}" ${CPP_COMPILER_ARGS} -c -O2 -fPIC -I../_build/ -I../XPSDK/CHeaders/XPLM -DXPLM200=1 -DXPLM210=1 -DXPLM300=1 -DXPLM301=1 -DXPLM303=1 -DXPLM400=${XPLM400} -DAPL=${TARGET_OSX} -DIBM=${TARGET_WIN} -DLIN=${TARGET_LIN} ImgFontAtlas.cpp || die "Failed to compile ImgFontAtlas.cpp"
+"${CPP_COMPILER}" ${CPP_COMPILER_ARGS} -c -O2 -fPIC -I../_build/ -I../XPSDK/CHeaders/XPLM -DXPLM200=1 -DXPLM210=1 -DXPLM300=1 -DXPLM301=1 -DXPLM303=1 -DXPLM400=${XPLM400} -DAPL=${TARGET_OSX} -DIBM=${TARGET_WIN} -DLIN=${TARGET_LIN} ImgWindow.cpp || die "Failed to compile ImgWindow.cpp"
 echo
 echo "==== Installing ===="
 cp -a "${script_dir}"/lib/xsb_public_sk/{ImgWindow,ImgFontAtlas}.{h,o} "${script_dir}/lib/_build/" || die "xsb_public_sk copy failed"

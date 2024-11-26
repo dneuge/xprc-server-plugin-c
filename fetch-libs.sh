@@ -41,7 +41,7 @@ function download {
         [[ -e download.tmp ]] && (rm download.tmp || die "deleting temporary file download.tmp failed")
         curl "${url}" -L -o download.tmp || die "download failed"
         
-        actual_size="$(wc -c download.tmp | cut -d' ' -f1)"
+        actual_size="$(wc -c download.tmp | sed -e 's#^[[:space:]]*##g' | cut -d' ' -f1)"
         actual_shasum="$(sha256sum download.tmp | cut -d' ' -f1)"
         actual_mdsum="$(md5sum download.tmp | cut -d' ' -f1)"
         
@@ -85,7 +85,7 @@ function download {
     
     # if there was a single directory on root level, pull it up
     subs="$(find "${extract_dir}" -mindepth 1 -maxdepth 1)"
-    if [[ "$(nl <<<"$subs" | tail -n1 | sed -e 's/\s*\([0-9]\+\)\s.*/\1/')" == "1" && -d "${subs}" ]]; then
+    if [[ "$(nl <<<"$subs" | tail -n1 | sed -r -e 's/[[:space:]]*([0-9]+)[[:space:]].*/\1/')" == "1" && -d "${subs}" ]]; then
         [[ ! -e "_tmp" ]] || die "unable to pull up directory, _tmp exists already"
         mv "${subs}" _tmp || die "failed to pull directory ${subs} up (1)"
         rmdir "${extract_dir}" || die "failed to pull directory ${subs} up (2)"
