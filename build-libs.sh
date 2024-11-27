@@ -25,6 +25,11 @@ mkdir -p "${script_dir}/lib/_build/GL" || die "Failed to create GL target direct
 
 num_jobs=$(( $NUM_CPUS + 1 ))
 
+MULTIARCH_FLAGS=""
+if [[ "${BUILD_TARGET}" == "macos" ]]; then
+    MULTIARCH_FLAGS="-arch x86_64 -arch arm64"
+fi
+
 # MinGW misses some C11 compatibility, most notably threads.h which is extensively used throughout XPRC
 # Mesa seems to have the best maintained C11 compatibility wrapper available, so we borrow that but only if we
 # compile for Windows - other systems/environments should hopefully support C11 by now...
@@ -138,7 +143,21 @@ cd "${script_dir}/lib/glew"
 echo
 
 echo "==== Building main directory ===="
-make -j${num_jobs} || die "Failed to make GLEW"
+if [[ "${BUILD_TARGET}" != "macos" ]]; then
+    make -j${num_jobs} || die "Failed to make GLEW (regular call)"
+else
+    # GLEW's Makefile does not handle multi-architecture binaries, so we cannot use ar and strip and instead need to do some "post-processing" on our own
+    make -j${num_jobs} CFLAGS.EXTRA="${MULTIARCH_FLAGS}" LDFLAGS.EXTRA="${MULTIARCH_FLAGS}" AR= STRIP= || die "Failed to make GLEW (MacOS call)"
+    
+    # we cannot create an actual .a archive but we can create a universal binary
+    
+    # "strip" would normally be called to strip the .a archive which only contains glew.o, so we simply strip the object file
+    strip -x tmp/darwin/default/static/glew.o || die "Failed to strip glew object file"
+
+    # now we can package it to a universal binary and give it a misleading .a extension
+    # note that this is NOT an archive but CMake and Apple compiler toolchain will treat it correctly nevertheless
+    lipo tmp/darwin/default/static/glew.o -create -output lib/libGLEW.a || die "Failed to package glew object file to universal binary (fake .a)"
+fi
 echo
 
 echo "==== Installing ===="
@@ -162,6 +181,7 @@ cmake \
     -D IMGUI_STATIC=yes \
     -D IMGUI_FREETYPE=no \
     -D CMAKE_POSITION_INDEPENDENT_CODE=TRUE \
+    -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
     ..
 make -j${num_jobs} || die "cimgui make failed"
 cp -a cimgui.a "${script_dir}/lib/_build/" || die "cimgui copy (1) failed"
@@ -194,8 +214,8 @@ elif [[ "${BUILD_TARGET}" == "macos" ]]; then
 else
     die "Unknown target system: ${BUILD_TARGET}"
 fi
-"${CPP_COMPILER}" ${CPP_COMPILER_ARGS} -c -O2 -fPIC -I../_build/ -I../XPSDK/CHeaders/XPLM -DXPLM200=1 -DXPLM210=1 -DXPLM300=1 -DXPLM301=1 -DXPLM303=1 -DXPLM400=${XPLM400} -DAPL=${TARGET_OSX} -DIBM=${TARGET_WIN} -DLIN=${TARGET_LIN} ImgFontAtlas.cpp || die "Failed to compile ImgFontAtlas.cpp"
-"${CPP_COMPILER}" ${CPP_COMPILER_ARGS} -c -O2 -fPIC -I../_build/ -I../XPSDK/CHeaders/XPLM -DXPLM200=1 -DXPLM210=1 -DXPLM300=1 -DXPLM301=1 -DXPLM303=1 -DXPLM400=${XPLM400} -DAPL=${TARGET_OSX} -DIBM=${TARGET_WIN} -DLIN=${TARGET_LIN} ImgWindow.cpp || die "Failed to compile ImgWindow.cpp"
+"${CPP_COMPILER}" ${CPP_COMPILER_ARGS} -c -O2 -fPIC ${MULTIARCH_FLAGS} -I../_build/ -I../XPSDK/CHeaders/XPLM -DXPLM200=1 -DXPLM210=1 -DXPLM300=1 -DXPLM301=1 -DXPLM303=1 -DXPLM400=${XPLM400} -DAPL=${TARGET_OSX} -DIBM=${TARGET_WIN} -DLIN=${TARGET_LIN} ImgFontAtlas.cpp || die "Failed to compile ImgFontAtlas.cpp"
+"${CPP_COMPILER}" ${CPP_COMPILER_ARGS} -c -O2 -fPIC ${MULTIARCH_FLAGS} -I../_build/ -I../XPSDK/CHeaders/XPLM -DXPLM200=1 -DXPLM210=1 -DXPLM300=1 -DXPLM301=1 -DXPLM303=1 -DXPLM400=${XPLM400} -DAPL=${TARGET_OSX} -DIBM=${TARGET_WIN} -DLIN=${TARGET_LIN} ImgWindow.cpp || die "Failed to compile ImgWindow.cpp"
 echo
 echo "==== Installing ===="
 cp -a "${script_dir}"/lib/xsb_public_sk/{ImgWindow,ImgFontAtlas}.{h,o} "${script_dir}/lib/_build/" || die "xsb_public_sk copy failed"
