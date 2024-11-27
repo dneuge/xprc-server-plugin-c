@@ -30,6 +30,10 @@ if [[ "${BUILD_TARGET}" == "macos" ]]; then
     MULTIARCH_FLAGS="-arch x86_64 -arch arm64"
 fi
 
+# set locale to default to silence Perl warnings
+export LANG="C"
+export LC_ALL="C"
+
 # MinGW misses some C11 compatibility, most notably threads.h which is extensively used throughout XPRC
 # Mesa seems to have the best maintained C11 compatibility wrapper available, so we borrow that but only if we
 # compile for Windows - other systems/environments should hopefully support C11 by now...
