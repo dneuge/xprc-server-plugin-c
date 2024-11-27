@@ -147,7 +147,8 @@ if [[ "${BUILD_TARGET}" != "macos" ]]; then
     make -j${num_jobs} || die "Failed to make GLEW (regular call)"
 else
     # GLEW's Makefile does not handle multi-architecture binaries, so we cannot use ar and strip and instead need to do some "post-processing" on our own
-    make -j${num_jobs} CFLAGS.EXTRA="${MULTIARCH_FLAGS}" LDFLAGS.EXTRA="${MULTIARCH_FLAGS}" AR= STRIP= || die "Failed to make GLEW (MacOS call)"
+    # also silence OpenGL deprecation warnings
+    make -j${num_jobs} CFLAGS.EXTRA="${MULTIARCH_FLAGS} -DGL_SILENCE_DEPRECATION" LDFLAGS.EXTRA="${MULTIARCH_FLAGS}" AR= STRIP= || die "Failed to make GLEW (MacOS call)"
     
     # we cannot create an actual .a archive but we can create a universal binary
     
