@@ -82,7 +82,7 @@ error_t destroy_server_manager(server_manager_t *server_manager) {
     unlock_server_manager(server_manager);
 
     // lock and unlock again in case another thread accessed the instance in the mean-time
-    if (lock_server_manager(server_manager) != ERROR_NONE) {
+    if (mtx_lock(&server_manager->mutex) != thrd_success) {
         RCLOG_WARN("[server manager] failed to lock server manager a second time on destruction; continuing regardless");
     } else {
         unlock_server_manager(server_manager);
