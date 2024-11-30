@@ -535,7 +535,10 @@ static int run_receive_thread(void *arg) {
             // connection was closed
             break;
         } else if (received < 0) {
-            RCLOG_WARN("error while reading from connection");
+            // warn only if not intentional
+            if (!(connection->shutdown || connection->closing)) {
+                RCLOG_WARN("error while reading from connection");
+            }
             break;
         }
 
@@ -693,8 +696,11 @@ static int run_server_thread(void *arg) {
     while (!server->shutdown && (consecutive_errors < SERVER_MAX_CONSECUTIVE_ERRORS)) {
         int sd = accept(server->ssd, NULL, NULL);
         if (sd < 0) {
-            RCLOG_WARN("accept failed");
-            consecutive_errors++;
+            // do not warn/count as an error if socket was intended to be closed
+            if (!server->shutdown) {
+                RCLOG_WARN("accept failed");
+                consecutive_errors++;
+            }
             continue;
         }
 
