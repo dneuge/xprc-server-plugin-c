@@ -15,7 +15,7 @@ server_manager_t* create_server_manager(settings_manager_t *settings_manager) {
         return NULL;
     }
 
-    if (mtx_init(&settings_manager->mutex, mtx_plain | mtx_recursive) != thrd_success) {
+    if (mtx_init(&out->mutex, mtx_plain | mtx_recursive) != thrd_success) {
         RCLOG_WARN("[server manager] failed to initialize mutex during creation");
         free(out);
         return NULL;
