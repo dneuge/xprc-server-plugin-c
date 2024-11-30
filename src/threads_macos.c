@@ -133,57 +133,57 @@ int thrd_join(thrd_t thr, int *res) {
 }
 
 void inline thrd_yield() {
-	sched_yield();
+    sched_yield();
 }
 
 int cnd_init(cnd_t *cond) {
-	int err = pthread_cond_init(cond, NULL);
-	if (err) {
-		printf("[threads_macos] pthread_cond_init error: %d %s\n", err, strerror(err));
-		return (err == ENOMEM) ? thrd_nomem : thrd_error;
-	}
+    int err = pthread_cond_init(cond, NULL);
+    if (err) {
+        printf("[threads_macos] pthread_cond_init error: %d %s\n", err, strerror(err));
+        return (err == ENOMEM) ? thrd_nomem : thrd_error;
+    }
 
-	return thrd_success;
+    return thrd_success;
 }
 
 void cnd_destroy(cnd_t *cond) {
-	int err = pthread_cond_destroy(cond);
-	if (err) {
-		printf("[threads_macos] pthread_cond_destroy error: %d %s\n", err, strerror(err));
-	}
+    int err = pthread_cond_destroy(cond);
+    if (err) {
+        printf("[threads_macos] pthread_cond_destroy error: %d %s\n", err, strerror(err));
+    }
 }
 
 int cnd_wait(cnd_t *cond, mtx_t *mutex) {
-	int err = pthread_cond_wait(cond, mutex);
-	if (err) {
-		printf("[threads_macos] pthread_cond_wait error: %d %s\n", err, strerror(err));
-		return thrd_error;
-	}
-	
-	return thrd_success;
+    int err = pthread_cond_wait(cond, mutex);
+    if (err) {
+        printf("[threads_macos] pthread_cond_wait error: %d %s\n", err, strerror(err));
+        return thrd_error;
+    }
+    
+    return thrd_success;
 }
 
 int cnd_broadcast(cnd_t *cond) {
-	int err = pthread_cond_broadcast(cond);
-	if (err) {
-		printf("[threads_macos] pthread_cond_broadcast error: %d %s\n", err, strerror(err));
-		return thrd_error;
-	}
+    int err = pthread_cond_broadcast(cond);
+    if (err) {
+        printf("[threads_macos] pthread_cond_broadcast error: %d %s\n", err, strerror(err));
+        return thrd_error;
+    }
 
-	return thrd_success;
+    return thrd_success;
 }
 
 int cnd_timedwait(cnd_t *cond, mtx_t *mutex, const struct timespec *time_point) {
-	// FIXME: C11 time_point should be UTC-based but POSIX threads do not specify any time zone ("system time"?)
-	int err = pthread_cond_timedwait(cond, mutex, time_point);
-	if (err) {
-		if (err == ETIMEDOUT) {
-			return thrd_timedout;
-		}
+    // FIXME: C11 time_point should be UTC-based but POSIX threads do not specify any time zone ("system time"?)
+    int err = pthread_cond_timedwait(cond, mutex, time_point);
+    if (err) {
+        if (err == ETIMEDOUT) {
+            return thrd_timedout;
+        }
 
-		printf("[threads_macos] pthread_cond_timedwait error: %d %s\n", err, strerror(err));
-		return thrd_error;
-	}
-	
-	return thrd_success;
+        printf("[threads_macos] pthread_cond_timedwait error: %d %s\n", err, strerror(err));
+        return thrd_error;
+    }
+    
+    return thrd_success;
 }
