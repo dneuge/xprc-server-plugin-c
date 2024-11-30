@@ -38,6 +38,8 @@
 /// minimum length expected for full X-Plane preferences directory path; used for plausibility check to detect errors in XP SDK usage/malfunction
 #define MIN_EXPECTED_XP_PREFERENCES_DIRECTORY_LENGTH 5
 
+#define XP_PLUGIN_FEATURE_NATIVE_PATHS "XPLM_USE_NATIVE_PATHS"
+
 XPLMFlightLoopID flight_loop_before_flight_model_id = {0};
 XPLMFlightLoopID flight_loop_after_flight_model_id = {0};
 bool flight_loop_registered = false;
@@ -293,6 +295,23 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
         RCLOG_ERROR("a fatal error has occurred, XPRC is stuck - simulator restart required");
         return 1;
     }
+
+#ifdef TARGET_MACOS
+    // We get old-style colon-separated paths on MacOS unless we enable the "native paths" feature.
+    // see https://developer.x-plane.com/sdk/XPLMPlugin/
+    if (XPLMHasFeature(XP_PLUGIN_FEATURE_NATIVE_PATHS) == 1) {
+        XPLMEnableFeature(XP_PLUGIN_FEATURE_NATIVE_PATHS, 1);
+        if (XPLMIsFeatureEnabled(XP_PLUGIN_FEATURE_NATIVE_PATHS) != 1) {
+            RCLOG_ERROR("Failed to enable native paths. XPRC is stuck - simulator restart required (which is unlikely to fix this issue, please report to XPRC developers)");
+            fatal_error = 1;
+            return 1;
+        }
+    } else {
+        RCLOG_ERROR("X-Plane does not appear to support native paths for plugins. XPRC is stuck - simulator restart required (which is unlikely to fix this issue, please report to XPRC developers)");
+        fatal_error = 1;
+        return 1;
+    }
+#endif
 
     // check that plugin and X-Plane use the same directory separator
     // TODO: Macs will probably need XPLM_USE_NATIVE_PATHS to be set for UNIX-style paths (or XPRC needs to use pre-10 colons), see X-Plane documentation, check low-level stdio.h behaviour; must not be set on Windows
