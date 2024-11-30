@@ -148,7 +148,9 @@ int cnd_init(cnd_t *cond) {
 
 void cnd_destroy(cnd_t *cond) {
 	int err = pthread_cond_destroy(cond);
-	printf("[threads_macos] pthread_cond_destroy error: %d %s\n", err, strerror(err));
+	if (err) {
+		printf("[threads_macos] pthread_cond_destroy error: %d %s\n", err, strerror(err));
+	}
 }
 
 int cnd_wait(cnd_t *cond, mtx_t *mutex) {
