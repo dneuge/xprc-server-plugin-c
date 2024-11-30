@@ -14,8 +14,8 @@ typedef int (*thrd_start_t)(void*);
 #define thrd_nomem (2)
 #define thrd_timedout (3)
 
-#define mtx_plain (1)
-#define mtx_recursive (3)
+#define mtx_plain (1 << 0)
+#define mtx_recursive (1 << 1)
 
 int mtx_init(mtx_t *mutex, int type);
 void mtx_destroy(mtx_t *mutex);
