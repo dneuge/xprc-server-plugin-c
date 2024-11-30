@@ -130,9 +130,8 @@ static error_t cmtr_unschedule(command_cmtr_t *command) {
         RCLOG_WARN("[CMTR] failed to unschedule task: %d", err);
         return err;
     }
-        
-    RCLOG_TRACE("[CMTR] freeing task");
-    free(command->task);
+
+    // just drop the reference but don't free the task; memory management is taken care of by schedule maintenance
     command->task = NULL;
 
     return ERROR_NONE;

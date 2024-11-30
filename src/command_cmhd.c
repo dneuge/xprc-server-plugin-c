@@ -94,9 +94,8 @@ static error_t cmhd_unschedule(command_cmhd_t *command) {
         RCLOG_WARN("[CMHD] failed to unschedule task: %d", err);
         return err;
     }
-        
-    RCLOG_TRACE("[CMHD] freeing task");
-    free(command->task);
+
+    // just drop the reference but don't free the task; memory management is taken care of by schedule maintenance
     command->task = NULL;
 
     return ERROR_NONE;

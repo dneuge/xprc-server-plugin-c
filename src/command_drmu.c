@@ -160,7 +160,7 @@ static error_t drmu_terminate(void *command_ref) {
             return err;
         }
         
-        free(command->task);
+        // just drop the reference but don't free the task; memory management is taken care of by schedule maintenance
         command->task = NULL;
     }
 

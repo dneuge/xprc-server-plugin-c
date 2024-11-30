@@ -67,8 +67,7 @@ static error_t drls_terminate(void *command_ref) {
             return err;
         }
         
-        RCLOG_TRACE("[DRLS] terminate: freeing task");
-        free(command->task);
+        // just drop the reference but don't free the task; memory management is taken care of by schedule maintenance
         command->task = NULL;
     }
 

@@ -84,7 +84,7 @@ static error_t cmrg_terminate(void *command_ref) {
     if (err == ERROR_NONE) {
         err = unschedule_task(command->session->server->config.task_schedule, command->task, CMRG_TASK_PHASE);
         if (err == ERROR_NONE) {
-            free(command->task);
+            // just drop the reference but don't free the task; memory management is taken care of by schedule maintenance
             command->task = NULL;
         }
         unlock_schedule(command->session->server->config.task_schedule);

@@ -191,8 +191,7 @@ static error_t drci_terminate(void *command_ref) {
             return err;
         }
         
-        RCLOG_TRACE("[DRCI] terminate: freeing registration task");
-        free(command->registration_task);
+        // just drop the reference but don't free the task; memory management is taken care of by schedule maintenance
         command->registration_task = NULL;
     }
 
@@ -278,6 +277,7 @@ static void drci_process_post(command_drci_t *command) {
     }
 
     if (err == ERROR_NONE) {
+        // just drop the reference but don't free the task; memory management is taken care of by schedule maintenance
         command->registration_task = NULL;
     } else {
         RCLOG_WARN("[DRCI] failed to unschedule registration task for %s (error %d)", command->dataref_name, err);
