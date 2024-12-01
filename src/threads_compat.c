@@ -2,7 +2,7 @@
 
 #ifdef TARGET_MACOS
 
-#include "threads_macos.c"
+#include "threads_macos_compat.c"
 
 #elif TARGET_WINDOWS
 
