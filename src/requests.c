@@ -245,7 +245,7 @@ error_t parse_request(request_t **request, char *line, int length) {
     }
 
     // parse command parameters (just split on separator)
-    bool has_parameters = (offset < length);
+    bool has_parameters = (offset <= length);
     if (has_parameters) {
         int parameter_start = 0;
         int parameter_length = 0;
