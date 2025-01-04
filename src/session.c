@@ -81,6 +81,7 @@ static error_t send_channel(session_t *session, channel_t *channel, channel_acti
     }
 
     if (timestamp < 0) {
+        RCLOG_DEBUG("send_channel: invalid timestamp %d", timestamp);
         return ERROR_UNSPECIFIC;
     }
 
@@ -258,14 +259,17 @@ error_t error_channel(session_t *session, channel_id_t channel_id, int64_t times
 }
 
 static void destroy_session_channel(channel_t *channel, void *ref) {
-    RCLOG_TRACE("destroy_session_channel");
-    
+    RCLOG_TRACE("destroy_session_channel session %p / channel %p", ref, channel);
+
+    error_t err = ERROR_NONE;
     session_t *session = ref;
 
     if (!channel->destruction_requested) {
         if (channel->command && channel->command->terminate) {
-            // TODO: log error
-            channel->command->terminate(channel->command_ref);
+            err = channel->command->terminate(channel->command_ref);
+            if (err != ERROR_NONE) {
+                RCLOG_WARN("destroy_session_channel: failed to terminate command: %d", err);
+            }
         }
 
         if (channel->state != CHANNEL_STATE_CLOSED) {
@@ -274,8 +278,10 @@ static void destroy_session_channel(channel_t *channel, void *ref) {
     }
 
     if (channel->command && channel->command->destroy) {
-        // TODO: log error
-        channel->command->destroy(channel->command_ref);
+        err = channel->command->destroy(channel->command_ref);
+        if (err != ERROR_NONE) {
+            RCLOG_ERROR("destroy_session_channel: failed to destroy command at %p (error %d)", channel->command_ref, err);
+        }
     }
 
     RCLOG_TRACE("destroy_session_channel: freeing channel");
