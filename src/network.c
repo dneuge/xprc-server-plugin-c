@@ -715,7 +715,7 @@ static int run_server_thread(void *arg) {
 #ifdef TARGET_MACOS
         // disable SIGPIPE when sending to a closed socket
         // not available on Linux (we need to use MSG_NOSIGNAL there) and irrelevant on Windows (no such signal)
-        res = setsockopt(sd, SOL_SOCKET, SO_NOSIGPIPE, &SOCKOPT_ENABLE_VALUE, SOCKOPT_ENABLE_SIZE);
+        int res = setsockopt(sd, SOL_SOCKET, SO_NOSIGPIPE, &SOCKOPT_ENABLE_VALUE, SOCKOPT_ENABLE_SIZE);
         if (res) {
             RCLOG_WARN("failed to enable NOSIGPIPE on socket: %d, errno %d", res, errno);
         }
