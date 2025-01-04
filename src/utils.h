@@ -159,4 +159,12 @@ void* zmalloc(size_t size);
  */
 bool parse_int(int *dest, char *s);
 
+/**
+ * Sets the current thread's name according to the given format string. The name will be cut off at the
+ * maximum possible length.
+ * @param format formatting string; see vsnprintf for available syntax
+ * @param ... parameters to be formatted
+ */
+void set_current_thread_name(char *format, ...);
+
 #endif

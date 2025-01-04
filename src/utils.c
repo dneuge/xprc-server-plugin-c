@@ -290,3 +290,33 @@ bool parse_int(int *dest, char *s) {
 
     return success;
 }
+
+#ifndef HAVE_PTHREAD
+void set_current_thread_name(char *format, ...) {
+    // do nothing without POSIX threads
+    // TODO: probably possible on Windows somehow?
+}
+#else
+#include <pthread.h>
+#define MAX_THREAD_NAME_LENGTH 15
+
+void set_current_thread_name(char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    char *name = dynamic_vsprintf(format, args);
+    va_end(args);
+
+    if (!name) {
+        return;
+    }
+
+    int len = strlen(name);
+    if (len > MAX_THREAD_NAME_LENGTH) {
+        name[len] = 0;
+    }
+
+    pthread_setname_np(pthread_self(), name);
+
+    free(name);
+}
+#endif
