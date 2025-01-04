@@ -77,6 +77,13 @@ static const char SOCKOPT_ENABLE_VALUE = 1;
  */
 static int close_socket(int sd);
 
+/**
+ * Queries the remote port number for a given socket descriptor.
+ * @param sd socket descriptor
+ * @return remote port number or 0 on error/if unknown
+ */
+static uint16_t get_remote_port(int sd);
+
 static bool parse_ipv4_segment(uint8_t *out, char *address, int start, int endExcl) {
     int segment_length = endExcl - start;
     if ((segment_length < 1) || (segment_length > 3)) {
@@ -388,6 +395,7 @@ bool is_ip_address(char *address) {
 typedef struct _network_connection_t {
     bool in_use; // connections are reused by server; no lock needed - only set true by server thread, reset to false when closed
     int sd; // socket descriptor
+    uint16_t remote_port;
     bool closing; // multiple threads can ask for connections to be closed incl. connections themselves which makes them unjoinable; instead we only mark them as "closing" while keeping them "in use" and wait for a maintenance thread to perform the actual shutdown
     bool socket_closed;
     network_server_t *server;
@@ -744,6 +752,7 @@ static int run_server_thread(void *arg) {
         connection->in_use = true;
         connection->sd = sd;
         connection->server = server;
+        connection->remote_port = get_remote_port(sd);
 
         if (mtx_init(&connection->send_mutex, mtx_plain) != thrd_success) {
             RCLOG_ERROR("failed to initialize send mutex");

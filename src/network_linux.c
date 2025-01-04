@@ -121,3 +121,27 @@ error_t initialize_os_network_apis() {
     // we do not need to initialize anything on Linux
     return ERROR_NONE;
 }
+
+static uint16_t get_remote_port(int sd) {
+    struct sockaddr address = {0};
+    socklen_t address_size = sizeof(struct sockaddr);
+
+    int res = getpeername(sd, &address, &address_size);
+    if (res) {
+        RCLOG_WARN("get_remote_port: getpeername failed for sd=%d, res=%d, err=%d (%s)", sd, res, errno, strerror(errno));
+        return 0;
+    }
+
+    if (address.sa_family == AF_INET) {
+        struct sockaddr_in *ip4addr = (struct sockaddr_in*) &address;
+        return ntohs(ip4addr->sin_port);
+    }
+
+    if (address.sa_family == AF_INET6) {
+        struct sockaddr_in6 *ip6addr = (struct sockaddr_in6*) &address;
+        return ntohs(ip6addr->sin6_port);
+    }
+
+    RCLOG_WARN("get_remote_port: getpeername returned unsupported address family %hu", address.sa_family);
+    return 0;
+}

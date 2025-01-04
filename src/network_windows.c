@@ -247,3 +247,8 @@ static int close_socket(int sd) {
     // [sdk-api] docs/sdk-api-src/content/winsock2/nf-winsock2-closesocket.md
     return closesocket(sd);
 }
+
+static uint16_t get_remote_port(int sd) {
+    // TODO: implement
+    return 0;
+}
