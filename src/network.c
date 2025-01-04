@@ -699,6 +699,7 @@ static int run_maintenance_thread(void *arg) {
 static int run_server_thread(void *arg) {
     network_server_t *server = arg;
 
+    int res = 0;
     unsigned int consecutive_errors = 0;
 
     while (!server->shutdown && (consecutive_errors < SERVER_MAX_CONSECUTIVE_ERRORS)) {
@@ -715,7 +716,7 @@ static int run_server_thread(void *arg) {
 #ifdef TARGET_MACOS
         // disable SIGPIPE when sending to a closed socket
         // not available on Linux (we need to use MSG_NOSIGNAL there) and irrelevant on Windows (no such signal)
-        int res = setsockopt(sd, SOL_SOCKET, SO_NOSIGPIPE, &SOCKOPT_ENABLE_VALUE, SOCKOPT_ENABLE_SIZE);
+        res = setsockopt(sd, SOL_SOCKET, SO_NOSIGPIPE, &SOCKOPT_ENABLE_VALUE, SOCKOPT_ENABLE_SIZE);
         if (res) {
             RCLOG_WARN("failed to enable NOSIGPIPE on socket: %d, errno %d", res, errno);
         }
@@ -782,7 +783,7 @@ static int run_server_thread(void *arg) {
             continue;
         }
 
-        int res = server->handler.new_connection(connection, &connection->handler_reference, server->handler.new_connection_constructor_reference);
+        res = server->handler.new_connection(connection, &connection->handler_reference, server->handler.new_connection_constructor_reference);
         if (res != ERROR_NONE) {
             RCLOG_WARN("handler failed to create connection: %d", res);
             consecutive_errors++;
