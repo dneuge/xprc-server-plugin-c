@@ -275,6 +275,9 @@ static void destroy_session_channel(channel_t *channel, void *ref) {
         if (channel->state != CHANNEL_STATE_CLOSED) {
             send_channel(session, channel, CHANNEL_ACTION_CLOSE, CURRENT_TIME_REFERENCE, NULL);
         }
+
+        channel->destruction_requested = true;
+        channel->state = CHANNEL_STATE_CLOSED;
     }
 
     if (channel->command && channel->command->destroy) {
@@ -284,6 +287,11 @@ static void destroy_session_channel(channel_t *channel, void *ref) {
             return;
         }
     }
+
+    RCLOG_TRACE("destroy_session_channel: poisoning channel");
+    channel->id = BAD_CHANNEL_ID;
+    channel->command = NULL;
+    channel->command_ref = NULL;
 
     RCLOG_TRACE("destroy_session_channel: freeing channel");
     free(channel);
