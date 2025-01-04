@@ -62,6 +62,14 @@ static const char SOCKOPT_ENABLE_VALUE = 1;
 #error "OS-specific early parts of network.c are missing; target OS is not supported"
 #endif
 
+// suppress SIGPIPE on Linux which has MSG_NOSIGNAL
+// macOS has a socket option instead, Windows doesn't know the signal at all
+#ifdef TARGET_LINUX
+#define NETWORK_SEND_FLAGS (MSG_NOSIGNAL)
+#else
+#define NETWORK_SEND_FLAGS (0)
+#endif
+
 /**
  * Closes the given (server) socket descriptor using the correct function depending on operating system.
  * @param sd (server) socket descriptor to close
@@ -491,7 +499,7 @@ static int run_send_thread(void *arg) {
         mtx_unlock(&connection->send_mutex);
         holds_lock = false;
 
-        ssize_t sent = send(connection->sd, connection->send_ringbuffer + connection->send_read_pos, chunk_size, 0);
+        ssize_t sent = send(connection->sd, connection->send_ringbuffer + connection->send_read_pos, chunk_size, NETWORK_SEND_FLAGS);
         if (sent <= 0) {
             RCLOG_WARN("failed to send");
             break;
@@ -703,6 +711,15 @@ static int run_server_thread(void *arg) {
             }
             continue;
         }
+
+#ifdef TARGET_MACOS
+        // disable SIGPIPE when sending to a closed socket
+        // not available on Linux (we need to use MSG_NOSIGNAL there) and irrelevant on Windows (no such signal)
+        res = setsockopt(sd, SOL_SOCKET, SO_NOSIGPIPE, &SOCKOPT_ENABLE_VALUE, SOCKOPT_ENABLE_SIZE);
+        if (res) {
+            RCLOG_WARN("failed to enable NOSIGPIPE on socket: %d, errno %d", res, errno);
+        }
+#endif
 
         // find a free connection instance
         int connection_id = -1;
