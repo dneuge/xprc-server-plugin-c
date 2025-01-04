@@ -74,7 +74,9 @@ int cycles_until_gui_maintenance = GUI_MAINTENANCE_INTERVAL;
 int run_post_processing_thread(void *arg) {
     error_t err = ERROR_NONE;
     bool has_lock = false;
-    
+
+    set_current_thread_name("XPRC postproc");
+
     int cycles_until_schedule_cleaning = SCHEDULE_CLEANING_INTERVAL;
     int cycles_until_server_maintenance = SERVER_MAINTENANCE_INTERVAL;
     

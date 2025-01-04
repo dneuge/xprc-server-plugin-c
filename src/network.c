@@ -467,6 +467,8 @@ static int run_send_thread(void *arg) {
     struct timespec wait_until = {0};
     bool holds_lock = false;
 
+    set_current_thread_name("XPRC send %u", connection->remote_port);
+
     if (mtx_lock(&connection->send_mutex) != thrd_success) {
         RCLOG_WARN("failed to get initial lock of mutex in send thread");
     } else {
@@ -539,6 +541,8 @@ static int run_send_thread(void *arg) {
 
 static int run_receive_thread(void *arg) {
     network_connection_t *connection = arg;
+
+    set_current_thread_name("XPRC recv %u", connection->remote_port);
 
     char line_buffer[RECEIVE_MAX_LINE_LENGTH] = {0};
     int line_write_offset = 0;
@@ -664,6 +668,8 @@ static bool shutdown_network_connection(network_connection_t *connection) {
 static int run_maintenance_thread(void *arg) {
     network_server_t *server = arg;
 
+    set_current_thread_name("XPRC maintain");
+
     while (!(server->shutdown && server->server_thread_stopped)) {
         for (int i=0; i<MAX_CONNECTIONS; i++) {
             network_connection_t *connection = &(server->connections[i]);
@@ -706,6 +712,8 @@ static int run_maintenance_thread(void *arg) {
 
 static int run_server_thread(void *arg) {
     network_server_t *server = arg;
+
+    set_current_thread_name("XPRC server");
 
     int res = 0;
     unsigned int consecutive_errors = 0;
