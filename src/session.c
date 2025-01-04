@@ -280,7 +280,8 @@ static void destroy_session_channel(channel_t *channel, void *ref) {
     if (channel->command && channel->command->destroy) {
         err = channel->command->destroy(channel->command_ref);
         if (err != ERROR_NONE) {
-            RCLOG_ERROR("destroy_session_channel: failed to destroy command at %p (error %d)", channel->command_ref, err);
+            RCLOG_ERROR("destroy_session_channel: failed to destroy command at %p (error %d), refusing to free channel", channel->command_ref, err);
+            return;
         }
     }
 
