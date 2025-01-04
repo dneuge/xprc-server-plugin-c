@@ -272,11 +272,24 @@ static void destroy_session_channel(channel_t *channel, void *ref) {
             }
         }
 
-        if (channel->state != CHANNEL_STATE_CLOSED) {
-            send_channel(session, channel, CHANNEL_ACTION_CLOSE, CURRENT_TIME_REFERENCE, NULL);
+        channel->destruction_requested = true;
+    }
+
+    if (channel->state != CHANNEL_STATE_CLOSED) {
+        if (session->destruction_pending) {
+            // If session is being destroyed we don't need to communicate with any potentially still connected client
+            // as the connection will be shut down anyway, implicitly terminating all channels at once.
+            // send_channel/CURRENT_TIME_REFERENCE will always fail if session is pending destruction, so we can just
+            // skip that call altogether.
+            RCLOG_DEBUG("destroy_session_channel: channel is not closed yet but session is being destroyed, skip client notification");
+        } else {
+            RCLOG_DEBUG("destroy_session_channel: channel is not closed yet, closing");
+            err = send_channel(session, channel, CHANNEL_ACTION_CLOSE, CURRENT_TIME_REFERENCE, NULL);
+            if (err != ERROR_NONE) {
+                RCLOG_WARN("destroy_session_channel: failed to close channel: %d", err);
+            }
         }
 
-        channel->destruction_requested = true;
         channel->state = CHANNEL_STATE_CLOSED;
     }
 
