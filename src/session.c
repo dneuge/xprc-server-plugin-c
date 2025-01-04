@@ -113,7 +113,7 @@ static error_t send_channel(session_t *session, channel_t *channel, channel_acti
     }
 
     int message_length = (message != NULL) ? strlen(message) : 0;
-    bool needs_state_prefix = (message_length == 0) || (channel->state == CHANNEL_STATE_INITIAL);
+    bool needs_state_prefix = (message_length == 0) || (channel->state == CHANNEL_STATE_INITIAL) || (action == CHANNEL_ACTION_ERR);
     
     int out_length = 1 /* continuation */ + 4 /* channel ID */ + 1 /* space */ + timestamp_length + 1 /* LF */;
     if (message_length > 0) {
