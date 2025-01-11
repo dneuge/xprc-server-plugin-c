@@ -199,17 +199,17 @@ static void run_tasks_post_processing(task_schedule_t *task_schedule) {
             continue;
         }
 
-        prealloc_list_item_t *item = queue->first_in_use_item;
-        while (item) {
-            prealloc_list_item_t *next = item->next_in_use;
+        for (prealloc_list_item_t *item = queue->first_in_use_item; item; item = item->next_in_use) {
             task_t *task = item->value;
+            if (!task) {
+                RCLOG_DEBUG("run_tasks_post_processing: skipping null task in schedule");
+                continue;
+            }
 
             if (task->on_processing) {
                 RCLOG_TRACE("run_tasks_post_processing: calling task %p", task);
                 task->on_processing(task, TASK_SCHEDULE_POST_PROCESSING);
             }
-            
-            item = next;
         }
     }
 
