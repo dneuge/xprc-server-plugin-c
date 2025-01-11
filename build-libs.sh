@@ -142,7 +142,7 @@ REPO_OPENGL="${download_dir}/github.KhronosGroup.OpenGL-Registry.main.bundle" \
     REF_EGL="b055c9b483e70ecd57b3cf7204db21f5a06f9ffe" \
     REPO_GLFIXES="${download_dir}/github.nigels-com.glfixes.bundle" \
     REF_GLFIXES="b63c8d3e676097d610efda64870cbe6f10543bd3" \
-    make || die "Failed to prepare GLEW's \"auto\" directory"
+    make -j1 || die "Failed to prepare GLEW's \"auto\" directory"
 cd "${script_dir}/lib/glew"
 echo
 
