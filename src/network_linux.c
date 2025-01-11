@@ -114,6 +114,7 @@ static struct sockaddr* create_address_ipv6(network_server_config_t *config) {
 }
 
 static int close_socket(int sd) {
+    RCLOG_DEBUG("closing socket %d", sd);
     return close(sd);
 }
 

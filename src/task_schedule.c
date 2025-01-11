@@ -3,6 +3,8 @@
 
 #include "task_schedule.h"
 
+#include "logger.h"
+
 error_t create_task_schedule(task_schedule_t **task_schedule) {
     *task_schedule = malloc(sizeof(task_schedule_t));
     if (!*task_schedule) {
@@ -139,6 +141,7 @@ static void run_tasks_post_processing(task_schedule_t *task_schedule) {
             task_t *task = item->value;
 
             if (task->on_processing) {
+                RCLOG_TRACE("run_tasks_post_processing: calling task %p", task);
                 task->on_processing(task, TASK_SCHEDULE_POST_PROCESSING);
             }
             
@@ -170,6 +173,7 @@ void run_tasks(task_schedule_t *task_schedule, task_schedule_phase_t phase) {
     while (item) {
         task_t *task = item->value;
         if (task->on_processing) {
+            RCLOG_TRACE("run_tasks: calling task %p for phase %d", task, phase);
             task->on_processing(task, phase);
         }
         item = item->next_in_use;
@@ -217,11 +221,12 @@ error_t unschedule_task(task_schedule_t *task_schedule, task_t *task, task_sched
     prealloc_list_item_t *item = queue->first_in_use_item;
     while (item) {
         if (item->value == task) {
+            RCLOG_TRACE("unschedule_task_queue_item task %p / phase %d", task, phase);
             error_t task_err = unschedule_task_queue_item(task_schedule, item, phase);
             if (task_err == ERROR_NONE) {
                 return ERROR_NONE;
             } else {
-                // TODO: log
+                RCLOG_WARN("unschedule_task_queue_item failed to unschedule task %p / phase %d: %d", task, phase, task_err);
                 return task_err;
             }
         }

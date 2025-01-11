@@ -266,6 +266,7 @@ static void destroy_session_channel(channel_t *channel, void *ref) {
 
     if (!channel->destruction_requested) {
         if (channel->command && channel->command->terminate) {
+            RCLOG_TRACE("destroy_session_channel: terminating session %p / channel %p / command %p", session, channel, channel->command);
             err = channel->command->terminate(channel->command_ref);
             if (err != ERROR_NONE) {
                 RCLOG_WARN("destroy_session_channel: failed to terminate command: %d", err);

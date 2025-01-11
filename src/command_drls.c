@@ -25,13 +25,15 @@ static error_t drls_destroy(void *command_ref) {
     
     command_drls_t *command = command_ref;
 
+    RCLOG_TRACE("[DRLS] destroy session=%p, command=%p", command->session, command);
+
     if (command->type == TYPE_SPECIFIC) {
         drls_specific_destroy(command);
     } else {
         drls_unspecific_destroy(command);
     }
     
-    RCLOG_TRACE("[DRLS] destroy: freeing command");
+    RCLOG_TRACE("[DRLS] destroy: freeing command %p", command);
     free(command);
     
     RCLOG_TRACE("[DRLS] destroy: done");
@@ -49,16 +51,19 @@ static error_t drls_terminate(void *command_ref) {
     error_t err = ERROR_NONE;
     command_drls_t *command = command_ref;
 
+    RCLOG_TRACE("[DRLS] terminate session %p / command %p", command->session, command);
+
     // channel may have been closed before (by error or finishing); ignore error
     finish_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, NULL);
 
     if (command->task) {
-        RCLOG_TRACE("[DRLS] terminate: have task, unscheduling");
+        RCLOG_TRACE("[DRLS] terminate: have task, unscheduling %p", command->task);
         task_schedule_t *task_schedule = command->session->server->config.task_schedule;
         
         err = lock_schedule(task_schedule);
         if (err == ERROR_NONE) {
             err = unschedule_task(task_schedule, command->task, DRLS_SCHEDULE_PHASE);
+            RCLOG_TRACE("[DRLS] terminate: unscheduled %p", command->task);
             unlock_schedule(task_schedule);
         }
         
@@ -75,9 +80,11 @@ static error_t drls_terminate(void *command_ref) {
     
     RCLOG_TRACE("[DRLS] terminate: poisoning channel ID");
     command->channel_id = BAD_CHANNEL_ID;
-    
+
+    RCLOG_TRACE("[DRLS] terminate: request_channel_destruction");
     request_channel_destruction(command->session->channels, channel_id);
-    
+    RCLOG_TRACE("[DRLS] terminate: request_channel_destruction done");
+
     return ERROR_NONE;
 }
 
