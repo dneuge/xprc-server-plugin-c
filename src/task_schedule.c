@@ -4,6 +4,7 @@
 #include "task_schedule.h"
 
 #include "logger.h"
+#include "utils.h"
 
 error_t create_task_schedule(task_schedule_t **task_schedule) {
     *task_schedule = malloc(sizeof(task_schedule_t));
@@ -113,6 +114,48 @@ error_t lock_schedule(task_schedule_t *task_schedule) {
     }
 
     if (mtx_lock(&task_schedule->mutex) != thrd_success) {
+        return ERROR_MUTEX_FAILED;
+    }
+
+    if (task_schedule->destruction_pending) {
+        mtx_unlock(&task_schedule->mutex);
+        return ERROR_DESTRUCTION_PENDING;
+    }
+
+    return ERROR_NONE;
+}
+
+error_t lock_schedule_try(task_schedule_t *task_schedule) {
+    if (task_schedule->destruction_pending) {
+        return ERROR_DESTRUCTION_PENDING;
+    }
+
+    if (mtx_trylock(&task_schedule->mutex) != thrd_success) {
+        return ERROR_MUTEX_FAILED;
+    }
+
+    if (task_schedule->destruction_pending) {
+        mtx_unlock(&task_schedule->mutex);
+        return ERROR_DESTRUCTION_PENDING;
+    }
+
+    return ERROR_NONE;
+}
+
+error_t lock_schedule_timeout(task_schedule_t *task_schedule, uint16_t timeout_millis) {
+    struct timespec max_wait = {0};
+    if (!timespec_now_plus_millis(&max_wait, TIME_UTC, timeout_millis)) {
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (task_schedule->destruction_pending) {
+        return ERROR_DESTRUCTION_PENDING;
+    }
+
+    int res = mtx_timedlock(&task_schedule->mutex, &max_wait);
+    if (res == thrd_timedout) {
+        return ERROR_MUTEX_TIMEOUT;
+    } else if (res != thrd_success) {
         return ERROR_MUTEX_FAILED;
     }
 

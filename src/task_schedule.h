@@ -82,11 +82,24 @@ error_t create_task_schedule(task_schedule_t **task_schedule);
 error_t destroy_task_schedule(task_schedule_t *task_schedule);
 
 /**
- * Attempts to lock the given schedule.
+ * Attempts to lock the given schedule, blocking.
  * @param task_schedule task schedule to lock
  * @return true if lock was gained, false if locking failed
  */
 error_t lock_schedule(task_schedule_t *task_schedule);
+/**
+ * Attempts to lock the given schedule without blocking.
+ * @param task_schedule task schedule to lock
+ * @return true if lock was gained, false if locking failed
+ */
+error_t lock_schedule_try(task_schedule_t *task_schedule);
+/**
+ * Attempts to lock the given schedule with a timeout.
+ * @param  task_schedule  task schedule to lock
+ * @param  timeout_millis maximum time to wait on a lock (milliseconds)
+ * @return true if lock was gained, false if locking failed
+ */
+error_t lock_schedule_timeout(task_schedule_t *task_schedule, uint16_t timeout_millis);
 /**
  * Unlocks a previously locked schedule; must only be called if a lock is currently held.
  * @param task_schedule task schedule to unlock
