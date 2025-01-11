@@ -620,7 +620,7 @@ static bool shutdown_network_connection(network_connection_t *connection) {
 
     if (!connection->socket_closed) {
         shutdown(connection->sd, SHUT_RD); // QUESTION: close write channel as well?
-        close_socket(connection->sd);
+        close_network_connection(connection);
         connection->socket_closed = true;
     }
 
@@ -954,7 +954,7 @@ bool destroy_network_server(network_server_t *server) {
 
     server->shutdown = true;
     shutdown(server->ssd, SHUT_RD);
-    close_socket(server->ssd); // this should unblock the thread
+    close(server->ssd); // this should unblock the thread
     if (thrd_join(server->server_thread, &res) != thrd_success) {
         RCLOG_ERROR("failed to join server thread");
         return false; // we cannot continue destruction in this case
@@ -1041,7 +1041,12 @@ error_t send_to_network(network_connection_t *connection, char *content, int len
 }
 
 void close_network_connection(network_connection_t *connection) {
+    // FIXME: set closing atomic
+    if (connection->closing) {
+        return;
+    }
     connection->closing = true;
+
     close_socket(connection->sd);
 }
 
