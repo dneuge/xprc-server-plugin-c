@@ -44,6 +44,12 @@
 #define ERROR_INCOMPLETE 5
 
 /**
+ * Used when the requested operation cannot be performed or completed because a thread lock could not be acquired
+ * within timeout where thread-safety is required.
+ */
+#define ERROR_MUTEX_TIMEOUT 6
+
+/**
  * Start offset for errors related to the requests module, see: requests.h
  */
 #define REQUEST_ERROR_BASE 10
