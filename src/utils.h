@@ -109,6 +109,15 @@ int num_digits(int value);
 int64_t millis_of_timespec(struct timespec *ts);
 
 /**
+ * Calculates a timespec set to current time plus an offset.
+ * @param out    reference to existing timespec to set; may get set to garbage if operation fails
+ * @param base   base as required by timespec_get (e.g. TIME_UTC)
+ * @param millis offset in milliseconds to add; only positive values (incl. zero) are supported
+ * @return true if successful, false on error; out may hold garbage if operation fails
+ */
+bool timespec_now_plus_millis(struct timespec *out, int base, uint16_t millis);
+
+/**
  * Returns the offset of the first occurrence of the given needle in a string.
  * @param haystack null-terminated string to search on
  * @param needle null-terminated string to search for

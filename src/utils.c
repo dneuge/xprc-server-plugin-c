@@ -247,6 +247,24 @@ int64_t millis_of_timespec(struct timespec *ts) {
     return ((int64_t) ts->tv_sec * 1000) + (ts->tv_nsec / 1000000);
 }
 
+bool timespec_now_plus_millis(struct timespec *out, int base, uint16_t millis) {
+    if (millis < 0) {
+        return false;
+    }
+
+    if (!timespec_get(out, base)) {
+        return false;
+    }
+
+    if (millis != 0) {
+        out->tv_nsec += millis * 1000;
+        out->tv_sec += out->tv_nsec / 1000000000;
+        out->tv_nsec = out->tv_nsec % 1000000000;
+    }
+
+    return true;
+}
+
 int count_chars(char *s, char needle, int length) {
     if (length <= 0) {
         return 0;
