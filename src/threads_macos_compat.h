@@ -1,7 +1,7 @@
 #ifndef THREADS_MACOS_COMPAT_H
 /**
  * C11 threads compatibility wrapper for the macOS(r) operating system
- * Copyright (c) 2024 Daniel Neugebauer
+ * Copyright (c) 2024-2025 Daniel Neugebauer
  * https://github.com/dneuge/c11-threads-compat-for-macos-operating-system
  * 
  * Released under MIT license, unless marked otherwise in the code that follows:
@@ -65,6 +65,8 @@ typedef int (*thrd_start_t)(void*);
 int mtx_init(mtx_t *mutex, int type);
 void mtx_destroy(mtx_t *mutex);
 int mtx_lock(mtx_t *mutex);
+int mtx_trylock(mtx_t *mutex);
+int mtx_timedlock(mtx_t *mutex, const struct timespec *time_point);
 int mtx_unlock(mtx_t *mutex);
 
 int thrd_create(thrd_t *thr, thrd_start_t func, void *arg);
