@@ -94,7 +94,10 @@ error_t lock_schedule(task_schedule_t *task_schedule);
 void unlock_schedule(task_schedule_t *task_schedule);
 
 /**
- * To be called by the actual scheduler to run all tasks for the specified phase; schedule must be locked.
+ * To be called by the actual scheduler to run all tasks for the specified phase; schedule must NOT be locked.
+ *
+ * Schedule needs to be unlocked prior to running some callbacks to prevent deadlocks, in particular between
+ * post-processing hooks (requiring session locks) and send/receive threads (which already hold a session lock).
  *
  * @param task_schedule task schedule to run tasks of
  * @param phase phase to run tasks for

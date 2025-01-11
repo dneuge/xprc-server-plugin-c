@@ -56,7 +56,9 @@ xpcommand_registry_t *xpcommand_registry = NULL;
 xpqueue_t *xpqueue = NULL;
 
 task_schedule_t *task_schedule = NULL;
-bool flight_loop_locked_task_schedule = false;
+mtx_t flight_loop_mutex = {0};
+bool has_flight_loop_mutex = false;
+static bool flight_loop_locked_by_xp = false; // coordinates sharing of lock between "before" and "after" flight loop callbacks
 
 cnd_t post_processing_wait;
 thrd_t post_processing_thread;
@@ -71,24 +73,37 @@ bool plugin_initialized = false;
 int cycles_until_xpref_maintenance = XPREF_MAINTENANCE_INTERVAL;
 int cycles_until_gui_maintenance = GUI_MAINTENANCE_INTERVAL;
 
-int run_post_processing_thread(void *arg) {
+static error_t lock_flight_loop() {
+    if (mtx_lock(&flight_loop_mutex) != thrd_success) {
+        return ERROR_MUTEX_FAILED;
+    }
+
+    return ERROR_NONE;
+}
+
+static void unlock_flight_loop() {
+    if (mtx_unlock(&flight_loop_mutex) != thrd_success) {
+        RCLOG_ERROR("failed to unlock flight loop");
+        fatal_error = true;
+    }
+}
+
+static int run_post_processing_thread(void *arg) {
     error_t err = ERROR_NONE;
-    bool has_lock = false;
 
     set_current_thread_name("XPRC postproc");
 
     int cycles_until_schedule_cleaning = SCHEDULE_CLEANING_INTERVAL;
     int cycles_until_server_maintenance = SERVER_MAINTENANCE_INTERVAL;
-    
-    err = lock_schedule(task_schedule);
+
+    err = lock_flight_loop();
     if (err != ERROR_NONE) {
-        RCLOG_WARN("post-processing thread failed to lock schedule: %d", err);
+        RCLOG_WARN("post-processing thread failed to lock flight loop: %d", err);
         return 0;
     }
-    has_lock = true;
-    
+
     while (!shutdown_post_processing) {
-        if (cnd_wait(&post_processing_wait, &task_schedule->mutex) != thrd_success) {
+        if (cnd_wait(&post_processing_wait, &flight_loop_mutex) != thrd_success) {
             RCLOG_WARN("post-processing thread failed to wait");
             break;
         }
@@ -102,9 +117,17 @@ int run_post_processing_thread(void *arg) {
         cycles_until_schedule_cleaning--;
         if (cycles_until_schedule_cleaning <= 0) {
             cycles_until_schedule_cleaning = SCHEDULE_CLEANING_INTERVAL;
-            err = clean_schedule(task_schedule);
+
+            err = lock_schedule(task_schedule);
             if (err != ERROR_NONE) {
-                RCLOG_WARN("clean_schedule reported error %d", err);
+                RCLOG_WARN("failed to lock task schedule for cleaning, skipping; error %d", err);
+            } else {
+                err = clean_schedule(task_schedule);
+                if (err != ERROR_NONE) {
+                    RCLOG_WARN("clean_schedule reported error %d", err);
+                }
+
+                unlock_schedule(task_schedule);
             }
         }
 
@@ -113,26 +136,14 @@ int run_post_processing_thread(void *arg) {
         if (cycles_until_server_maintenance <= 0) {
             cycles_until_server_maintenance = SERVER_MAINTENANCE_INTERVAL;
             
-            unlock_schedule(task_schedule);
-            has_lock = false;
-            
             err = maintain_server_manager(server_manager);
             if (err != ERROR_NONE) {
                 RCLOG_WARN("server manager failed to perform maintenance; error %d", err);
             }
-
-            err = lock_schedule(task_schedule);
-            if (err != ERROR_NONE) {
-                RCLOG_WARN("failed to regain lock on task schedule after server maintenance: %d", err);
-                break;
-            }
-            has_lock = true;
         }
     }
 
-    if (has_lock) {
-        unlock_schedule(task_schedule);
-    }
+    unlock_flight_loop();
 
     RCLOG_DEBUG("post-processing thread terminates\n");
     
@@ -140,12 +151,13 @@ int run_post_processing_thread(void *arg) {
 }
 
 static float process_flight_loop_before_flight_model(float inElapsedSinceLastCall, float inElapsedTimeSinceLastFlightLoop, int inCounter, void *inRefcon) {
-    if (lock_schedule(task_schedule)) {
-        // TODO: is there any way we could log that?
+    error_t err = lock_flight_loop();
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("process_flight_loop_before_flight_model: failed to lock flight loop: %d", err);
         return CALL_ON_NEXT_FRAME;
     }
 
-    flight_loop_locked_task_schedule = true;
+    flight_loop_locked_by_xp = true;
 
     run_tasks(task_schedule, TASK_SCHEDULE_BEFORE_FLIGHT_MODEL);
     
@@ -155,7 +167,7 @@ static float process_flight_loop_before_flight_model(float inElapsedSinceLastCal
 static float process_flight_loop_after_flight_model(float inElapsedSinceLastCall, float inElapsedTimeSinceLastFlightLoop, int inCounter, void *inRefcon) {
     error_t err = ERROR_NONE;
     
-    if (!flight_loop_locked_task_schedule) {
+    if (!flight_loop_locked_by_xp) {
         return CALL_ON_NEXT_FRAME;
     }
 
@@ -193,9 +205,9 @@ static float process_flight_loop_after_flight_model(float inElapsedSinceLastCall
     }
 
     cnd_broadcast(&post_processing_wait);
-    
-    flight_loop_locked_task_schedule = false;
-    unlock_schedule(task_schedule);
+
+    flight_loop_locked_by_xp = false;
+    unlock_flight_loop();
     
     return CALL_ON_NEXT_FRAME;
 }
@@ -327,6 +339,19 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
         fatal_error = 1;
         return 1;
     }
+
+    if (has_flight_loop_mutex) {
+        RCLOG_ERROR("flight loop mutex is already/still initialized - simulator restart required");
+        fatal_error = 1;
+        return 1;
+    }
+
+    if (mtx_init(&flight_loop_mutex, mtx_plain) != thrd_success) {
+        RCLOG_ERROR("flight loop mutex could not be created - simulator restart required")
+        fatal_error = 1;
+        return 1;
+    }
+    has_flight_loop_mutex = true;
 
     if (cnd_init(&post_processing_wait) != thrd_success) {
         RCLOG_ERROR("failed to create condition for post-processing thread - simulator restart required");
@@ -558,16 +583,6 @@ PLUGIN_API void XPluginDisable() {
     
     if (flight_loop_registered) {
         XPLMDestroyFlightLoop(flight_loop_before_flight_model_id);
-        int remaining_cycles = 1000;
-        while (flight_loop_locked_task_schedule && remaining_cycles > 0) {
-            remaining_cycles--;
-            thrd_yield();
-        }
-        if (flight_loop_locked_task_schedule) {
-            RCLOG_ERROR("task schedule cannot be unlocked; plugin shutdown is not possible");
-            fatal_error = true;
-            return;
-        }
         XPLMDestroyFlightLoop(flight_loop_after_flight_model_id);
         flight_loop_registered = false;
     }
@@ -586,6 +601,12 @@ PLUGIN_API void XPluginDisable() {
             
             has_post_processing_thread = false;
         }
+    }
+
+    if (flight_loop_locked_by_xp) {
+        RCLOG_DEBUG("flight loop was still locked on plugin shutdown; unlocking");
+        unlock_flight_loop();
+        flight_loop_locked_by_xp = false;
     }
 
     if (task_schedule) {
@@ -667,6 +688,17 @@ PLUGIN_API void XPluginStop() {
     }
 
     cnd_destroy(&post_processing_wait);
+
+    if (has_flight_loop_mutex) {
+        if (flight_loop_locked_by_xp) {
+            fatal_error = true;
+            RCLOG_ERROR("flight loop mutex is locked, unable to destroy; XPRC is stuck - simulator restart required");
+            return;
+        }
+
+        mtx_destroy(&flight_loop_mutex);
+        has_flight_loop_mutex = false;
+    }
 
     if (command_factory) {
         destroy_command_factory(command_factory);

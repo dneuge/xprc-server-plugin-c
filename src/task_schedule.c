@@ -129,6 +129,12 @@ void unlock_schedule(task_schedule_t *task_schedule) {
 }
 
 static void run_tasks_post_processing(task_schedule_t *task_schedule) {
+    error_t err = lock_schedule(task_schedule);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("run_tasks_post_processing: failed to lock task schedule; skipping: %d", err);
+        return;
+    }
+
     for (int i=0; i<TASK_SCHEDULE_NUM_TASK_QUEUES; i++) {
         prealloc_list_t *queue = task_schedule->queues[i];
         if (!queue) {
@@ -148,13 +154,12 @@ static void run_tasks_post_processing(task_schedule_t *task_schedule) {
             item = next;
         }
     }
+
+    RCLOG_TRACE("run_tasks_post_processing: unlocking schedule");
+    unlock_schedule(task_schedule);
 }
 
 void run_tasks(task_schedule_t *task_schedule, task_schedule_phase_t phase) {
-    if (task_schedule->destruction_pending) {
-        return;
-    }
-    
     if (phase == TASK_SCHEDULE_POST_PROCESSING) {
         run_tasks_post_processing(task_schedule);
         return;
@@ -164,9 +169,15 @@ void run_tasks(task_schedule_t *task_schedule, task_schedule_phase_t phase) {
         return;
     }
 
+    error_t err = lock_schedule(task_schedule);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("run_tasks: failed to lock task schedule: %d", err);
+        return;
+    }
+
     prealloc_list_t *queue = task_schedule->queues[phase];
     if (!queue) {
-        return;
+        goto end;
     }
 
     prealloc_list_item_t *item = queue->first_in_use_item;
@@ -178,6 +189,9 @@ void run_tasks(task_schedule_t *task_schedule, task_schedule_phase_t phase) {
         }
         item = item->next_in_use;
     }
+
+end:
+    unlock_schedule(task_schedule);
 }
 
 error_t schedule_task(task_schedule_t *task_schedule, task_t *task, task_schedule_phase_t phase) {
