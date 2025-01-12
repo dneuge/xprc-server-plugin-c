@@ -295,7 +295,7 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
 
     xprc_log_init();
 
-    // TODO: make log levels configurable
+    // temporary log levels until settings have been loaded/initialized
     xprc_set_min_log_level_console(RCLOG_LEVEL_TRACE);
     xprc_set_min_log_level_xplane(RCLOG_LEVEL_INFO);
 
@@ -440,6 +440,9 @@ PLUGIN_API int XPluginEnable() {
         // runs yet
         auto_start = settings_manager->settings->auto_startup;
     }
+
+    // reconfigure logger according to settings (direct access is safe because nothing else runs yet)
+    configure_logger_from_settings(settings_manager->settings);
 
     server_manager = create_server_manager(settings_manager);
     if (!server_manager) {

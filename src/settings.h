@@ -19,6 +19,16 @@
 
 #define XPRC_DEFAULT_NETWORK_INTERFACE INTERFACE_LOCAL
 
+// log levels are redefined for settings/persistence to be independent of log system changes
+#define SETTINGS_LOG_LEVEL_ERROR (20)
+#define SETTINGS_LOG_LEVEL_WARN (40)
+#define SETTINGS_LOG_LEVEL_INFO (60)
+#define SETTINGS_LOG_LEVEL_DEBUG (80)
+#define SETTINGS_LOG_LEVEL_TRACE (100)
+
+#define SETTINGS_DEFAULT_LOG_LEVEL_CONSOLE SETTINGS_LOG_LEVEL_INFO
+#define SETTINGS_DEFAULT_LOG_LEVEL_XPLANE SETTINGS_LOG_LEVEL_INFO
+
 /**
  * XPRC settings accessible to users
  */
@@ -35,6 +45,10 @@ typedef struct {
     int network_port;
     /// true enables IPv6 support; false disables IPv6
     bool network_enable_ipv6;
+    /// log level to use for X-Plane
+    int log_level_xplane;
+    /// log level to use for console output
+    int log_level_console;
 } settings_t;
 
 /**
@@ -114,5 +128,11 @@ error_t save_settings_without_password(settings_t *settings, char *filepath);
  * @return error code; #ERROR_NONE on success
  */
 error_t save_password(settings_t *settings, char *filepath);
+
+/**
+ * Applies log levels from settings to log system.
+ * @param settings settings to apply
+ */
+void configure_logger_from_settings(settings_t *settings);
 
 #endif //XPRC_SETTINGS_H

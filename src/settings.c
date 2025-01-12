@@ -21,6 +21,8 @@ static const settings_t default_settings = {
         .password = NULL, // must be auto-generated
         .auto_startup = true,
         .auto_regen_password = true,
+        .log_level_console = SETTINGS_DEFAULT_LOG_LEVEL_CONSOLE,
+        .log_level_xplane = SETTINGS_DEFAULT_LOG_LEVEL_XPLANE,
         .network_interface = XPRC_DEFAULT_NETWORK_INTERFACE,
         .network_port = XPRC_DEFAULT_NETWORK_PORT,
         .network_enable_ipv6 = XPRC_DEFAULT_NETWORK_ENABLE_IPV6
@@ -55,6 +57,18 @@ static const settings_field_t settings_fields[] = {
         .key = "auto_regen_password",
         .type = SETTINGS_FIELD_TYPE_BOOLEAN,
         .offset = offsetof(settings_t, auto_regen_password)
+    },
+
+    {
+        .key = "log_level_console",
+        .type = SETTINGS_FIELD_TYPE_INTEGER,
+        .offset = offsetof(settings_t, log_level_console)
+    },
+
+    {
+        .key = "log_level_xplane",
+        .type = SETTINGS_FIELD_TYPE_INTEGER,
+        .offset = offsetof(settings_t, log_level_xplane)
     },
 
     {
@@ -371,6 +385,9 @@ error_t copy_settings(settings_t *dest, settings_t *src, bool copy_password) {
     dest->auto_regen_password = src->auto_regen_password;
     dest->auto_startup = src->auto_startup;
 
+    dest->log_level_xplane = src->log_level_xplane;
+    dest->log_level_console = src->log_level_console;
+
     return ERROR_NONE;
 }
 
@@ -507,12 +524,66 @@ error_t save_password(settings_t *settings, char *filepath) {
     return write_file(settings->password, strlen(settings->password), filepath);
 }
 
+static bool validate_log_level(int settings_log_level) {
+    switch (settings_log_level) {
+        case SETTINGS_LOG_LEVEL_ERROR:
+        case SETTINGS_LOG_LEVEL_WARN:
+        case SETTINGS_LOG_LEVEL_INFO:
+        case SETTINGS_LOG_LEVEL_DEBUG:
+        case SETTINGS_LOG_LEVEL_TRACE:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
+static xprc_log_level_t settings_log_level_to_system(int settings_log_level) {
+    switch (settings_log_level) {
+        case SETTINGS_LOG_LEVEL_ERROR:
+            return RCLOG_LEVEL_ERROR;
+
+        case SETTINGS_LOG_LEVEL_WARN:
+            return RCLOG_LEVEL_WARN;
+
+        case SETTINGS_LOG_LEVEL_INFO:
+            return RCLOG_LEVEL_INFO;
+
+        case SETTINGS_LOG_LEVEL_DEBUG:
+            return RCLOG_LEVEL_DEBUG;
+
+        case SETTINGS_LOG_LEVEL_TRACE:
+            return RCLOG_LEVEL_TRACE;
+
+        default:
+            RCLOG_WARN("settings_log_level_to_system: unhandled settings log level %d", settings_log_level);
+            return RCLOG_COMPILED_MIN_LOG_LEVEL;
+    }
+}
+
+void configure_logger_from_settings(settings_t *settings) {
+    if (!settings) {
+        return;
+    }
+
+    xprc_set_min_log_level_console(settings_log_level_to_system(settings->log_level_console));
+    xprc_set_min_log_level_xplane(settings_log_level_to_system(settings->log_level_xplane));
+}
+
 bool validate_settings(settings_t *settings, bool check_password) {
     if (!settings) {
         return false;
     }
 
     if (check_password && !validate_password(settings->password)) {
+        return false;
+    }
+
+    if (!validate_log_level(settings->log_level_console)) {
+        return false;
+    }
+
+    if (!validate_log_level(settings->log_level_xplane)) {
         return false;
     }
 
@@ -526,21 +597,33 @@ bool validate_settings(settings_t *settings, bool check_password) {
 }
 
 bool constrain_settings(settings_t *settings) {
+    bool changed = false;
+
     if (!settings) {
         return false;
     }
 
     if (settings->network_port < NETWORK_MINIMUM_PORT) {
         settings->network_port = NETWORK_MINIMUM_PORT;
-        return true;
+        changed = true;
     }
 
     if (settings->network_port > NETWORK_MAXIMUM_PORT) {
         settings->network_port = NETWORK_MAXIMUM_PORT;
-        return true;
+        changed = true;
     }
 
-    return false;
+    if (!validate_log_level(settings->log_level_console)) {
+        settings->log_level_console = SETTINGS_DEFAULT_LOG_LEVEL_CONSOLE;
+        changed = true;
+    }
+
+    if (!validate_log_level(settings->log_level_xplane)) {
+        settings->log_level_xplane = SETTINGS_DEFAULT_LOG_LEVEL_XPLANE;
+        changed = true;
+    }
+
+    return changed;
 }
 
 error_t reset_network_settings(settings_t *settings) {

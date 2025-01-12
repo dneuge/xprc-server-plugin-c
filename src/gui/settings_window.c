@@ -165,6 +165,9 @@ static void apply_settings(settings_window_t *settings_window) {
         goto end;
     }
 
+    RCLOG_DEBUG("[settings window] reconfiguring logger");
+    configure_logger_from_settings(settings_window->settings_manager->settings);
+
     RCLOG_DEBUG("[settings window] persist settings from manager");
     err = persist_settings_from_manager(settings_window->settings_manager);
     if (err != ERROR_NONE) {
@@ -217,6 +220,66 @@ static const char* interface_option_label(char *option) {
     } else {
         return option;
     }
+}
+
+static int settings_log_levels[] = {
+    SETTINGS_LOG_LEVEL_ERROR,
+    SETTINGS_LOG_LEVEL_WARN,
+    SETTINGS_LOG_LEVEL_INFO,
+    SETTINGS_LOG_LEVEL_DEBUG,
+    SETTINGS_LOG_LEVEL_TRACE,
+    -1 // terminate array
+};
+
+static const char* settings_log_level_label(int settings_log_level) {
+    switch (settings_log_level) {
+        case SETTINGS_LOG_LEVEL_ERROR:
+            return "ERROR";
+
+        case SETTINGS_LOG_LEVEL_WARN:
+            return "WARN";
+
+        case SETTINGS_LOG_LEVEL_INFO:
+            return "INFO";
+
+        case SETTINGS_LOG_LEVEL_DEBUG:
+            return "DEBUG";
+
+        case SETTINGS_LOG_LEVEL_TRACE:
+            return "TRACE";
+
+        default:
+            return "UNKNOWN";
+    }
+}
+
+static bool update_view_log_level(const char *caption, const char *input_label, float offset_from_start_x, int *settings_log_level_ref) {
+    bool selection_changed = false;
+
+    igText(caption);
+    igSameLine(offset_from_start_x, 0.0f);
+    igSetNextItemWidth(80.0f);
+    if (igBeginCombo(input_label, settings_log_level_label(*settings_log_level_ref), 0)) {
+        // drop-down is open
+        for (int *item=settings_log_levels; *item>=0; item++) {
+            int item_settings_log_level = *item;
+            bool is_selected = (item_settings_log_level == *settings_log_level_ref);
+            if (igSelectable_Bool(settings_log_level_label(item_settings_log_level), is_selected, 0, IMGUI_ZERO_SIZE)) {
+                if (!is_selected) {
+                    selection_changed = true;
+                    *settings_log_level_ref = item_settings_log_level;
+                }
+            }
+
+            if (is_selected) {
+                igSetItemDefaultFocus();
+            }
+        }
+
+        igEndCombo();
+    }
+
+    return selection_changed;
 }
 
 static void update_view(settings_window_t *settings_window) {
@@ -312,6 +375,16 @@ static void update_view(settings_window_t *settings_window) {
         igText(" ");
 
         settings_window->btn_network_reset_state = igButton("Reset network options", IMGUI_ZERO_SIZE);
+
+        igIndent(-indent_section);
+    }
+
+    if (igCollapsingHeader_TreeNodeFlags("Advanced Settings", ImGuiTreeNodeFlags_CollapsingHeader)) {
+        igIndent(indent_section);
+
+        float log_level_offset_x = 200.0f + indent_section + input_offset_x;
+        settings_window->dirty |= update_view_log_level("Minimum console log level:", "##loglevelconsole", log_level_offset_x, &settings->log_level_console);
+        settings_window->dirty |= update_view_log_level("Minimum X-Plane log level:", "##loglevelxplane", log_level_offset_x, &settings->log_level_xplane);
 
         igIndent(-indent_section);
     }
