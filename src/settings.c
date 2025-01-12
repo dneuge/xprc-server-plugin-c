@@ -420,6 +420,10 @@ error_t load_settings_without_password(settings_t *dest, char *filepath) {
 
     RCLOG_DEBUG("[settings] storing loaded settings");
     err = copy_settings(dest, settings, SETTINGS_KEEP_PASSWORD);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("[settings] failed to copy loaded settings to destination: %d", err);
+        out_err = err;
+    }
 
 end:
     destroy_settings(settings);
