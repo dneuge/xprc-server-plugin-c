@@ -97,6 +97,17 @@ static void handle_termination_request(session_t *session, request_t *request) {
 }    
 
 static void handle_request(session_t *session, request_t *request) {
+    // Practically all invocations below require locks to both session and task schedule.
+    // If we only lock the session here and let the commands lock the schedule, we get a deadlock with flight loop and
+    // post-processing calls which lock the schedule before invoked command callbacks lock the session.
+    // Locking the schedule here already, before gaining a session lock, ensures that we nest the locks in the
+    // same order which solves that deadlock without overhead or more complex workarounds.
+    if (lock_schedule(session->server->config.task_schedule) != ERROR_NONE) {
+        RCLOG_WARN("failed to lock task schedule for request handling; closing connection");
+        close_network_connection(session->connection);
+        return;
+    }
+
     if (!lock_session(session)) {
         RCLOG_WARN("failed to lock session for request; closing connection");
         close_network_connection(session->connection);
@@ -110,6 +121,7 @@ static void handle_request(session_t *session, request_t *request) {
     }
 
     unlock_session(session);
+    unlock_schedule(session->server->config.task_schedule);
 }
 
 static error_t new_connection(network_connection_t *connection, void **handler_reference, void *constructor_reference) {
