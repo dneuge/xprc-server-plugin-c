@@ -6,15 +6,6 @@
 #include "logger.h"
 #include "utils.h"
 
-/**
- * Maximum time (in milliseconds) to wait for gaining a schedule lock to run post-processing tasks.
- * The post-processing thread interlocks with X-Plane's main thread, so an excessive amount of time wasted on trying to
- * acquire a lock may end up inflicting FPS issues. While this may be annoying for users, it ends up being "dangerous"
- * in regard to the flight model if we drop close to 20 FPS. The maximum amount of total time per cycle needs to aim
- * at sustaining a frame rate of at least 25 or 30 FPS in worst case.
- */
-#define POST_PROCESSING_LOCK_TIMEOUT_MILLIS (30)
-
 error_t create_task_schedule(task_schedule_t **task_schedule) {
     *task_schedule = malloc(sizeof(task_schedule_t));
     if (!*task_schedule) {
@@ -181,13 +172,7 @@ void unlock_schedule(task_schedule_t *task_schedule) {
 }
 
 static void run_tasks_post_processing(task_schedule_t *task_schedule) {
-    error_t err = lock_schedule_try(task_schedule);
-    if (err == ERROR_MUTEX_FAILED) {
-        RCLOG_DEBUG("run_tasks_post_processing: cannot lock immediately, locking with timeout", err);
-        thrd_yield();
-        err = lock_schedule_timeout(task_schedule, POST_PROCESSING_LOCK_TIMEOUT_MILLIS);
-    }
-
+    error_t err = lock_schedule(task_schedule);
     if (err != ERROR_NONE) {
         RCLOG_WARN("run_tasks_post_processing: failed to lock task schedule; skipping: %d", err);
         return;
