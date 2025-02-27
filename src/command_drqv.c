@@ -150,7 +150,7 @@ static bool drqv_initialize(command_drqv_t *command) {
 
         XPLMDataTypeID available_types = XPLMGetDataRefTypes(dataref->xp_ref);
         if (!(available_types & dataref->type)) {
-            RCLOG_DEBUG("[DRQV] wanted type %d, got types %d", dataref->type, available_types);
+            RCLOG_DEBUG("[DRQV] wanted type %d, got types %d for dataref %s", dataref->type, available_types, dataref->name);
             error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "type is not available from dataref");
             command->failed = true;
             return false;
