@@ -171,8 +171,8 @@ elif [[ "${BUILD_TARGET}" == "macos" ]]; then
 else
     die "Unknown target system: ${BUILD_TARGET}"
 fi
-"${CPP_COMPILER}" ${CPP_COMPILER_ARGS} -c -O2 -fPIC ${MULTIARCH_FLAGS} -I../_build/ -I../XPSDK/CHeaders/XPLM -DXPLM200=1 -DXPLM210=1 -DXPLM300=1 -DXPLM301=1 -DXPLM303=1 -DXPLM400=${XPLM400} -DAPL=${TARGET_OSX} -DIBM=${TARGET_WIN} -DLIN=${TARGET_LIN} ImgFontAtlas.cpp || die "Failed to compile ImgFontAtlas.cpp"
-"${CPP_COMPILER}" ${CPP_COMPILER_ARGS} -c -O2 -fPIC ${MULTIARCH_FLAGS} -I../_build/ -I../XPSDK/CHeaders/XPLM -DXPLM200=1 -DXPLM210=1 -DXPLM300=1 -DXPLM301=1 -DXPLM303=1 -DXPLM400=${XPLM400} -DAPL=${TARGET_OSX} -DIBM=${TARGET_WIN} -DLIN=${TARGET_LIN} ImgWindow.cpp || die "Failed to compile ImgWindow.cpp"
+"${CPP_COMPILER}" ${CPP_COMPILER_ARGS} -c -O2 -fPIC ${MULTIARCH_FLAGS} -I../_build/ -I../XPSDK/CHeaders/XPLM -DXPLM200=1 -DXPLM210=1 -DXPLM300=1 -DXPLM301=1 -DXPLM303=1 -DXPLM400=${XPLM400} -DAPL=${TARGET_OSX} -DIBM=${TARGET_WIN} -DLIN=${TARGET_LIN} -DGLEW_NO_GLU=1 ImgFontAtlas.cpp || die "Failed to compile ImgFontAtlas.cpp"
+"${CPP_COMPILER}" ${CPP_COMPILER_ARGS} -c -O2 -fPIC ${MULTIARCH_FLAGS} -I../_build/ -I../XPSDK/CHeaders/XPLM -DXPLM200=1 -DXPLM210=1 -DXPLM300=1 -DXPLM301=1 -DXPLM303=1 -DXPLM400=${XPLM400} -DAPL=${TARGET_OSX} -DIBM=${TARGET_WIN} -DLIN=${TARGET_LIN} -DGLEW_NO_GLU=1 ImgWindow.cpp || die "Failed to compile ImgWindow.cpp"
 echo
 echo "==== Installing ===="
 cp -a "${script_dir}"/lib/xsb_public_sk/{ImgWindow,ImgFontAtlas}.{h,o} "${script_dir}/lib/_build/" || die "xsb_public_sk copy failed"
