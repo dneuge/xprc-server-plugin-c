@@ -1,0 +1,19 @@
+do not link directly against X11
+--- a/glew/config/Makefile.linux	2020-03-15 12:59:54.000000000 +0100
++++ b/glew/config/Makefile.linux	2025-08-30 17:17:45.115621134 +0200
+@@ -12,14 +12,7 @@
+ ifeq (e2k,${M_ARCH})
+   ARCH64 = true
+ endif
+-ifeq (${ARCH64},true)
+-  LDFLAGS.EXTRA = -L/usr/X11R6/lib64 -L/usr/lib64
+-  LIBDIR = $(GLEW_DEST)/lib64
+-else
+-  LDFLAGS.EXTRA = -L/usr/X11R6/lib -L/usr/lib
+-  LIBDIR = $(GLEW_DEST)/lib
+-endif
+-LDFLAGS.GL = -lGL -lX11
++LDFLAGS.GL = -lGL
+ LDFLAGS.STATIC = -Wl,-Bstatic
+ LDFLAGS.DYNAMIC = -Wl,-Bdynamic
+ NAME = GLEW
