@@ -128,14 +128,6 @@ IF(UNIX)
         "${LIB_BUILD}/libGLEW.a"
     )
 ELSEIF(WIN32)
-    # FreeGLUT may not actually be required?
-    # no reference to GLEW?!
-    #SET(OPENGL_STATIC_LIBRARIES
-    #    #"${LIB_BUILD}/libfreeglut_static.a"
-    #    "${LIB_BUILD}/libGLEW.a"
-    #)
-    
-    # FreeGLUT also links dynamically against: winmm gdi32
     SET(OPENGL_LIBRARIES opengl32)
 ENDIF()
 

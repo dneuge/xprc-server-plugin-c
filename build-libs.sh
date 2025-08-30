@@ -74,54 +74,6 @@ EOF
 fi
 echo
 
-if [[ "${BUILD_TARGET}" == "windows" ]]; then
-    echo "===== Skipping Mesa GLU (not needed for Windows cross-compilation) ====="
-elif [[ "${BUILD_TARGET}" == "macos" ]]; then
-    echo "===== Skipping Mesa GLU (not needed for MacOS) ====="
-else
-    echo "===== Building Mesa GLU ====="
-    cd "${script_dir}/lib/mesa-glu"
-    [[ -d build ]] && (rm -Rf build || die "Mesa GLU clean failed")
-    mkdir build || die "Mesa GLU mkdir failed"
-    cd build
-    meson setup -Dgl_provider=glvnd .. || die "Mesa GLU Meson setup failed"
-    meson compile || die "Mesa GLU Meson compile failed"
-    old_ifs="${IFS}"
-    IFS=$'\n'
-    for file in $(find src/ -name \*.${BUILD_TARGET_DYNLIB_EXT}\* -and -not -name \*.p); do
-        cp -a "${file}" "${script_dir}/lib/_build/" || die "Mesa GLU copy failed (1: ${file})"
-    done
-    IFS="${old_ifs}"
-    cp -a src/libGLU.a "${script_dir}/lib/_build/" || die "Mesa GLU copy failed (2)"
-    cp ../include/GL/* "${script_dir}/lib/_build/GL/" || die "Mesa GLU copy failed (3)"
-fi
-echo
-    
-if [[ "${BUILD_TARGET}" != "windows" ]]; then
-    echo "===== Skipping FreeGLUT (only needed for Windows cross-compilation) ====="
-else
-    echo "===== Building FreeGLUT ====="
-    cd "${script_dir}/lib/freeglut"
-    [[ -d build ]] && (rm -Rf build || die "FreeGLUT clean failed")
-    mkdir build || die "FreeGLUT mkdir failed"
-    cd build
-    cmake \
-        -DGNU_HOST=x86_64-w64-mingw32 \
-        -DCMAKE_TOOLCHAIN_FILE="${script_dir}/lib/freeglut/mingw_cross_toolchain.cmake" \
-        -DOpenGL_GL_PREFERENCE=GLVND \
-        -DFREEGLUT_BUILD_DEMOS=Off \
-        -DFREEGLUT_BUILD_SHARED_LIBS=Off \
-        -DFREEGLUT_BUILD_STATIC_LIBS=On \
-        -DFREEGLUT_GLES=Off \
-        -DFREEGLUT_WAYLAND=Off \
-        ..
-    make -j${num_jobs} || die "FreeGLUT make failed"
-    mkdir -p "${script_dir}/lib/_build/GL" || die "Failed to create GL target directory"
-    cp -a lib/lib*glut*.a "${script_dir}/lib/_build/" || die "FreeGLUT copy failed (1)"
-    cp ../include/GL/* "${script_dir}/lib/_build/GL/" || die "FreeGLUT GLU copy failed (2)"
-fi
-echo
-
 echo "===== Building GLEW ====="
 echo "==== Cleaning main build ===="
 cd "${script_dir}/lib/glew"
