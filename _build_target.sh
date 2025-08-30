@@ -56,14 +56,19 @@ elif [[ "${XPLANE_TARGET}" =~ $re_xp12_version ]]; then
 	XPLANE_TARGET_MAJOR=12
 fi
 
-BUILD_TARGET_DYNLIB_EXT="so"
-if [[ "${BUILD_TARGET}" == "windows" ]]; then
-	BUILD_TARGET_DYNLIB_EXT="dll"
+if [[ "${BUILD_TARGET}" == "linux" ]]; then
+	CMAKE_TOOLCHAIN_FILE="${root_dir}/TC-generic_linux-linux-x86_64-clang.cmake"
+elif [[ "${BUILD_TARGET}" == "windows" ]]; then
 	if [[ "${HOST_OS_NAME} ${HOST_OS_VERSION}" == "Ubuntu jammy" ]]; then
 		CMAKE_TOOLCHAIN_FILE="${root_dir}/TC-ubuntu22.04-windows-x86_64-mingw.cmake"
 	else
 		die "Missing CMake toolchain for ${HOST_OS_NAME} ${HOST_OS_VERSION} (target: ${BUILD_TARGET})"
 	fi
+fi
+
+BUILD_TARGET_DYNLIB_EXT="so"
+if [[ "${BUILD_TARGET}" == "windows" ]]; then
+	BUILD_TARGET_DYNLIB_EXT="dll"
 elif [[ "${BUILD_TARGET}" != "linux" ]] && [[ "${BUILD_TARGET}" != "macos" ]]; then
 	die "Unknown build target: ${BUILD_TARGET}"
 fi

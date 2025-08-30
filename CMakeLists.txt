@@ -22,6 +22,15 @@ IF(CMAKE_VERSION VERSION_LESS "3.25")
     ENDIF()
 ENDIF()
 
+MESSAGE(STATUS "Detected C compiler: ${CMAKE_C_COMPILER_ID}")
+MESSAGE(STATUS "Detected C++ compiler: ${CMAKE_CXX_COMPILER_ID}")
+
+IF(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    MESSAGE(WARNING "It seems that you are trying to build using GCC which would potentially result in badly licensed binaries spreading GPL3 over network connections and voids integrated license information. Consider using LLVM/Clang instead.")
+ELSEIF(NOT (CMAKE_C_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
+    MESSAGE(WARNING "Clang was not detected which voids integrated license information. Consider using LLVM/CLang instead.")
+ENDIF()
+
 ADD_DEFINITIONS(-DRCLOG_COMPILED_MIN_LOG_LEVEL=RCLOG_LEVEL_TRACE)
 
 SET(COMMON_SOURCES
