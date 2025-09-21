@@ -25,11 +25,28 @@ ENDIF()
 MESSAGE(STATUS "Detected C compiler: ${CMAKE_C_COMPILER_ID}")
 MESSAGE(STATUS "Detected C++ compiler: ${CMAKE_CXX_COMPILER_ID}")
 
-IF(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    MESSAGE(WARNING "It seems that you are trying to build using GCC which would potentially result in badly licensed binaries spreading GPL3 over network connections and voids integrated license information. Consider using LLVM/Clang instead.")
-ELSEIF(NOT (CMAKE_C_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
-    MESSAGE(WARNING "Clang was not detected which voids integrated license information. Consider using LLVM/CLang instead.")
+IF(CMAKE_GENERATOR MATCHES "Visual Studio")
+    MESSAGE(STATUS "Detected Visual Studio")
+    SET(MSVC TRUE)
+
+    # VS should only ever be instructed to do release builds:
+    #   1. debug builds may link against versions of standard libraries which
+    #      cannot be obtained without Visual Studio and do not allow redistribution
+    #   2. debug builds define _ITERATOR_DEBUG_LEVEL to values incompatible with
+    #      libraries to be linked
+    SET(CMAKE_BUILD_TYPE Release)
 ENDIF()
+
+IF(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    MESSAGE(FATAL_ERROR "It seems that you are trying to build using GCC which would potentially result in badly licensed binaries spreading GPL3 over network connections and voids integrated license information. Use LLVM/Clang instead.")
+    RETURN()
+ELSEIF(NOT (CMAKE_C_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
+    MESSAGE(FATAL_ERROR "Clang was not detected which voids integrated license information. Use LLVM/CLang instead.")
+    RETURN()
+ENDIF()
+
+MESSAGE(STATUS "Build mode: ${CMAKE_BUILD_TYPE}")
+
 
 ADD_DEFINITIONS(-DRCLOG_COMPILED_MIN_LOG_LEVEL=RCLOG_LEVEL_TRACE)
 
@@ -115,20 +132,40 @@ IF(UNIX)
     ENDIF()
 ENDIF()
 
+# check if we have ssize_t
+SET(SSIZET_TEST_SOURCE "\n
+    #include <sys/types.h>\n
+    int main() {\n
+        ssize_t test = 0;\n
+        return 0;
+    }\n
+")
+CHECK_C_SOURCE_COMPILES("${SSIZET_TEST_SOURCE}" HAVE_SSIZE_T FAIL_REGEX "implicit declaration")
+IF(HAVE_SSIZE_T)
+    ADD_DEFINITIONS(-DHAVE_SSIZE_T)
+    MESSAGE(STATUS "added definition HAVE_SSIZE_T")
+ENDIF()
+
+
 SET(CIMGUI_LIB
-    "${LIB_BUILD}/cimgui.a"
+    "${LIB_BUILD}/cimgui${CMAKE_STATIC_LIBRARY_SUFFIX}"
 )
 
 SET(IMGWINDOW_LIB
-    "${LIB_BUILD}/ImgWindow.o"
-    "${LIB_BUILD}/ImgFontAtlas.o"
+    "${LIB_BUILD}/ImgWindow${CMAKE_C_OUTPUT_EXTENSION}"
+    "${LIB_BUILD}/ImgFontAtlas${CMAKE_C_OUTPUT_EXTENSION}"
 )
+
+SET(GLEW_LIB "${LIB_BUILD}/libGLEW${CMAKE_STATIC_LIBRARY_SUFFIX}")
+IF(MSVC)
+    SET(GLEW_LIB "${LIB_BUILD}/glew32s${CMAKE_STATIC_LIBRARY_SUFFIX}")
+ENDIF()
 
 # OpenGL is partially abstracted/decoupled through GLEW
 # platforms other than Linux still need to be dynamically linked against system libraries for OpenGL
 SET(OPENGL_LIBRARIES "")
 SET(OPENGL_STATIC_LIBRARIES
-    "${LIB_BUILD}/libGLEW.a"
+    "${GLEW_LIB}"
 )
 ADD_DEFINITIONS(-DGLEW_NO_GLU)
 IF(APPLE)
@@ -140,9 +177,10 @@ ENDIF()
 SET(XPSDK_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/lib/XPSDK")
 SET(XPSDK_INCLUDE "${XPSDK_ROOT}/CHeaders" CACHE STRING PATH)
 
-IF(LINUX)
+IF(LINUX OR MSVC)
     ADD_LIBRARY(xprc SHARED ${XPRC_SOURCES})
 ELSEIF(WIN32)
+    # cross-compilation with MinGW only, MSVC needs "SHARED" keyword
     ADD_LIBRARY(xprc MODULE ${XPRC_SOURCES})
 ELSEIF(APPLE)
     ADD_EXECUTABLE(xprc ${XPRC_SOURCES})
@@ -194,9 +232,14 @@ ENDIF()
 SET_PROPERTY(TARGET xplm APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${XPSDK_INCLUDE}/XPLM" "${XPSDK_INCLUDE}/Wrappers")
 SET_PROPERTY(TARGET xpwidgets APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${XPSDK_INCLUDE}/XPLM" "${XPSDK_INCLUDE}/Widgets" "${XPSDK_INCLUDE}/Wrappers")
 
+SET(STANDARD_LIBRARIES "m")
+IF(MSVC)
+    SET(STANDARD_LIBRARIES "")
+ENDIF()
+
 TARGET_COMPILE_DEFINITIONS(xprc PUBLIC -DXPLM200=1 -DXPLM210=1 -DXPLM300=1 -DXPLM301=1 -DXPLM302=1 -DXPLM303=1 -DHAVE_XPLM)
 TARGET_INCLUDE_DIRECTORIES(xprc PUBLIC "${XPSDK_INCLUDE}/XPLM" "${XPSDK_INCLUDE}/Widgets" "${XPSDK_INCLUDE}/Wrappers" "${LIB_BUILD}")
-TARGET_LINK_LIBRARIES(xprc PUBLIC ${IMGWINDOW_LIB} ${CIMGUI_LIB} ${XPLM_LIBRARY} ${XPWIDGETS_LIBRARY} ${LINK_C11_COMPAT_STATIC} ${OPENGL_STATIC_LIBRARIES} m ${OPENGL_LIBRARIES} ${PTHREAD_LIB})
+TARGET_LINK_LIBRARIES(xprc PUBLIC ${IMGWINDOW_LIB} ${CIMGUI_LIB} ${XPLM_LIBRARY} ${XPWIDGETS_LIBRARY} ${LINK_C11_COMPAT_STATIC} ${OPENGL_STATIC_LIBRARIES} ${STANDARD_LIBRARIES} ${OPENGL_LIBRARIES} ${PTHREAD_LIB})
 
 IF(LINUX)
     TARGET_LINK_LIBRARIES(xprc PUBLIC c)
@@ -245,7 +288,7 @@ IF(BUILD_TESTS)
 
     ADD_EXECUTABLE(test-hashmap ${CMAKE_CURRENT_SOURCE_DIR}/src/test-hashmap.c ${COMMON_SOURCES})
     TARGET_INCLUDE_DIRECTORIES(test-hashmap PUBLIC "${LIB_BUILD}")
-    TARGET_LINK_LIBRARIES(test-hashmap PUBLIC ${LINK_C11_COMPAT_STATIC} m ${OS_LIBRARIES})
+    TARGET_LINK_LIBRARIES(test-hashmap PUBLIC ${LINK_C11_COMPAT_STATIC} ${STANDARD_LIBRARIES} ${OS_LIBRARIES})
 
     ADD_EXECUTABLE(test-prealloc-list ${CMAKE_CURRENT_SOURCE_DIR}/src/test-prealloc-list.c ${COMMON_SOURCES})
     TARGET_INCLUDE_DIRECTORIES(test-prealloc-list PUBLIC "${LIB_BUILD}")

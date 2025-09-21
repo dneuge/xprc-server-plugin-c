@@ -37,6 +37,22 @@ export HOST_OS_ARCH
 export HOST_OS_NAME
 export HOST_OS_VERSION
 
+BUILD_SYSTEM="std"
+vs_product_version="unknown"
+if [[ "$HOST_OS_TYPE" == "Windows" ]]; then
+	vswhere="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
+	if [[ ! -e "$vswhere" ]]; then
+		echo "Visual Studio does not appear to be installed, assuming standard build system"
+	else
+		vs_product_id=$("$vswhere" -latest -property productId)
+		vs_product_version=$("$vswhere" -latest -property catalog_productLineVersion)
+
+		echo "Found Visual Studio: ${vs_product_id} ${vs_product_version}"
+		BUILD_SYSTEM="vs"
+	fi
+fi
+export BUILD_SYSTEM
+
 BUILD_TARGET="$(tr '[:upper:]' '[:lower:]' <<<$HOST_OS_TYPE)"
 if [[ "$#" -ge 1 ]]; then
 	BUILD_TARGET="$1"
@@ -95,16 +111,21 @@ fi
 export XPLANE_PLATFORM_ID
 
 CPP_COMPILER_ARGS=""
-if [[ "${BUILD_TARGET}" == "linux" ]]; then
-	CPP_COMPILER="g++"
-elif [[ "${BUILD_TARGET}" == "windows" ]]; then
-	CPP_COMPILER="x86_64-w64-mingw32-g++"
+CPP_COMPILER="clang++"
+if [[ "${BUILD_SYSTEM}" == "vs" ]]; then
+	CPP_COMPILER="/c/Program Files (x86)/Microsoft Visual Studio/${vs_product_version}/BuildTools/VC/Tools/Llvm/x64/bin/clang-cl.exe"
+
+	# For options see:
+	#   https://github.com/MicrosoftDocs/cpp-docs/blob/main/docs/build/reference/md-mt-ld-use-run-time-library.md
+	#
+	# /MD selects a runtime library suitable for creating DLLs which is necessary because by default MT_StaticRelease
+	# will be selected which is incompatible to linking the main plugin. This can be checked via
+	#   "c:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.42.34433\bin\Hostx86\x64\dumpbin.exe" /DIRECTIVES ...
+	# which must not list
+	#   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+	CPP_COMPILER_ARGS="//MD"
 elif [[ "${BUILD_TARGET}" == "macos" ]]; then
-	#CPP_COMPILER="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++"
-	CPP_COMPILER="clang++"
 	CPP_COMPILER_ARGS="-std=c++11"
-else
-	die "C++ compiler variable not configured for ${BUILD_TARGET}"
 fi
 export CPP_COMPILER
 export CPP_COMPILER_ARGS

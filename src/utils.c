@@ -5,6 +5,13 @@
 
 #include "utils.h"
 
+#ifdef _MSC_VER
+// MSVC linker fails to find inline methods, disable modifier
+#define MAY_INLINE
+#else
+#define MAY_INLINE inline
+#endif
+
 char* dynamic_sprintf(char *format, ...) {
     va_list args;
     va_start(args, format);
@@ -136,7 +143,7 @@ void* zmalloc(size_t size) {
     return addr;
 }
 
-inline void* zalloc(size_t size) {
+MAY_INLINE void* zalloc(size_t size) {
     // FIXME: migrate all calls to zmalloc, then delete
     return zmalloc(size);
 }

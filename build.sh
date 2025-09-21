@@ -30,7 +30,20 @@ mkdir -p "${release_dir}"
 cd "${build_dir}"
 
 cmake -D XPLANE_TARGET="${XPLANE_TARGET}" .. || die "CMake failed"
-make -j$num_jobs || die "make failed"
+if [[ "${BUILD_SYSTEM}" == "vs" ]]; then
+    MSYS_NO_PATHCONV=1 msbuild.exe xprc.vcxproj /t:Build /p:Configuration=Release || die "msbuild xprc failed"
+    MSYS_NO_PATHCONV=1 msbuild.exe test-hashmap.vcxproj /t:Build /p:Configuration=Release || die "msbuild test-hashmap failed"
+    MSYS_NO_PATHCONV=1 msbuild.exe test-list.vcxproj /t:Build /p:Configuration=Release || die "msbuild test-list failed"
+    MSYS_NO_PATHCONV=1 msbuild.exe test-prealloc-list.vcxproj /t:Build /p:Configuration=Release || die "msbuild test-prealloc-list failed"
+    MSYS_NO_PATHCONV=1 msbuild.exe test-network-addresses.vcxproj /t:Build /p:Configuration=Release || die "msbuild test-network-addresses failed"
+else
+    make -j$num_jobs || die "make failed"
+fi
+
+## MSVC: change directory
+if [[ "$BUILD_SYSTEM" == "vs" ]]; then
+    cd Release
+fi
 
 ## COPY
 mkdir -p "${script_dir}/release/xprc/${XPLANE_PLATFORM_ID}" || die "Failed to create release directory ${XPLANE_PLATFORM_ID}"

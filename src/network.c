@@ -29,6 +29,7 @@
 #include <string.h>
 
 #include "threads_compat.h"
+#include "types_compat.h"
 
 #include "logger.h"
 #include "network.h"
@@ -954,7 +955,7 @@ bool destroy_network_server(network_server_t *server) {
 
     server->shutdown = true;
     shutdown(server->ssd, SHUT_RD);
-    close(server->ssd); // this should unblock the thread
+    close_socket(server->ssd); // this should unblock the thread
     if (thrd_join(server->server_thread, &res) != thrd_success) {
         RCLOG_ERROR("failed to join server thread");
         return false; // we cannot continue destruction in this case

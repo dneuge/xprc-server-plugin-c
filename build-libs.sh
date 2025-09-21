@@ -39,6 +39,9 @@ export LC_ALL="C"
 # compile for Windows - other systems/environments should hopefully support C11 by now...
 if [[ "${BUILD_TARGET}" != "windows" ]]; then
     echo "==== Skipping Mesa (only C11 compatibility) ===="
+elif [[ "${BUILD_SYSTEM}" == "vs" ]]; then
+    echo "==== Skipping Mesa (only C11 compatibility) ===="
+    echo "Reason: Build is being performed with Visual Studio which actually supports C11."
 else
     echo "==== Building Mesa (only C11 compatibility) ===="
     cd_real_path "${script_dir}/lib/mesa/_c11_only"
@@ -99,7 +102,10 @@ cd "${script_dir}/lib/glew"
 echo
 
 echo "==== Building main directory ===="
-if [[ "${BUILD_TARGET}" != "macos" ]]; then
+if [[ "${BUILD_SYSTEM}" == "vs" ]]; then
+    MSYS_NO_PATHCONV=1 msbuild.exe build\\vc15\\glew_shared.vcxproj /t:Build /p:Configuration=Release || die "Failed to make GLEW (msbuild dynamic)"
+    MSYS_NO_PATHCONV=1 msbuild.exe build\\vc15\\glew_static.vcxproj /t:Build /p:Configuration=Release || die "Failed to make GLEW (msbuild static)"
+elif [[ "${BUILD_TARGET}" != "macos" ]]; then
     make -j${num_jobs} glew.lib || die "Failed to make GLEW (regular call)"
 else
     # GLEW's Makefile does not handle multi-architecture binaries, so we cannot use ar and strip and instead need to do some "post-processing" on our own
@@ -120,7 +126,12 @@ echo
 echo "==== Installing ===="
 mkdir -p "${script_dir}/lib/_build/GL" || die "Failed to create GL target directory"
 cp "${script_dir}/lib/glew/include/GL/"* "${script_dir}/lib/_build/GL/" || die "Failed to copy GLEW includes"
-cp "${script_dir}/lib/glew/lib/"* "${script_dir}/lib/_build/" || die "Failed to copy GLEW lib"
+if [[ "${BUILD_SYSTEM}" == "vs" ]]; then
+    mkdir -p "${script_dir}/lib/_build/Release/Win32"
+    cp "${script_dir}/lib/glew/lib/Release/Win32/"* "${script_dir}/lib/_build/" || die "Failed to copy GLEW lib (VS)"
+else
+    cp "${script_dir}/lib/glew/lib/"* "${script_dir}/lib/_build/" || die "Failed to copy GLEW lib"
+fi
 echo
 
 echo "===== Building (c)imgui ====="
@@ -134,14 +145,28 @@ echo "==== Building cimgui ===="
 [[ -d build ]] && (rm -Rf build || die "cimgui clean failed")
 mkdir build || die "cimgui mkdir failed"
 cd build
+cimgui_build_type="Debug"
+if [[ "${BUILD_SYSTEM}" == "vs" ]]; then
+    # Visual Studio must not be allowed to create debug builds, see main CMakeLists.txt for explanation
+    cimgui_build_type="Release"
+fi
 cmake \
     -D IMGUI_STATIC=yes \
     -D IMGUI_FREETYPE=no \
+    -D CMAKE_BUILD_TYPE=${cimgui_build_type} \
     -D CMAKE_POSITION_INDEPENDENT_CODE=TRUE \
     -D CMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
     ..
-make -j${num_jobs} || die "cimgui make failed"
-cp -a cimgui.a "${script_dir}/lib/_build/" || die "cimgui copy (1) failed"
+if [[ "${BUILD_SYSTEM}" == "vs" ]]; then
+    # ALL_BUILD.vcxproj
+    # ZERO_CHECK.vcxproj
+    MSYS_NO_PATHCONV=1 msbuild.exe cimgui.vcxproj /t:Build /p:Configuration=Release || die "cimgui msbuild failed"
+    ls -alR
+    cp -a Release/cimgui.lib "${script_dir}/lib/_build/" || die "cimgui copy (vs 1) failed"
+else
+    make -j${num_jobs} || die "cimgui make failed"
+    cp -a cimgui.a "${script_dir}/lib/_build/" || die "cimgui copy (std 1) failed"
+fi
 cp -a ../cimgui.h "${script_dir}/lib/_build/" || die "cimgui copy (2) failed"
 echo
 
@@ -175,7 +200,11 @@ fi
 "${CPP_COMPILER}" ${CPP_COMPILER_ARGS} -c -O2 -fPIC ${MULTIARCH_FLAGS} -I../_build/ -I../XPSDK/CHeaders/XPLM -DXPLM200=1 -DXPLM210=1 -DXPLM300=1 -DXPLM301=1 -DXPLM303=1 -DXPLM400=${XPLM400} -DAPL=${TARGET_OSX} -DIBM=${TARGET_WIN} -DLIN=${TARGET_LIN} -DGLEW_NO_GLU ImgWindow.cpp || die "Failed to compile ImgWindow.cpp"
 echo
 echo "==== Installing ===="
-cp -a "${script_dir}"/lib/xsb_public_fork/{ImgWindow,ImgFontAtlas}.{h,o} "${script_dir}/lib/_build/" || die "xsb_public_fork copy failed"
+if [[ "${BUILD_SYSTEM}" == "vs" ]]; then
+    cp -a "${script_dir}"/lib/xsb_public_fork/{ImgWindow,ImgFontAtlas}.{h,obj} "${script_dir}/lib/_build/" || die "xsb_public_fork copy failed (vs)"
+else
+    cp -a "${script_dir}"/lib/xsb_public_fork/{ImgWindow,ImgFontAtlas}.{h,o} "${script_dir}/lib/_build/" || die "xsb_public_fork copy failed (std)"
+fi
 echo
 
 echo Lib build complete.
