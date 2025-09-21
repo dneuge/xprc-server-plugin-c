@@ -106,8 +106,8 @@ elif [[ "${BUILD_TARGET}" == "macos" ]]; then
 else
 	die "C++ compiler variable not configured for ${BUILD_TARGET}"
 fi
-export GCC_CPP_COMPILER
-export GCC_CPP_COMPILER_ARGS
+export CPP_COMPILER
+export CPP_COMPILER_ARGS
 
 if [[ "${HOST_OS_TYPE}" == "MacOS" ]]; then
 	NUM_CPUS=$(sysctl -n hw.ncpu)
