@@ -19,9 +19,18 @@ elif [[ "${HOST_OS_TYPE}" == "Darwin" ]]; then
 	HOST_OS_TYPE="MacOS"
 	HOST_OS_NAME="MacOS"
 	HOST_OS_VERSION="$(sw_vers -productVersion)"
+elif [[ "${HOST_OS_TYPE}" =~ ^MSYS_NT-.* ]]; then
+	HOST_OS_VERSION="${HOST_OS_TYPE/MSYS_/}"
+	HOST_OS_TYPE="Windows"
+	HOST_OS_NAME="Windows"
+elif [[ "${HOST_OS_TYPE}" =~ ^MINGW64_NT-.* ]]; then
+	HOST_OS_VERSION="${HOST_OS_TYPE/MINGW64_/}"
+	HOST_OS_TYPE="Windows"
+	HOST_OS_NAME="Windows"
 fi
 if [[ "${HOST_OS_NAME}" == "" ]]; then
 	HOST_OS_NAME="unknown host system"
+	echo "!!! Unknown host system: HOST_OS_NAME=${HOST_OS_NAME} / HOST_OS_TYPE=${HOST_OS_TYPE}"
 fi
 export HOST_OS_TYPE
 export HOST_OS_ARCH
@@ -111,6 +120,8 @@ if [[ "${HOST_OS_TYPE}" == "MacOS" ]]; then
 	else
 		echo "WARNING: CMake binary not found on PATH and also not in ${cmake_bin_path}"
 	fi
+elif [[ "${HOST_OS_TYPE}" == "Windows" ]]; then
+	NUM_CPUS=$NUMBER_OF_PROCESSORS
 else
 	NUM_CPUS=$(cat /proc/cpuinfo | grep -E 'processor\s*:' | nl | tail -n1 | sed -e 's/\s*\([0-9]\+\)\s.*/\1/')
 fi

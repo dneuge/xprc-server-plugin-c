@@ -40,9 +40,12 @@ cp -a xprc.xpl "${script_dir}/release/xprc/${XPLANE_PLATFORM_ID}/xprc.xpl" || di
 exec_wrapper=""
 ext_executable=""
 if [[ "${BUILD_TARGET}" == "windows" ]]; then
-    exec_wrapper="wine"
     ext_executable=".exe"
-    export WINEDEBUG="-all"
+
+    if [[ "$HOST_OS_TYPE" != "Windows" ]]; then
+        exec_wrapper="wine"
+        export WINEDEBUG="-all"
+    fi
 fi
 ${exec_wrapper} ./test-hashmap${ext_executable} || die "Failed tests for hashmaps"
 ${exec_wrapper} ./test-list${ext_executable} || die "Failed tests for lists"
