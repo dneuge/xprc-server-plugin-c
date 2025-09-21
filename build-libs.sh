@@ -154,7 +154,7 @@ echo
 
 echo "===== Building XSB Public (forked) / ImgWindow ====="
 echo "==== Compiling ===="
-cd "${script_dir}/lib/xsb_public_sk"
+cd "${script_dir}/lib/xsb_public_fork"
 XPLM400=0
 if [[ "${XPLANE_TARGET}" == "12.04" ]]; then
     XPLM400=1
@@ -175,7 +175,7 @@ fi
 "${CPP_COMPILER}" ${CPP_COMPILER_ARGS} -c -O2 -fPIC ${MULTIARCH_FLAGS} -I../_build/ -I../XPSDK/CHeaders/XPLM -DXPLM200=1 -DXPLM210=1 -DXPLM300=1 -DXPLM301=1 -DXPLM303=1 -DXPLM400=${XPLM400} -DAPL=${TARGET_OSX} -DIBM=${TARGET_WIN} -DLIN=${TARGET_LIN} -DGLEW_NO_GLU ImgWindow.cpp || die "Failed to compile ImgWindow.cpp"
 echo
 echo "==== Installing ===="
-cp -a "${script_dir}"/lib/xsb_public_sk/{ImgWindow,ImgFontAtlas}.{h,o} "${script_dir}/lib/_build/" || die "xsb_public_sk copy failed"
+cp -a "${script_dir}"/lib/xsb_public_fork/{ImgWindow,ImgFontAtlas}.{h,o} "${script_dir}/lib/_build/" || die "xsb_public_fork copy failed"
 echo
 
 echo Lib build complete.

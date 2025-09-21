@@ -1,0 +1,64 @@
+removes references to acfutils as it is not available in this project
+
+diff '--color=auto' -ur xsb_public_fork.bak/ImgFontAtlas.h xsb_public_fork/ImgFontAtlas.h
+--- a/xsb_public_fork/ImgFontAtlas.h	2025-09-21 13:19:25.981048437 +0200
++++ b/xsb_public_fork/ImgFontAtlas.h	2025-09-21 13:20:40.569116274 +0200
+@@ -35,7 +35,7 @@
+ #ifndef IMGFONTATLAS_H
+ #define IMGFONTATLAS_H
+ 
+-#include <acfutils/glew.h>
++#include <GL/glew.h>
+ #include <imgui.h>
+ 
+ /** Construct an empty font atlas we can use later
+diff '--color=auto' -ur xsb_public_fork.bak/ImgWindow.cpp xsb_public_fork/ImgWindow.cpp
+--- a/xsb_public_fork/ImgWindow.cpp	2025-09-21 13:19:25.981048437 +0200
++++ b/xsb_public_fork/ImgWindow.cpp	2025-09-21 13:21:20.269152878 +0200
+@@ -37,12 +37,9 @@
+ #include <XPLMDataAccess.h>
+ #include <XPLMDisplay.h>
+ #include <XPLMGraphics.h>
+-#include <acfutils/glew.h>
++#include <GL/glew.h>
+ #include "ImgWindow.h"
+ 
+-#include <acfutils/stat.h>
+-#include <acfutils/widget.h>
+-
+ static XPLMDataRef		gVrEnabledRef			= nullptr;
+ static XPLMDataRef		gModelviewMatrixRef		= nullptr;
+ static XPLMDataRef		gViewportRef			= nullptr;
+@@ -646,12 +643,6 @@
+ }
+ 
+ void
+-ImgWindow::Center()
+-{
+-	classic_win_center(mWindowID);
+-}
+-
+-void
+ ImgWindow::SetResizingLimits(int minw, int minh, int maxw, int maxh)
+ {
+ 	XPLMSetWindowResizingLimits(mWindowID, minw, minh, maxw, maxh);
+diff '--color=auto' -ur xsb_public_fork.bak/ImgWindow.h xsb_public_fork/ImgWindow.h
+--- a/xsb_public_fork/ImgWindow.h	2025-09-21 13:19:25.981048437 +0200
++++ b/xsb_public_fork/ImgWindow.h	2025-09-21 13:21:48.197178817 +0200
+@@ -35,7 +35,7 @@
+ #ifndef IMGWINDOW_H
+ #define IMGWINDOW_H
+ 
+-#include <acfutils/glew.h>
++#include <GL/glew.h>
+ #include <string>
+ #include <memory>
+ #include <queue>
+@@ -249,7 +249,6 @@
+ 
+ public:
+ 	void BringToFront(void);
+-	void Center(void);
+ 	void SetResizingLimits(int minw, int minh, int maxw, int maxh);
+ 	void SetPositioningMode(XPLMWindowPositioningMode mode, int monitor);
+ 	void TakeKeyboardFocus(void);
