@@ -1,0 +1,70 @@
+version: 2.1
+
+parameters:
+    xplane_target:
+        type: string
+        default: ''
+
+jobs:
+    build:
+        resource_class: 'windows.medium'
+        machine:
+            image: 'windows-server-2022-gui:current'
+            shell: 'bash.exe'
+        steps:
+            - run:
+                command: |
+                    if [[ "<< pipeline.parameters.xplane_target >>" == "" ]]; then
+                        echo "missing xplane_target build parameter"
+                        exit 1
+                    fi
+            - run:
+                command: |
+                    vswhere="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
+                    if [[ ! -e "$vswhere" ]]; then
+                        echo "Visual Studio does not appear to be installed"
+                        exit 1
+                    fi
+                    
+                    vs_product_id=$("$vswhere" -latest -property productId)
+                    vs_product_version=$("$vswhere" -latest -property catalog_productLineVersion)
+                    
+                    echo "Found Visual Studio: ${vs_product_id} ${vs_product_version}"
+                    if [[ "$vs_product_id" != "Microsoft.VisualStudio.Product.Community" ]]; then
+                        echo "Compilation must only be performed using Community license; aborting."
+                        exit 1
+                    fi
+                    echo "OK: Community Edition is installed"
+            - run: choco install cmake --version=3.31.8
+            - run: choco install make --version=4.4.1
+            - run: choco install windows-sdk-8.1 --version=8.100.26654.0
+            - run: choco install windows-sdk-10.0 --version=10.0.26624
+            - checkout
+            - run:
+                command: |
+                    export PATH="/c/Program Files/CMake/bin:/cmd:/mingw64/bin:/usr/bin:${PATH}"
+                    ./fetch-libs.sh
+            - run:
+                command: |
+                    export PATH="/c/Program Files/CMake/bin:/cmd:/mingw64/bin:/usr/bin:${PATH}"
+                    ./build-libs.sh windows << pipeline.parameters.xplane_target >>
+            - run: "ls -alR lib/_build"
+            - run:
+                command: |
+                    cd lib/_build
+                    for l in *.{lib,obj}; do
+                        echo "==== DUMPBIN $l"
+                        MSYS_NO_PATHCONV=1 "c:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.42.34433\\bin\\Hostx86\\x64\\dumpbin.exe" /DIRECTIVES "$l"
+                        echo
+                    done
+            - run:
+                command: |
+                    export PATH="/c/Program Files/CMake/bin:/cmd:/mingw64/bin:/usr/bin:${PATH}"
+                    ./build.sh windows << pipeline.parameters.xplane_target >>
+            - store_artifacts:
+                path: release
+
+workflow:
+    build:
+        jobs:
+         - build

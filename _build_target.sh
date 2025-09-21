@@ -86,6 +86,8 @@ if [[ "${BUILD_TARGET}" == "linux" ]]; then
 elif [[ "${BUILD_TARGET}" == "windows" ]]; then
 	if [[ "${HOST_OS_NAME} ${HOST_OS_VERSION}" == "Ubuntu jammy" ]]; then
 		CMAKE_TOOLCHAIN_FILE="${root_dir}/TC-ubuntu22.04-windows-x86_64-mingw.cmake"
+	elif [[ "${HOST_OS_NAME}" == "Windows" ]]; then
+		CMAKE_TOOLCHAIN_FILE="${root_dir}/TC-windows_circleci-windows-x86_64-msvc_clang.cmake"
 	else
 		die "Missing CMake toolchain for ${HOST_OS_NAME} ${HOST_OS_VERSION} (target: ${BUILD_TARGET})"
 	fi
