@@ -1,0 +1,13 @@
+fix failing compilation due to incompatible cimconfig.h path reference
+
+--- a/cimgui/CMakeLists.txt	2025-03-22 10:23:01.000000000 +0100
++++ b/cimgui/CMakeLists.txt	2025-09-21 13:40:58.826317132 +0200
+@@ -48,7 +48,7 @@
+ 	target_compile_definitions(cimgui PUBLIC IMGUI_USE_WCHAR32)
+ endif(IMGUI_WCHAR32)
+ 
+-add_definitions("-DIMGUI_USER_CONFIG=\"../cimconfig.h\"")
++add_definitions("-DIMGUI_USER_CONFIG=\"cimconfig.h\"")
+ target_compile_definitions(cimgui PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS=1)
+ if (WIN32)
+     target_compile_definitions(cimgui PUBLIC IMGUI_IMPL_API=extern\t\"C\"\t__declspec\(dllexport\))

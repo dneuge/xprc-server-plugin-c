@@ -207,5 +207,5 @@ git_mirror "Khronos Group OpenGL Registry" github.KhronosGroup.OpenGL-Registry.m
 git_mirror "Khronos Group EGL Registry" github.KhronosGroup.EGL-Registry.main.bundle https://github.com/KhronosGroup/EGL-Registry.git main
 git_mirror "XSB Public (skiselkov Fork)" github.skiselkov.xsb_public.master.bundle https://github.com/skiselkov/xsb_public.git master
 git_unbundle "XSB Public (skiselkov Fork)" xsb_public_sk github.skiselkov.xsb_public.master.bundle 845522196c4fb8f9c3e3ca427bd9b4a1a7ab0b7b
-download "Dear ImGui" imgui imgui-1.89.5.zip 1729132 https://github.com/ocornut/imgui/archive/refs/tags/v1.89.5.zip 36a4ef22f7bec177a82bdbeac3342d4d10ff74903b571208d415aeeb5e6e1fad 9bab2695ebb78a50353f90ad2771ba61
-download "cimgui" cimgui cimgui-1.89.5.zip 427548 https://github.com/cimgui/cimgui/archive/refs/tags/1.89.5.zip 4a3e3da10c02796f3efda96f5386e6620e0c2eb9b7d2240530a435e1600afe0f 49c80f5b1cea5ba94a8460cdbcc0a0c1
+download "Dear ImGui" imgui imgui-1.91.9b.zip 2021831 https://github.com/ocornut/imgui/archive/refs/tags/v1.91.9b.zip fd37507c8476a6d14cc7c4b352401f31bcbd0f0d995d35390811e968c466f46e 913db10a6ef52623b118142aafba7438
+download "cimgui" cimgui cimgui-1.91.9b.zip 385597 https://github.com/cimgui/cimgui/archive/refs/tags/1.91.9b.zip f7c74ef9bfe98c03056d70a0bf77588ca9d35097377d0938d1e42eecc3d86f30 1ed5e987b59ba86a962ed84c87c9d9fb
