@@ -128,6 +128,11 @@ if [[ "${BUILD_SYSTEM}" == "vs" ]]; then
 	CPP_COMPILER_ARGS="//MD"
 elif [[ "${BUILD_TARGET}" == "macos" ]]; then
 	CPP_COMPILER_ARGS="-std=c++11"
+elif [[ "${BUILD_TARGET}" == "windows" ]]; then
+  if [[ "${I_WILL_NOT_DISTRIBUTE_BUILD_RESULTS:-False}" != "1" && "${I_WILL_NOT_DISTRIBUTE_BUILD_RESULTS:-False}" != "True" ]]; then
+    echo "!!! ENABLING MINGW COMPILATION WHICH VOIDS LICENSE CONFORMITY; DO NOT DISTRIBUTE BUILD RESULTS !!!"
+    CPP_COMPILER="x86_64-w64-mingw32-g++"
+  fi
 fi
 export CPP_COMPILER
 export CPP_COMPILER_ARGS
