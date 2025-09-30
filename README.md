@@ -8,8 +8,15 @@ This project contains a native plugin implementing the protocol, written in C.
 
 Related projects:
 
-- the protocol specification (TBD)
-- a Java client library (TBD)
+- the [protocol specification](https://github.com/dneuge/xprc-protocol)
+- a [Java client library](https://github.com/dneuge/xprc-client-java)
+
+## Development / Building
+
+The project can be built for all platforms supported by X-Plane by simply running the included
+scripts. Please refer to the [developer documentation](DEVELOPMENT.md) for details. 
+
+An [SBOM](sbom.xml) is provided for detailed information about project dependencies.
 
 ## License
 
