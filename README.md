@@ -37,3 +37,7 @@ no tool/model offers traceability nor can today's AI models understand and reaso
 Apart from potential copyright/license violations the quality of AI output is doubtful and generally requires more
 effort to be reviewed and cleaned/fixed than actually contributing original work. Contributors will be asked to confirm
 and permanently record compliance with these guidelines.
+
+## Acknowledgements
+
+X-Plane is a registered trademark of Austin Meyer and Aerosoft.
