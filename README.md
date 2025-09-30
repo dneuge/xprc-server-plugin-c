@@ -16,7 +16,9 @@ Related projects:
 All sources and original files of this project are provided under [MIT license](LICENSE.md), unless declared otherwise
 (e.g. by source code comments). Please be aware that dependencies (e.g. libraries and/or external data used by this
 project) are subject to their own respective licenses which can affect distribution, particularly in binary/packaged
-form.
+form. Patches included with this project, which are being applied to dependencies, fall under the same license as the
+file/location being patched, while original content added by patches is released under MIT license as well
+(dual-licensing), if applicable and not restricted by upstream licenses.
 
 ### Note on the use of/for AI
 
