@@ -1,0 +1,3 @@
+[submodule "tools/simple-sbom"]
+	path = tools/simple-sbom
+	url = https://github.com/dneuge/simple-sbom.git
