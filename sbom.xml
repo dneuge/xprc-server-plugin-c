@@ -1,0 +1,579 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<sbom xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="tools/simple-sbom/simple-sbom.xsd">
+    <product>
+        <name>XPRC</name>
+        <description>X-Plane Remote Control (server plugin reference implementation in C)</description>
+        <website>https://github.com/dneuge/xprc-server-plugin-c</website>
+        <source>https://github.com/dneuge/xprc-server-plugin-c.git</source>
+        <copyright license="MIT" years="2022-2025">
+            <author>DanielNeugebauer</author>
+        </copyright>
+    </product>
+    <dependencies>
+        <dependency id="xplane">
+            <name>X-Plane</name>
+            <source>https://www.x-plane.com/</source>
+            <method>provided</method>
+            <developerRemark>runtime linked to via SDK</developerRemark>
+            <copyright>
+                <author>laminarResearch</author>
+            </copyright>
+        </dependency>
+        <dependency id="xplane-sdk">
+            <name>X-Plane SDK</name>
+            <version>401</version>
+            <source>https://developer.x-plane.com/wp-content/plugins/code-sample-generation/sdk_zip_files/XPSDK401.zip</source>
+            <location>lib/XPSDK</location>
+            <method>separate</method>
+            <copyright license="xpsdk" years="2008">
+                <author>SandyBarbour</author>
+                <author>BenSupnik</author>
+                <combinedAuthors>Sandy Barbour and Ben Supnik</combinedAuthors>
+                <originalRemark>Copyright (c) 2008, Sandy Barbour and Ben Supnik</originalRemark>
+            </copyright>
+            <copyright license="xpsdk" years="2005-2022">
+                <author>laminarResearch</author>
+                <author>SandyBarbour</author>
+                <author>BenSupnik</author>
+                <combinedAuthors>Laminar Research, Sandy Barbour and Ben Supnik</combinedAuthors>
+                <originalRemark>Copyright 2005-2022 Laminar Research, Sandy Barbour and Ben Supnik</originalRemark>
+            </copyright>
+            <dependency>xplane</dependency>
+        </dependency>
+        <dependency id="mesa-c11">
+            <name>Mesa</name>
+            <version>22.3.1</version>
+            <source>https://archive.mesa3d.org/mesa-22.3.1.tar.xz</source>
+            <location>lib/mesa</location>
+            <method>static</method>
+            <excerpt>C11 compatibility only</excerpt>
+            <patch>
+                <source>lib/mesa-01-add_c11_only.patch</source>
+                <description>add CMake file to only build C11 compatibility files</description>
+                <copyright>
+                    <author>DanielNeugebauer</author>
+                </copyright>
+            </patch>
+            <patch>
+                <source>build-libs.sh</source>
+                <description>conditionally persist HAVE_STRUCT_TIMESPEC to time.h if used by CMake</description>
+                <copyright>
+                    <author>DanielNeugebauer</author>
+                </copyright>
+            </patch>
+            <copyright license="BSL-1.0" years="2012">
+                <author>yohhoy</author>
+            </copyright>
+            <copyright license="BSL-1.0" years="2022">
+                <author>YonggangLuo</author>
+            </copyright>
+            <copyright license="MIT" years="2022">
+                <author>YonggangLuo</author>
+            </copyright>
+        </dependency>
+        <dependency id="threads-macos-compat">
+            <name>C11 threads compatibility wrapper for the macOS® operating system</name>
+            <version>b2d453ee96e2376e99b6f9990bc95a20015d4bf4</version>
+            <website>https://github.com/dneuge/c11-threads-compat-for-macos-operating-system</website>
+            <source>https://github.com/dneuge/c11-threads-compat-for-macos-operating-system.git</source>
+            <location>src/threads_macos_compat.h</location>
+            <location>src/threads_macos_compat.c</location>
+            <method>static</method>
+            <copyright license="MIT" years="2024-2025">
+                <author>DanielNeugebauer</author>
+            </copyright>
+        </dependency>
+        <dependency id="glew">
+            <name>GLEW</name>
+            <version>2.2.0</version>
+            <website>https://github.com/nigels-com/glew</website>
+            <source>https://github.com/nigels-com/glew/archive/refs/tags/glew-2.2.0.zip</source>
+            <location>lib/glew</location>
+            <method>static</method>
+            <patch>
+                <source>lib/glew-01-clone-with-branch.patch</source>
+                <description>compatibility with build process/caching: specify branch name on git clone commands</description>
+                <copyright>
+                    <author>DanielNeugebauer</author>
+                </copyright>
+            </patch>
+            <patch>
+                <source>lib/glew-02-clone-specific-refs.patch</source>
+                <description>compatibility with build process/caching: use specific revision for git checkout commands</description>
+                <copyright>
+                    <author>DanielNeugebauer</author>
+                </copyright>
+            </patch>
+            <patch>
+                <source>lib/glew-03-no-x11.patch</source>
+                <description>remove dynamic link to X11 on Linux</description>
+                <copyright>
+                    <author>DanielNeugebauer</author>
+                </copyright>
+            </patch>
+            <copyright license="BSD-glew" years="2008-2019">
+                <author>NigelStewart</author>
+            </copyright>
+            <copyright license="BSD-glew" years="2002-2008">
+                <author>MilanIkits</author>
+                <author>MarceloMagallon</author>
+            </copyright>
+            <copyright license="BSD-glew" years="2002">
+                <author>LevPovalahev</author>
+            </copyright>
+            <copyright license="MIT-mesa7" years="1999-2007">
+                <author>BrianPaul</author>
+                <originalRemark>Copyright (C) 1999-2007  Brian Paul   All Rights Reserved.</originalRemark>
+            </copyright>
+            <copyright license="MIT-materials" years="2007">
+                <author>khronos</author>
+                <originalRemark>Copyright (c) 2007 The Khronos Group Inc.</originalRemark>
+            </copyright>
+            <dependency>opengl</dependency>
+            <dependency>glew-glfixes</dependency>
+            <dependency>khronos-opengl-registry</dependency>
+            <dependency>khronos-egl-registry</dependency>
+        </dependency>
+        <dependency id="opengl">
+            <name>OpenGL</name>
+            <type>driver</type>
+            <method>provided</method>
+        </dependency>
+        <dependency id="glew-glfixes">
+            <name>GLEW glfixes</name>
+            <version>b63c8d3e676097d610efda64870cbe6f10543bd3</version>
+            <website>https://github.com/nigels-com/glfixes</website>
+            <source>https://github.com/nigels-com/glfixes.git</source>
+            <location>lib/glew/auto/glfixes</location>
+            <method>static</method>
+            <copyright license="Apache-2.0" years="2008-2017">
+                <author>khronos</author>
+            </copyright>
+            <copyright license="MIT-materials" years="2007-2017">
+                <author>khronos</author>
+            </copyright>
+            <copyright license="SGI-B-1.0" years="1991-2004">
+                <author>sgi-inc</author>
+            </copyright>
+            <copyright license="SGI-B-2.0">
+                <!-- author assumed from standard license text, no explicit copyright author remark present -->
+                <author>sgi-inc</author>
+            </copyright>
+        </dependency>
+        <dependency id="khronos-opengl-registry">
+            <name>Khronos Group OpenGL Registry</name>
+            <version>784b8b340e0429da3be2378bd5217d3c5530b9e5</version>
+            <website>https://github.com/KhronosGroup/OpenGL-Registry</website>
+            <source>https://github.com/KhronosGroup/OpenGL-Registry.git</source>
+            <location>lib/glew/auto/OpenGL-Registry</location>
+            <method>static</method>
+            <copyright license="Apache-2.0" years="2008-2021">
+                <author>khronos</author>
+            </copyright>
+            <copyright license="MIT" years="2013-2020">
+                <author>khronos</author>
+            </copyright>
+            <copyright license="SGI-B-no-version" years="1991-2000">
+                <author>sgi-inc</author>
+            </copyright>
+            <copyright license="SGI-B-1.0" years="1991-2000">
+                <author>sgi-inc</author>
+            </copyright>
+            <copyright license="SGI-B-2.0" years="1991-2000">
+                <!-- author assumed from standard license text, no explicit copyright author remark present -->
+                <author>sgi-inc</author>
+            </copyright>
+        </dependency>
+        <dependency id="khronos-egl-registry">
+            <name>Khronos Group EGL Registry</name>
+            <version>b055c9b483e70ecd57b3cf7204db21f5a06f9ffe</version>
+            <website>https://github.com/KhronosGroup/EGL-Registry</website>
+            <source>https://github.com/KhronosGroup/EGL-Registry.git</source>
+            <location>lib/glew/auto/EGL-Registry</location>
+            <method>static</method>
+            <copyright license="Apache-2.0" years="2006-2020">
+                <author>khronos</author>
+            </copyright>
+            <copyright license="MIT-materials" years="2008-2018">
+                <author>khronos</author>
+            </copyright>
+        </dependency>
+        <dependency id="xsb-public-fork">
+            <name>XSB Public Sources (forked)</name>
+            <version>3fec6ba99f040eecc63ee918606ad38e881b1b3d</version>
+            <website>https://github.com/amyinorbit/xsb_public</website>
+            <source>https://github.com/amyinorbit/xsb_public.git</source>
+            <location>lib/xsb_public_fork</location>
+            <method>static</method>
+            <excerpt>only basic window management/imgui integration</excerpt>
+            <patch>
+                <source>lib/xsb_public_fork-01-remove-acfutils.patch</source>
+                <description>remove libacfutils dependency</description>
+                <copyright>
+                    <author>DanielNeugebauer</author>
+                </copyright>
+            </patch>
+            <!-- licenses and years have been mixed between files and authors, only main contributors/maintenance at
+                 each time are being listed here -->
+            <copyright license="MIT" years="2005">
+                <author>BenSupnik</author>
+                <author>ChrisSerio</author>
+            </copyright>
+            <copyright license="BSD-3-Clause" years="2018-2020">
+                <author>ChristopherCollins</author>
+            </copyright>
+            <copyright license="CDDL-1.0" years="2021-2022">
+                <author>SasoKiselkov</author>
+            </copyright>
+            <copyright license="BSD-3-Clause" years="2025">
+                <!-- major contributions, not represented in copyright remarks yet; license according to README -->
+                <author>AmyParent</author>
+            </copyright>
+            <dependency>glew</dependency>
+            <dependency>imgui</dependency>
+            <dependency>xplane-sdk</dependency>
+        </dependency>
+        <dependency id="imgui">
+            <name>Dear ImGui</name>
+            <version>1.91.9b</version>
+            <website>https://www.dearimgui.com</website>
+            <website>https://github.com/ocornut/imgui</website>
+            <source>https://github.com/ocornut/imgui/archive/refs/tags/v1.91.9b.zip</source>
+            <location>lib/imgui</location>
+            <location>lib/cimgui/imgui</location>
+            <method>static</method>
+            <!-- Source files credit many more contributors without specific copyright remark,
+                 only main authors/maintainers are listed here. -->
+            <copyright license="MIT" years="2014-2025">
+                <author>OmarCornut</author>
+            </copyright>
+            <copyright license="MIT" years="2017">
+                <author>SeanBarrett</author>
+            </copyright>
+            <copyright license="MIT" years="2009-2021">
+                <author>SeanBarrett</author>
+                <author>rad</author>
+            </copyright>
+            <copyright license="MIT" years="2013-2020">
+                <!-- backends/imgui_impl_opengl3_loader.h -->
+                <author>khronos</author>
+            </copyright>
+            <!-- additional fonts come with the source package but are not used for compilation/packaging -->
+            <dependency>proggyclean</dependency>
+            <dependency>glew</dependency>
+        </dependency>
+        <dependency id="proggyclean">
+            <name>Proggy Clean</name>
+            <website>http://www.proggyfonts.net/</website>
+            <website>https://github.com/bluescan/proggyfonts/</website>
+            <source>lib/imgui/misc/fonts/ProggyClean.ttf</source>
+            <location>lib/imgui/imgui_draw.cpp</location>
+            <type>font</type>
+            <method>static</method>
+            <developerRemark>embedded to Dear ImGui in imgui_draw.cpp</developerRemark>
+            <copyright license="MIT" years="2004-2005">
+                <author>TristanGrimmer</author>
+            </copyright>
+        </dependency>
+        <dependency id="cimgui">
+            <name>cimgui</name>
+            <version>1.91.9b</version>
+            <website>https://github.com/cimgui/cimgui/</website>
+            <source>https://github.com/cimgui/cimgui/archive/refs/tags/1.91.9b.zip</source>
+            <location>lib/cimgui</location>
+            <method>static</method>
+            <patch>
+                <source>lib/cimgui-01-user_config.patch</source>
+                <description>fix path reference to cimconfig.h</description>
+                <copyright>
+                    <author>DanielNeugebauer</author>
+                </copyright>
+            </patch>
+            <copyright license="MIT" years="2015">
+                <!-- original author, manually maintained; see README -->
+                <author>StephanDilly</author>
+            </copyright>
+            <copyright license="MIT" years="2018-2025">
+                <!-- code generation, uncredited in copyright/license remarks; see README -->
+                <author>VictorBombi</author>
+            </copyright>
+            <dependency>imgui</dependency>
+        </dependency>
+    </dependencies>
+    <legalEntities>
+        <legalEntity id="sgi-inc">
+            <name>Silicon Graphics, Inc.</name>
+            <type>organization</type>
+            <defunct>
+                <successor>
+                    <id>rackableSystems</id>
+                    <event>acquisition</event>
+                    <date>2009-05-11</date>
+                    <source>https://en.wikipedia.org/wiki/Silicon_Graphics</source>
+                </successor>
+            </defunct>
+        </legalEntity>
+        <legalEntity id="rackableSystems">
+            <name>Rackable Systems, Inc.</name>
+            <type>organization</type>
+            <defunct>
+                <successor>
+                    <id>sgi-intl</id>
+                    <event>renaming</event>
+                    <source>https://en.wikipedia.org/wiki/Silicon_Graphics_International</source>
+                </successor>
+            </defunct>
+        </legalEntity>
+        <legalEntity id="sgi-intl">
+            <name>Silicon Graphics International Corp.</name>
+            <type>organization</type>
+            <defunct>
+                <successor>
+                    <id>hpe</id>
+                    <event>acquisition</event>
+                    <date>2016-11-01</date>
+                    <source>https://en.wikipedia.org/wiki/Silicon_Graphics_International</source>
+                </successor>
+            </defunct>
+        </legalEntity>
+        <legalEntity id="hpe">
+            <name>Hewlett Packard Enterprise Company</name>
+            <type>organization</type>
+            <contact type="website" checked="2025-09-29">https://www.hpe.com/</contact>
+        </legalEntity>
+        <legalEntity id="rad">
+            <name>RAD Game Tools</name>
+            <type>organization</type>
+            <contact type="website" checked="2025-09-29">https://www.radgametools.com</contact>
+            <association>
+                <type>alias</type>
+                <id>epicGamesTools</id>
+                <source checked="2025-09-29">https://www.radgametools.com/aboutrad.htm</source>
+                <source checked="2025-09-29">https://www.epicgames.com/site/en-US/news/epic-acquires-rad-game-tools</source>
+            </association>
+            <association>
+                <type>acquired-by</type>
+                <id>epicGames</id>
+                <from>2021-01-07</from>
+                <source checked="2025-09-29">https://www.radgametools.com/aboutrad.htm</source>
+                <source checked="2025-09-29">https://www.epicgames.com/site/en-US/news/epic-acquires-rad-game-tools</source>
+            </association>
+        </legalEntity>
+        <legalEntity id="epicGames">
+            <name>Epic Games, Inc.</name>
+            <type>organization</type>
+        </legalEntity>
+        <legalEntity id="epicGamesTools">
+            <name>Epic Games Tools LLC</name>
+            <type>organization</type>
+            <contact type="website" checked="2025-09-29">https://www.radgametools.com</contact>
+        </legalEntity>
+        <legalEntity id="khronos">
+            <name>The Khronos® Group Inc.</name>
+            <type>organization</type>
+            <contact type="website" checked="2025-09-29">https://www.khronos.org/</contact>
+        </legalEntity>
+        <legalEntity id="aerosoft">
+            <name>Aerosoft GmbH</name>
+            <type>organization</type>
+        </legalEntity>
+        <legalEntity id="laminarResearch">
+            <name>Laminar Research</name>
+            <type>organization</type>
+            <contact type="website" checked="2025-09-29">https://www.x-plane.com/</contact>
+            <contact type="website" checked="2025-09-29">https://web.archive.org/web/20190304032539/http://www.laminarresearch.com/</contact>
+            <!-- business registration moved from South Carolina to New Hampshire in 2025 -->
+        </legalEntity>
+        <legalEntity id="AmyParent">
+            <name>Amy Parent</name>
+            <type>person</type>
+            <contact type="website" checked="2025-09-30">https://github.com/amyinorbit</contact>
+            <contact type="website" checked="2025-09-30">https://amyparent.com</contact>
+        </legalEntity>
+        <legalEntity id="AustinMeyer">
+            <name>Austin Meyer</name>
+            <type>person</type>
+            <association>
+                <type>owns</type>
+                <id>laminarResearch</id>
+                <source checked="2025-09-29">https://quickstart.sos.nh.gov/online/BusinessInquire/BusinessInformation?businessID=KaH66qA%2B5Z4%3D</source>
+            </association>
+        </legalEntity>
+        <legalEntity id="BenSupnik">
+            <name>Ben Supnik</name>
+            <type>person</type>
+        </legalEntity>
+        <legalEntity id="BrianPaul">
+            <name>Brian Paul</name>
+            <type>person</type>
+        </legalEntity>
+        <legalEntity id="ChrisSerio">
+            <name>Chris Serio</name>
+            <type>person</type>
+        </legalEntity>
+        <legalEntity id="ChristopherCollins">
+            <name>Christopher Collins</name>
+            <type>person</type>
+            <contact type="website" checked="2025-09-30">https://chris.collins.id.au/</contact>
+            <contact type="website" checked="2025-09-30">https://github.com/kuroneko</contact>
+        </legalEntity>
+        <legalEntity id="DanielNeugebauer">
+            <name>Daniel Neugebauer</name>
+            <type>person</type>
+            <contact type="website" checked="2025-09-30">http://www.energiequant.de/</contact>
+            <contact type="website" checked="2025-09-30">https://github.com/dneuge</contact>
+        </legalEntity>
+        <legalEntity id="LevPovalahev">
+            <name>Lev Povalahev</name>
+            <type>person</type>
+        </legalEntity>
+        <legalEntity id="NigelStewart">
+            <name>Nigel Stewart</name>
+            <type>person</type>
+        </legalEntity>
+        <legalEntity id="MarceloMagallon">
+            <name>Marcelo E. Magallon</name>
+            <type>person</type>
+        </legalEntity>
+        <legalEntity id="MilanIkits">
+            <name>Milan Ikits</name>
+            <type>person</type>
+        </legalEntity>
+        <legalEntity id="OmarCornut">
+            <name>Omar Cornut</name>
+            <type>person</type>
+            <contact type="website" checked="2025-09-30">https://www.miracleworld.net/</contact>
+            <contact type="website" checked="2025-09-30">https://github.com/ocornut</contact>
+        </legalEntity>
+        <legalEntity id="SandyBarbour">
+            <name>Sandy Barbour</name>
+            <type>person</type>
+        </legalEntity>
+        <legalEntity id="SasoKiselkov">
+            <name>Saso Kiselkov</name>
+            <type>person</type>
+            <contact type="website" checked="2025-09-30">https://github.com/skiselkov</contact>
+        </legalEntity>
+        <legalEntity id="SeanBarrett">
+            <name>Sean Barrett</name>
+            <type>person</type>
+            <contact type="website" checked="2025-09-30">https://nothings.org/</contact>
+            <contact type="website" checked="2025-09-30">https://github.com/nothings</contact>
+        </legalEntity>
+        <legalEntity id="StephanDilly">
+            <name>Stephan Dilly</name>
+            <type>person</type>
+            <contact type="website" checked="2025-09-30">https://github.com/extrawurst</contact>
+        </legalEntity>
+        <legalEntity id="TristanGrimmer">
+            <name>Tristan Grimmer</name>
+            <type>person</type>
+            <contact type="website" checked="2025-09-30">http://upperboundsinteractive.com/</contact>
+            <contact type="website" checked="2025-09-30">https://github.com/bluescan</contact>
+        </legalEntity>
+        <legalEntity id="VictorBombi">
+            <name>Victor Bombi</name>
+            <type>person</type>
+            <contact type="website" checked="2025-09-30">https://github.com/sonoro1234</contact>
+        </legalEntity>
+        <legalEntity id="yohhoy">
+            <!-- nickname only? -->
+            <name>yohhoy</name>
+            <type>person</type>
+            <contact type="website" checked="2025-09-29">https://github.com/yohhoy</contact>
+        </legalEntity>
+        <legalEntity id="YonggangLuo">
+            <name>Yonggang Luo</name>
+            <type>person</type>
+        </legalEntity>
+    </legalEntities>
+    <licenses>
+        <license id="Apache-2.0">
+            <standard spdx="Apache-2.0" />
+        </license>
+        <license id="BSD-3-Clause">
+            <standard spdx="BSD-3-Clause"/>
+        </license>
+        <license id="BSD-glew">
+            <standard spdx="BSD-3-Clause">
+                <!-- Strictly, this is not BSD-3-Clause since permission is granted in advance which the SPDX regex does
+                     not match. However, having that permission already granted, extends instead of limits rights, so
+                     for sake of being comparable we indicate a standard SPDX 3-Clause license. SPDX license registry
+                     seems to not know this variation yet, or it could not be found. -->
+                <variation>no written permission needed to endorse/promote: "The name of the author may be used to endorse or promote products derived from this software without specific prior written permission."</variation>
+            </standard>
+            <copy file="lib/glew/doc/glew.txt" />
+        </license>
+        <license id="BSL-1.0">
+            <standard spdx="BSL-1.0"/>
+        </license>
+        <license id="CDDL-1.0">
+            <standard spdx="CDDL-1.0"/>
+        </license>
+        <license id="MIT">
+            <standard spdx="MIT"/>
+        </license>
+        <license id="MIT-materials">
+            <standard spdx="MIT">
+                <variation>materials instead of software</variation>
+            </standard>
+        </license>
+        <license id="MIT-mesa7">
+            <standard spdx="MIT">
+                <variation>materials instead of software</variation>
+                <variation>"Mesa 3-D graphics library" "Version:  7.0"</variation>
+            </standard>
+            <copy file="lib/glew/doc/mesa.txt" />
+        </license>
+        <license id="SGI-B-1.0">
+            <standard spdx="SGI-B-1.0" />
+        </license>
+        <license id="SGI-B-no-version">
+            <!-- "SGI Free Software B License", date and omission of version implies early license, i.e. version 1.0 -->
+            <standard spdx="SGI-B-1.0" />
+        </license>
+        <license id="SGI-B-2.0">
+            <standard spdx="SGI-B-2.0" />
+        </license>
+        <license id="xpsdk">
+            <!-- TODO: check if there is a matching standard license -->
+            <copy file="lib/XPSDK/license.txt" />
+        </license>
+    </licenses>
+    <trademarks>
+        <trademark>
+            <name mark="tm">Khronos</name>
+            <owner>khronos</owner>
+            <display>Khronos and the Khronos Group logo are registered trademarks of the Khronos Group Inc.</display>
+        </trademark>
+        <!-- outdated?
+        <trademark>
+            <name mark="reg">OpenGL</name>
+            <name mark="tm">OpenGL ES</name>
+            <owner>hpe</owner>
+            <display>OpenGL® and OpenGL ES™ are registered trademarks of Hewlett Packard Enterprise</display>
+        </trademark>
+        -->
+        <trademark>
+            <name mark="reg">OpenGL</name>
+            <owner>hpe</owner>
+            <display>OpenGL® and the oval logo are trademarks or registered trademarks of Hewlett Packard Enterprise in the United States and/or other countries worldwide.</display>
+            <source checked="2025-09-29">https://www.khronos.org/legal/trademarks</source>
+        </trademark>
+        <trademark>
+            <name mark="none">OpenGL® ES</name>
+            <owner>hpe</owner>
+            <display>OpenGL is a registered trademark and the OpenGL ES logo is a trademark of Hewlett Packard Enterprise used by permission by Khronos.</display>
+            <source checked="2025-09-29">https://www.khronos.org/legal/trademarks</source>
+        </trademark>
+        <trademark>
+            <name>X-Plane</name>
+            <owner>AustinMeyer</owner>
+            <owner expiration="2025-10-06">aerosoft</owner>
+            <display>X-Plane is a registered trademark of Austin Meyer and Aerosoft.</display>
+            <source checked="2025-09-29">https://www.tmdn.org/tmview/#/tmview/detail/US500000076484507</source>
+            <source checked="2025-09-29">https://www.tmdn.org/tmview/#/tmview/detail/EM500000014648372</source>
+            <source checked="2025-09-29">https://www.tmdn.org/tmview/#/tmview/detail/GB500000914648372</source>
+        </trademark>
+    </trademarks>
+</sbom>
