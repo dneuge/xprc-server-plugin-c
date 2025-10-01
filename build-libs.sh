@@ -78,6 +78,13 @@ fi
 echo
 
 echo "===== Building GLEW ====="
+echo "==== Patching Visual Studio version ===="
+# changes project version from VS 2017 (v141) to 2022 (v143)
+# see: https://stackoverflow.com/questions/33380128/visual-studio-2015-command-line-retarget-solution
+# cannot be done through a patch file due to differences in line ending interpretations
+# between patch tools on Linux, Mac and Windows
+sed -i -e 's#<PlatformToolset>v141</PlatformToolset>#<PlatformToolset>v143</PlatformToolset>#' "${script_dir}/lib/glew/build/vc15"/*.vcxproj
+
 echo "==== Cleaning main build ===="
 cd "${script_dir}/lib/glew"
 make clean || die "cleaning main build directory failed"
