@@ -59,8 +59,6 @@ if [[ "$#" -ge 1 ]]; then
 fi
 export BUILD_TARGET
 
-CMAKE_TOOLCHAIN_FILE=""
-
 XPLANE_TARGET="12.04"
 if [[ "$#" -ge 2 ]]; then
 	XPLANE_TARGET="$2"
@@ -81,7 +79,10 @@ elif [[ "${XPLANE_TARGET}" =~ $re_xp12_version ]]; then
 	XPLANE_TARGET_MAJOR=12
 fi
 
-if [[ "${BUILD_TARGET}" == "linux" ]]; then
+CMAKE_TOOLCHAIN_FILE=""
+if [[ "${CMAKE_TOOLCHAIN_FILE:-}" != "" ]]; then
+	echo "Using user-provided CMake toolchain: ${CMAKE_TOOLCHAIN_FILE}"
+elif [[ "${BUILD_TARGET}" == "linux" ]]; then
 	CMAKE_TOOLCHAIN_FILE="${root_dir}/TC-generic_linux-linux-x86_64-clang.cmake"
 elif [[ "${BUILD_TARGET}" == "windows" ]]; then
 	if [[ "${HOST_OS_NAME} ${HOST_OS_VERSION}" == "Ubuntu jammy" ]]; then
