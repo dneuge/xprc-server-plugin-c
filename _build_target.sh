@@ -38,6 +38,7 @@ export HOST_OS_NAME
 export HOST_OS_VERSION
 
 BUILD_SYSTEM="std"
+vs_product_id="unknown"
 vs_product_version="unknown"
 vs_root_dir="/c/vs_not_found"
 if [[ "$HOST_OS_TYPE" == "Windows" ]]; then
@@ -129,12 +130,16 @@ fi
 CPP_COMPILER_ARGS=""
 CPP_COMPILER="clang++"
 if [[ "${BUILD_SYSTEM}" == "vs" ]]; then
-	if [[ "Microsoft.VisualStudio.Product.Community" ]]; then
+	if [[ "${vs_product_id}" == "Microsoft.VisualStudio.Product.Community" ]]; then
 		if [[ $override_distribution_restrictions -eq 1 ]]; then
 			echo "!!! ENABLING COMPILATION WITH VS COMMUNITY EDITION WHICH VOIDS LICENSE CONFORMITY; DO NOT DISTRIBUTE BUILD RESULTS !!!"
 		else
 			die "Detected Visual Studio Community edition which unfortunately cannot be used for distribution builds due to dependencies using licenses which are not OSI-approved."
 		fi
+  elif [[ "${vs_product_id}" != "Microsoft.VisualStudio.Product.Enterprise" && "${vs_product_id}" != "Microsoft.VisualStudio.Product.Professional" ]]; then
+		if [[ $override_distribution_restrictions -ne 1 ]]; then
+      die "Blocking compilation because an unknown edition of Visual Studio is being used, so license conformity cannot be ensured: ${vs_product_id}"
+    fi
 	fi
 
 	CPP_COMPILER="${vs_root_dir}/BuildTools/VC/Tools/Llvm/x64/bin/clang-cl.exe"
