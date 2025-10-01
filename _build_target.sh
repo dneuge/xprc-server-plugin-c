@@ -39,6 +39,7 @@ export HOST_OS_VERSION
 
 BUILD_SYSTEM="std"
 vs_product_version="unknown"
+vs_root_dir="/c/vs_not_found"
 if [[ "$HOST_OS_TYPE" == "Windows" ]]; then
 	vswhere="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
 	if [[ ! -e "$vswhere" ]]; then
@@ -49,6 +50,13 @@ if [[ "$HOST_OS_TYPE" == "Windows" ]]; then
 
 		echo "Found Visual Studio: ${vs_product_id} ${vs_product_version}"
 		BUILD_SYSTEM="vs"
+
+		vs_root_dir="/c/Program Files (x86)/Microsoft Visual Studio/${vs_product_version}"
+		if [[ ! -d "${vs_root_dir}" ]]; then
+			vs_root_dir="/c/Program Files/Microsoft Visual Studio/${vs_product_version}"
+		fi
+		[[ -d "${vs_root_dir}" ]] || die "Visual Studio root directory could not be found"
+		echo "Visual Studio root: ${vs_root_dir}"
 	fi
 fi
 export BUILD_SYSTEM
@@ -88,7 +96,7 @@ elif [[ "${BUILD_TARGET}" == "windows" ]]; then
 	if [[ "${HOST_OS_NAME} ${HOST_OS_VERSION}" == "Ubuntu jammy" ]]; then
 		CMAKE_TOOLCHAIN_FILE="${root_dir}/TC-ubuntu22.04-windows-x86_64-mingw.cmake"
 	elif [[ "${HOST_OS_NAME}" == "Windows" ]]; then
-		CMAKE_TOOLCHAIN_FILE="${root_dir}/TC-windows_circleci-windows-x86_64-msvc_clang.cmake"
+		CMAKE_TOOLCHAIN_FILE="${root_dir}/TC-windows_github-windows-x86_64-msvc_clang.cmake"
 	else
 		die "Missing CMake toolchain for ${HOST_OS_NAME} ${HOST_OS_VERSION} (target: ${BUILD_TARGET})"
 	fi
@@ -124,7 +132,11 @@ if [[ "${BUILD_SYSTEM}" == "vs" ]]; then
 		fi
 	fi
 
-	CPP_COMPILER="/c/Program Files (x86)/Microsoft Visual Studio/${vs_product_version}/BuildTools/VC/Tools/Llvm/x64/bin/clang-cl.exe"
+	CPP_COMPILER="${vs_root_dir}/BuildTools/VC/Tools/Llvm/x64/bin/clang-cl.exe"
+	if [[ ! -e "${CPP_COMPILER}" ]]; then
+		CPP_COMPILER="${vs_root_dir}/Enterprise/VC/Tools/Llvm/x64/bin/clang-cl.exe"
+	fi
+	[[ -e "${CPP_COMPILER}" ]] || die "Visual Studio Clang could not be found"
 
 	# For options see:
 	#   https://github.com/MicrosoftDocs/cpp-docs/blob/main/docs/build/reference/md-mt-ld-use-run-time-library.md
@@ -145,6 +157,16 @@ elif [[ "${BUILD_TARGET}" == "windows" ]]; then
 fi
 export CPP_COMPILER
 export CPP_COMPILER_ARGS
+
+if [[ "${BUILD_SYSTEM}" == "vs" ]]; then
+	if [[ ! "$(which msbuild.exe)" ]]; then
+		echo "MSBuild is not on path, trying known locations..."
+		vs_msbuild_dir="${vs_root_dir}/Enterprise/MSBuild/Current/Bin"
+		[[ -e "${vs_msbuild_dir}/MSBuild.exe" ]] || die "MSBuild.exe could not be located"
+		export PATH="${vs_msbuild_dir}:$PATH"
+		echo "MSBuild found in ${vs_msbuild_dir} (added to PATH)"
+	fi
+fi
 
 if [[ "${HOST_OS_TYPE}" == "MacOS" ]]; then
 	NUM_CPUS=$(sysctl -n hw.ncpu)
