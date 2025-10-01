@@ -48,10 +48,13 @@ jobs:
             lib/_downloads
           key: lib_downloads-${{ hashFiles('fetch-libs.sh') }}
       - name: fetch-libs
+        shell: bash
         run: ./fetch-libs.sh
       - name: build-libs
+        shell: bash
         run: ./build-libs.sh ${{ github.event.inputs.build_target }} ${{ github.event.inputs.xplane_target }}
       - name: build
+        shell: bash
         run: ./build.sh ${{ github.event.inputs.build_target }} ${{ github.event.inputs.xplane_target }}
       - name: archive
         uses: actions/upload-artifact@v4
