@@ -121,11 +121,16 @@ else
 fi
 export XPLANE_PLATFORM_ID
 
+override_distribution_restrictions=0
+if [[ "${I_WILL_NOT_DISTRIBUTE_BUILD_RESULTS:-False}" == "1" || "${I_WILL_NOT_DISTRIBUTE_BUILD_RESULTS:-False}" == "True" ]]; then
+  override_distribution_restrictions=1
+fi
+
 CPP_COMPILER_ARGS=""
 CPP_COMPILER="clang++"
 if [[ "${BUILD_SYSTEM}" == "vs" ]]; then
 	if [[ "Microsoft.VisualStudio.Product.Community" ]]; then
-		if [[ "${I_WILL_NOT_DISTRIBUTE_BUILD_RESULTS:-False}" != "1" && "${I_WILL_NOT_DISTRIBUTE_BUILD_RESULTS:-False}" != "True" ]]; then
+		if [[ $override_distribution_restrictions -eq 1 ]]; then
 			echo "!!! ENABLING COMPILATION WITH VS COMMUNITY EDITION WHICH VOIDS LICENSE CONFORMITY; DO NOT DISTRIBUTE BUILD RESULTS !!!"
 		else
 			die "Detected Visual Studio Community edition which unfortunately cannot be used for distribution builds due to dependencies using licenses which are not OSI-approved."
@@ -150,7 +155,7 @@ if [[ "${BUILD_SYSTEM}" == "vs" ]]; then
 elif [[ "${BUILD_TARGET}" == "macos" ]]; then
 	CPP_COMPILER_ARGS="-std=c++11"
 elif [[ "${BUILD_TARGET}" == "windows" ]]; then
-  if [[ "${I_WILL_NOT_DISTRIBUTE_BUILD_RESULTS:-False}" != "1" && "${I_WILL_NOT_DISTRIBUTE_BUILD_RESULTS:-False}" != "True" ]]; then
+  if [[ $override_distribution_restrictions -eq 1 ]]; then
     echo "!!! ENABLING MINGW COMPILATION WHICH VOIDS LICENSE CONFORMITY; DO NOT DISTRIBUTE BUILD RESULTS !!!"
     CPP_COMPILER="x86_64-w64-mingw32-g++"
   fi
