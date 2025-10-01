@@ -116,6 +116,14 @@ export XPLANE_PLATFORM_ID
 CPP_COMPILER_ARGS=""
 CPP_COMPILER="clang++"
 if [[ "${BUILD_SYSTEM}" == "vs" ]]; then
+	if [[ "Microsoft.VisualStudio.Product.Community" ]]; then
+		if [[ "${I_WILL_NOT_DISTRIBUTE_BUILD_RESULTS:-False}" != "1" && "${I_WILL_NOT_DISTRIBUTE_BUILD_RESULTS:-False}" != "True" ]]; then
+			echo "!!! ENABLING COMPILATION WITH VS COMMUNITY EDITION WHICH VOIDS LICENSE CONFORMITY; DO NOT DISTRIBUTE BUILD RESULTS !!!"
+		else
+			die "Detected Visual Studio Community edition which unfortunately cannot be used for distribution builds due to dependencies using licenses which are not OSI-approved."
+		fi
+	fi
+
 	CPP_COMPILER="/c/Program Files (x86)/Microsoft Visual Studio/${vs_product_version}/BuildTools/VC/Tools/Llvm/x64/bin/clang-cl.exe"
 
 	# For options see:
