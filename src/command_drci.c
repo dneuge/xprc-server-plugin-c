@@ -17,8 +17,9 @@
 #include "xptypes.h"
 
 #define DRCI_ECHO_NONE 0
-#define DRCI_ECHO_OTHER 1
-#define DRCI_ECHO_ALL 2
+#define DRCI_ECHO_XPLANE 1
+#define DRCI_ECHO_OTHER 2
+#define DRCI_ECHO_ALL 3
 typedef uint8_t drci_echo_mode_t;
 
 #define DRCI_INTCONV_NOT_SET 0
@@ -316,6 +317,9 @@ static bool parse_echo_mode(drci_echo_mode_t *echo_mode, char *s) {
         return true;
     } else if (!strcmp(s, "other")) {
         *echo_mode = DRCI_ECHO_OTHER;
+        return true;
+    } else if (!strcmp(s, "xplane")) {
+        *echo_mode = DRCI_ECHO_XPLANE;
         return true;
     } else if (!strcmp(s, "none")) {
         *echo_mode = DRCI_ECHO_NONE;
@@ -1046,6 +1050,10 @@ static xpint_t double2int(double value, drci_intconv_mode_t mode) {
 }
 
 static bool should_echo(command_drci_t *command, session_t *source_session) {
+    if (command->echo_mode == DRCI_ECHO_NONE) {
+        return false;
+    }
+
     if (command->echo_mode == DRCI_ECHO_OTHER) {
         return (source_session != command->session); // includes null source_session because command session is always set
     }
