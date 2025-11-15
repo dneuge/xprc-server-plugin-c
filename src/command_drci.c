@@ -1047,10 +1047,10 @@ static xpint_t double2int(double value, drci_intconv_mode_t mode) {
 
 static bool should_echo(command_drci_t *command, session_t *source_session) {
     if (command->echo_mode == DRCI_ECHO_OTHER) {
-        return (source_session != command->session);
+        return (source_session != command->session); // includes null source_session because command session is always set
     }
 
-    return (command->echo_mode == DRCI_ECHO_ALL);
+    return !source_session || (command->echo_mode == DRCI_ECHO_ALL);
 }
 
 static inline void dump_value(prealloc_list_t *list, command_drci_t *command, XPLMDataTypeID type, void *value_ref, int *total_length, bool *is_first, bool *should_abort) {
