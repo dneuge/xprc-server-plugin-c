@@ -1240,6 +1240,9 @@ static error_t drci_simple_set(void *ref, XPLMDataTypeID type, void *value, sess
         if (err != ERROR_NONE) {
             RCLOG_WARN("[DRCI] drci_simple_set failed to send notification to XPRC dataref owner (error %d)", err);
         }
+
+        free(dump);
+        dump = NULL;
     }
 
     return ERROR_NONE;
@@ -1431,6 +1434,9 @@ static error_t drci_array_update(void *ref, XPLMDataTypeID type, void *values, i
         if (err != ERROR_NONE) {
             RCLOG_WARN("[DRCI] drci_array_update failed to send notification to XPRC dataref owner (error %d)", err);
         }
+
+        free(dump);
+        dump = NULL;
     }
     
     RCLOG_TRACE("[DRCI] drci_array_update: done");
