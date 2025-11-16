@@ -618,6 +618,9 @@ error_t dataproxy_simple_set(dataproxy_t *proxy, XPLMDataTypeID type, void *valu
         return err;
     }
     
+    dataproxy_simple_set_f setter = NULL;
+    void *operations_ref = NULL;
+
     if (proxy->state != DATAPROXY_STATE_REGISTERED) {
         err = DATAPROXY_ERROR_INVALID_STATE;
     } else if (!dataproxy_can_write(proxy, source_session)) {
@@ -625,10 +628,17 @@ error_t dataproxy_simple_set(dataproxy_t *proxy, XPLMDataTypeID type, void *valu
     } else if (!proxy->operations.simple_set || (proxy->types & type) == 0) {
         err = DATAPROXY_ERROR_UNSUPPORTED_TYPE;
     } else {
-        err = proxy->operations.simple_set(proxy->operations_ref, type, value, source_session);
+        setter = proxy->operations.simple_set;
+        operations_ref = proxy->operations_ref;
     }
-    
+
+    // dataproxy has to be unlocked before calling setter as it will otherwise deadlock
+    // FIXME: check if this is sufficiently secured against e.g. concurrent proxy deregistration
     unlock_dataproxy(proxy);
+
+    if (err == ERROR_NONE && setter) {
+        err = setter(operations_ref, type, value, source_session);
+    }
 
     return err;
 }
@@ -730,7 +740,10 @@ error_t dataproxy_array_update(dataproxy_t *proxy, XPLMDataTypeID type, void *va
     if (err != ERROR_NONE) {
         return err;
     }
-    
+
+    dataproxy_array_update_f setter = NULL;
+    void *operations_ref = NULL;
+
     if (proxy->state != DATAPROXY_STATE_REGISTERED) {
         err = DATAPROXY_ERROR_INVALID_STATE;
     } else if (!dataproxy_can_write(proxy, source_session)) {
@@ -738,10 +751,17 @@ error_t dataproxy_array_update(dataproxy_t *proxy, XPLMDataTypeID type, void *va
     } else if (!proxy->operations.array_update || (proxy->types & type) == 0) {
         err = DATAPROXY_ERROR_UNSUPPORTED_TYPE;
     } else {
-        err = proxy->operations.array_update(proxy->operations_ref, type, values, offset, count, source_session);
+        setter = proxy->operations.array_update;
+        operations_ref = proxy->operations_ref;
     }
     
+    // dataproxy has to be unlocked before calling setter as it will otherwise deadlock
+    // FIXME: check if this is sufficiently secured against e.g. concurrent proxy deregistration
     unlock_dataproxy(proxy);
+
+    if (err == ERROR_NONE && setter) {
+        err = setter(operations_ref, type, values, offset, count, source_session);
+    }
 
     return err;
 }

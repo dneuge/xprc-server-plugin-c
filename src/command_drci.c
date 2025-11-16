@@ -1122,8 +1122,13 @@ static char* concat(prealloc_list_t *list, int total_length) {
     return out;
 }
 
-static error_t dump_values(command_drci_t *command) {
+static error_t dump_values(char **out, command_drci_t *command) {
     error_t err = ERROR_NONE;
+
+    if (!out) {
+        RCLOG_WARN("[DRCI] dump_values called with NULL out reference");
+        return ERROR_UNSPECIFIC;
+    }
     
     prealloc_list_t *list = create_preallocated_list();
     if (!list) {
@@ -1146,7 +1151,7 @@ static error_t dump_values(command_drci_t *command) {
     } else {
         char *s = concat(list, total_length);
         if (s) {
-            err = continue_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, s);
+            *out = s;
         } else {
             err = ERROR_UNSPECIFIC;
         }
@@ -1199,6 +1204,7 @@ static void apply_value(XPLMDataTypeID type, void *value, xpint_t *stored_int, x
 
 static error_t drci_simple_set(void *ref, XPLMDataTypeID type, void *value, session_t *source_session) {
     command_drci_t *command = ref;
+    error_t err = ERROR_NONE;
 
     if (((command->types & type) == 0) || (type & ~simple_types) != 0 || !value) {
         return ERROR_UNSPECIFIC;
@@ -1210,12 +1216,32 @@ static error_t drci_simple_set(void *ref, XPLMDataTypeID type, void *value, sess
 
     apply_value(type, value, &command->value_int, &command->value_float, &command->value_double, command->intconv_mode);
 
+    char *dump = NULL;
     if (should_echo(command, source_session)) {
-        dump_values(command);
+        err = dump_values(&dump, command);
+        if (err != ERROR_NONE) {
+            RCLOG_WARN("[DRCI] drci_simple_set failed to dump values, unable to notify XPRC dataref owner (error %d)", err);
+            if (dump) {
+                free(dump);
+                dump=NULL;
+            }
+        }
     }
 
+    session_t *session = command->session;
+    channel_id_t channel_id = command->channel_id;
+
+    // we need to unlock the command mutex before sending the response as we may otherwise deadlock with other events
+    // usually being processed with a session lock first, command locks afterwards
     mtx_unlock(&command->mutex);
-    
+
+    if (dump) {
+        err = continue_channel(session, channel_id, CURRENT_TIME_REFERENCE, dump);
+        if (err != ERROR_NONE) {
+            RCLOG_WARN("[DRCI] drci_simple_set failed to send notification to XPRC dataref owner (error %d)", err);
+        }
+    }
+
     return ERROR_NONE;
 }
 
@@ -1328,6 +1354,7 @@ static error_t drci_array_length(void *ref, XPLMDataTypeID type, int *length) {
 
 static error_t drci_array_update(void *ref, XPLMDataTypeID type, void *values, int offset, int count, session_t *source_session) {
     command_drci_t *command = ref;
+    error_t err = ERROR_NONE;
     error_t out_err = ERROR_NONE;
 
     RCLOG_TRACE("[DRCI] drci_array_update: type=%d, values=%p, offset=%d, count=%d, source_session=%p", type, values, offset, count, source_session);
@@ -1380,12 +1407,31 @@ static error_t drci_array_update(void *ref, XPLMDataTypeID type, void *values, i
     
     RCLOG_TRACE("[DRCI] drci_array_update: copy complete");
 
+    char *dump = NULL;
     if (should_echo(command, source_session)) {
-        RCLOG_TRACE("[DRCI] drci_array_update: dumping");
-        dump_values(command);
+        err = dump_values(&dump, command);
+        if (err != ERROR_NONE) {
+            RCLOG_WARN("[DRCI] drci_array_update failed to dump values, unable to notify XPRC dataref owner (error %d)", err);
+            if (dump) {
+                free(dump);
+                dump=NULL;
+            }
+        }
     }
-    
+
+    session_t *session = command->session;
+    channel_id_t channel_id = command->channel_id;
+
+    // we need to unlock the command mutex before sending the response as we may otherwise deadlock with other events
+    // usually being processed with a session lock first, command locks afterwards
     mtx_unlock(&command->mutex);
+
+    if (dump) {
+        err = continue_channel(session, channel_id, CURRENT_TIME_REFERENCE, dump);
+        if (err != ERROR_NONE) {
+            RCLOG_WARN("[DRCI] drci_array_update failed to send notification to XPRC dataref owner (error %d)", err);
+        }
+    }
     
     RCLOG_TRACE("[DRCI] drci_array_update: done");
     
