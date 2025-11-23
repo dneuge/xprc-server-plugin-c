@@ -86,7 +86,9 @@ static void handle_termination_request(session_t *session, request_t *request) {
     channel_t *channel = get_channel(session->channels, request->channel_id);
     if (!channel || channel->state == CHANNEL_STATE_CLOSED || channel->destruction_requested) {
         // mandatory error string; do not change (see Special Considerations section in protocol specification)
-        send_or_close(session->connection, "-ERR %s %ld termination request ignored, channel does not exist\n", channel_name, millis_since_reference(session));
+        // since the channel does not exist/is no longer open we should not send any channel-message but instead need
+        // to use an "out-of-band" server message (like a syntax error, except neither server nor client should panic)
+        send_or_close(session->connection, "*ERR %ld termination request ignored, channel does not exist: %s\n", millis_since_reference(session), channel_name);
         return;
     }
 
