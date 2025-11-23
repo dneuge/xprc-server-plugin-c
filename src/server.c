@@ -85,7 +85,8 @@ static void handle_termination_request(session_t *session, request_t *request) {
     
     channel_t *channel = get_channel(session->channels, request->channel_id);
     if (!channel || channel->state == CHANNEL_STATE_CLOSED || channel->destruction_requested) {
-        send_or_close(session->connection, "-ERR %s %ld channel does not exist\n", channel_name, millis_since_reference(session));
+        // mandatory error string; do not change (see Special Considerations section in protocol specification)
+        send_or_close(session->connection, "-ERR %s %ld termination request ignored, channel does not exist\n", channel_name, millis_since_reference(session));
         return;
     }
 
