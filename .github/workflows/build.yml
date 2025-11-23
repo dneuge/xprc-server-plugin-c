@@ -20,6 +20,10 @@ on:
       restore_cache:
         description: 'Is this run allowed to load cached files?'
         type: boolean
+      save_cache:
+        description: 'Is this run allowed to save files to cache?'
+        type: boolean
+        default: true
 
 jobs:
   build:
@@ -35,6 +39,7 @@ jobs:
           echo 'commit_ref=${{ github.event.inputs.commit_ref }}'
           echo 'ci_ref=${{ github.event.inputs.ci_ref }}'
           echo 'restore_cache=${{ github.event.inputs.restore_cache }}'
+          echo 'save_cache=${{ github.event.inputs.save_cache }}'
           echo '#### JOB PARAMETERS - END'
       - uses: actions/checkout@v4
         with:
@@ -64,6 +69,7 @@ jobs:
           retention-days: 1
       - name: save cache
         id: cache-save
+        if: "${{ github.event.inputs.save_cache == 'true' }}"
         uses: actions/cache/save@v4
         with:
           path: |
