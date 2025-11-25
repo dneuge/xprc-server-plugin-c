@@ -287,11 +287,11 @@ static bool read_dataref(drmu_dataref_t *dataref, dynamic_array_t *dest_arr) {
     } else if (dataref->type == xplmType_Double) {
         *((xpdouble_t*) dest) = XPLMGetDatad(dataref->xp_ref);
     } else if (dataref->type == xplmType_IntArray) {
-        success = read_xplm_dataref_array(dataref, dest, (xplm_dataref_array_getter_f) XPLMGetDatavi);
+        success = read_xplm_dataref_array(dataref, dest_arr, (xplm_dataref_array_getter_f) XPLMGetDatavi);
     } else if (dataref->type == xplmType_FloatArray) {
-        success = read_xplm_dataref_array(dataref, dest, (xplm_dataref_array_getter_f) XPLMGetDatavf);
+        success = read_xplm_dataref_array(dataref, dest_arr, (xplm_dataref_array_getter_f) XPLMGetDatavf);
     } else if (dataref->type == xplmType_Data) {
-        success = read_xplm_dataref_array(dataref, dest, (xplm_dataref_array_getter_f) XPLMGetDatab);
+        success = read_xplm_dataref_array(dataref, dest_arr, (xplm_dataref_array_getter_f) XPLMGetDatab);
     } else {
         RCLOG_WARN("[DRMU] read_dataref called with unsupported type %d", dataref->type);
         return false;
