@@ -5,7 +5,7 @@
         <description>X-Plane Remote Control (server plugin reference implementation in C)</description>
         <website>https://github.com/dneuge/xprc-server-plugin-c</website>
         <source>https://github.com/dneuge/xprc-server-plugin-c.git</source>
-        <copyright license="MIT" years="2022-2025">
+        <copyright license="MIT" years="2022-2026">
             <author>DanielNeugebauer</author>
         </copyright>
     </product>
