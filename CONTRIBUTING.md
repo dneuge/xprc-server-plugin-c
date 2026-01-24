@@ -2,7 +2,7 @@
 
 Before contributing code for inclusion to the main repository, please make sure that
 
-- you have read all available documentation of this project, in particular the [development notes](DEVELOPMENT.md)
+- you have read all available documentation of this project, in particular the [development notes](DEVELOPMENT.md) and [security policy](SECURITY.md)
 - the source code you are about to commit can be released under MIT license
   - check with project lead before introducing code restricted by licenses
 - source code is formatted "correctly", see the section below

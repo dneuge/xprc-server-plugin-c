@@ -16,11 +16,11 @@ Related projects:
 
 ## Current State
 
-In its current state the plugin is recommended only to be used as a **development preview**. Binary end-users releases will be published once the remaining blockers have been resolved:
+In its current state the plugin is recommended only to be used as a **development preview**. Binary releases suitable for end-users will be published once the remaining blockers have been resolved:
 
 - The plugin has some known stability issues which can deadlock X-Plane's main thread or may result in Crashes To Desktop (CTD). Those should be fixed before release to avoid user complaints.
 - The protocol has some open todos preventing a "version 1.0" release. Most importantly it does not make sense to increment the general protocol revision, potentially prompting unnecessary client updates, each time new features are being added. Instead, clients should have a way to detect server feature availability. There are some ideas on how to do that but they have not been finalized and thus not implemented yet. Please refer to the specification project for details.
-- Some originally intended security features are currently still missing on the network-side of this project.
+- Some [originally intended security features](SECURITY.md) are currently still missing on the network-side of this project.
 - License information must be presented to users for binary releases. Documentation necessary to prepare that "paperwork" has been partially prepared by the [SBOM](sbom.xml) but any distribution still needs to provide a proper human-readable document/text file.
 
 Work on this project started in February 2022 with the specification and a Python POC being written first. In 2025 the most critical stability issues were sufficiently mitigated for reliable use in a first application of limited scope. As of early 2026 it seemed unreasonable to hold back source code publication any longer, even if in its current state this project is only usable as a development preview. **A generally usable stable release is estimated to be published at some point in 2026** as it is also required for another project under active development.
@@ -41,6 +41,10 @@ The project can be built for all platforms supported by X-Plane by simply runnin
 scripts. Please refer to the [developer documentation](DEVELOPMENT.md) for details. 
 
 An [SBOM](sbom.xml) is provided for detailed information about project dependencies.
+
+## Security
+
+Please refer to the [security policy](SECURITY.md) for details on how to report security issues and an overview of security considerations.
 
 ## License
 
