@@ -228,23 +228,19 @@ static bool cmtr_initialize(command_cmtr_t *command) {
 typedef void (*xpref_consumer_f)(XPLMCommandRef xp_ref);
 
 static inline void for_all_xprefs(command_cmtr_t *command, xpref_consumer_f consumer, bool holding, bool only_if_held) {
-    list_item_t *item = command->entries->head;
-    while (item) {
+    for (list_item_t *item = command->entries->head; item; item = item->next) {
         cmtr_entry_t *entry = item->value;
 
         if (!only_if_held || entry->held) {
             consumer(entry->xp_ref);
         }
-        
+
         entry->held = holding;
-        
-        item = item->next;
     }
 }
 
 static inline void for_all_xprefs_reversed(command_cmtr_t *command, xpref_consumer_f consumer, bool holding, bool only_if_held) {
-    list_item_t *item = command->entries->tail;
-    while (item) {
+    for (list_item_t *item = command->entries->tail; item; item = item->prev) {
         cmtr_entry_t *entry = item->value;
 
         if (!only_if_held || entry->held) {
@@ -252,8 +248,6 @@ static inline void for_all_xprefs_reversed(command_cmtr_t *command, xpref_consum
         }
 
         entry->held = holding;
-
-        item = item->prev;
     }
 }
 
