@@ -242,6 +242,21 @@ static inline void for_all_xprefs(command_cmtr_t *command, xpref_consumer_f cons
     }
 }
 
+static inline void for_all_xprefs_reversed(command_cmtr_t *command, xpref_consumer_f consumer, bool holding, bool only_if_held) {
+    list_item_t *item = command->entries->tail;
+    while (item) {
+        cmtr_entry_t *entry = item->value;
+
+        if (!only_if_held || entry->held) {
+            consumer(entry->xp_ref);
+        }
+
+        entry->held = holding;
+
+        item = item->prev;
+    }
+}
+
 static inline void notify_channel(command_cmtr_t *command, cmtr_action_t action, bool may_close) {
     bool should_notify = (command->monitor_mode == CMTR_MONITOR_HOLD_RELEASE) || ((action == CMTR_ACTION_HOLD_OR_TRIGGER) && (command->monitor_mode != CMTR_MONITOR_DISABLE));
     if (!should_notify) {
@@ -269,7 +284,7 @@ static inline void notify_channel(command_cmtr_t *command, cmtr_action_t action,
 
 static inline void release_all_held_xprefs(command_cmtr_t *command, bool is_last_action) {
     notify_channel(command, CMTR_ACTION_RELEASE, is_last_action);
-    for_all_xprefs(command, XPLMCommandEnd, false, true);
+    for_all_xprefs_reversed(command, XPLMCommandEnd, false, true);
     command->holding = false;
 }
 
