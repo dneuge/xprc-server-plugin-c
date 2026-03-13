@@ -11,6 +11,8 @@ src_dir="${script_dir}/src"
 build_dir="${script_dir}/build"
 release_dir="${script_dir}/release"
 
+build_info_path="${src_dir}/_buildinfo.h"
+
 function die {
     echo $@
     exit 1
@@ -34,7 +36,7 @@ elif [[ ! -d .git ]]; then
 else
     XPRC_SERVER_BUILD_REF="$(git rev-parse HEAD)"
     
-    tag="$(git describe --tags 2>/dev/null || echo -n)"
+    tag="$(git describe --tags --exact-match 2>/dev/null || echo -n)"
     if [[ "$tag" != "" ]]; then
         XPRC_SERVER_BUILD_REF="${tag}@${XPRC_SERVER_BUILD_REF}"
     fi
@@ -44,7 +46,7 @@ else
     fi
 fi
 
-cat >"${src_dir}/_buildinfo.h" <<EOF
+cat >"${build_info_path}" <<EOF
 #ifndef XPRC__BUILDINFO_H
 #define XPRC__BUILDINFO_H
 
@@ -57,6 +59,12 @@ cat >"${src_dir}/_buildinfo.h" <<EOF
 
 #endif //XPRC__BUILDINFO_H
 EOF
+
+echo
+echo "------ BUILD INFO FILE: ${build_info_path}"
+cat "${build_info_path}"
+echo "------ END OF BUILD INFO FILE"
+echo
 
 ## BUILD
 cd "${build_dir}"
