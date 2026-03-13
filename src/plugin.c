@@ -9,6 +9,7 @@
 #include <XPLMProcessing.h>
 #include <XPLMUtilities.h>
 
+#include "_buildinfo.h"
 #include "commands.h"
 #include "dataproxy.h"
 #include "fileio.h"
@@ -289,8 +290,8 @@ fatal_error:
 }
 
 PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
-    strcpy(name, "XPRC");
-    strcpy(sig, "de.energiequant.xprc");
+    strcpy(name, XPRC_SERVER_NAME);
+    strcpy(sig, XPRC_SERVER_ID);
     strcpy(desc, "XP Remote Control");
 
     xprc_log_init();
@@ -309,6 +310,11 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
         RCLOG_ERROR("a fatal error has occurred, XPRC is stuck - simulator restart required");
         return 1;
     }
+
+    RCLOG_INFO("starting XPRC server plugin " XPRC_SERVER_ID " version " XPRC_SERVER_VERSION " " XPRC_SERVER_BUILD_ID " " XPRC_SERVER_BUILD_REF);
+
+    XPLMHostApplicationID xplm_host_application_id = {0};
+    XPLMGetVersions(&server_base_config.xpinfo.xplane_version, &server_base_config.xpinfo.xplm_version, &xplm_host_application_id);
 
 #ifdef TARGET_MACOS
     // We get old-style colon-separated paths on MacOS unless we enable the "native paths" feature.

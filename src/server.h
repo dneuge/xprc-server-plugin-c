@@ -29,6 +29,14 @@ typedef struct {} xpcommand_registry_t;
 typedef struct {} xpqueue_t;
 #endif
 
+/// general information about X-Plane
+typedef struct {
+    /// X-Plane version ID as returned by XPLMGetVersions
+    int xplane_version;
+    /// X-Plane API (XPLM) version ID as returned by XPLMGetVersions
+    int xplm_version;
+} xpinfo_t;
+
 /// resources and configuration passed to the server
 typedef struct {
     /// password required to match for session authentication
@@ -46,6 +54,9 @@ typedef struct {
     xpcommand_registry_t *xpcommand_registry;
     /// used to queue one-shot X-Plane commands
     xpqueue_t *xpqueue;
+
+    /// general information about X-Plane
+    xpinfo_t xpinfo;
 } server_config_t;
 
 /**

@@ -17,6 +17,7 @@ build/
 lib/*
 !lib/*.patch
 release/
+src/_buildinfo.h
 user.cfg
 
 manualtest*

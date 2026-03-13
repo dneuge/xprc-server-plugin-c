@@ -26,6 +26,38 @@ mkdir -p "${build_dir}"
 [[ -d "${release_dir}" ]] && rm -Rf "${release_dir}"
 mkdir -p "${release_dir}"
 
+## GENERATE BUILD INFO FILE
+if [[ "${XPRC_SERVER_BUILD_REF:-}" != "" ]]; then
+    echo "!! Build version reference has been overridden to: ${XPRC_SERVER_BUILD_REF}"
+elif [[ ! -d .git ]]; then
+    echo "!! Building without git repository, build version reference will be missing"
+else
+    XPRC_SERVER_BUILD_REF="$(git rev-parse HEAD)"
+    
+    tag="$(git describe --tags 2>/dev/null || echo -n)"
+    if [[ "$tag" != "" ]]; then
+        XPRC_SERVER_BUILD_REF="${tag}@${XPRC_SERVER_BUILD_REF}"
+    fi
+    
+    if [[ "$(git status --porcelain)" != "" ]]; then
+        XPRC_SERVER_BUILD_REF="${XPRC_SERVER_BUILD_REF}(modified)"
+    fi
+fi
+
+cat >"${src_dir}/_buildinfo.h" <<EOF
+#ifndef XPRC__BUILDINFO_H
+#define XPRC__BUILDINFO_H
+
+#define XPRC_SERVER_ID "${XPRC_SERVER_ID:-de.energiequant.xprc}"
+#define XPRC_SERVER_NAME "${XPRC_SERVER_NAME:-XPRC}"
+#define XPRC_SERVER_VERSION "${XPRC_SERVER_VERSION:-dev}"
+#define XPRC_SERVER_WEBSITE "${XPRC_SERVER_WEBSITE:-}"
+#define XPRC_SERVER_BUILD_ID "${XPRC_SERVER_BUILD_ID:-}"
+#define XPRC_SERVER_BUILD_REF "${XPRC_SERVER_BUILD_REF:-}"
+
+#endif //XPRC__BUILDINFO_H
+EOF
+
 ## BUILD
 cd "${build_dir}"
 

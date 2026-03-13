@@ -10,6 +10,7 @@
 #include "command_drls.h"
 #include "command_drqv.h"
 #include "command_drmu.h"
+#include "command_srid.h"
 
 static bool register_command(command_factory_t *factory, command_t *command) {
     void *_old_value = NULL;
@@ -38,6 +39,7 @@ command_factory_t* create_command_factory() {
     success &= register_command(factory, &command_drls);
     success &= register_command(factory, &command_drqv);
     success &= register_command(factory, &command_drmu);
+    success &= register_command(factory, &command_srid);
 
     if (!success) {
         destroy_command_factory(factory);
