@@ -54,6 +54,14 @@ static error_t srid_create(void **command_ref, session_t *session, request_t *re
     // confirm channel without data on first message for better readability of raw transcripts
     confirm_channel(session, channel_id, CURRENT_TIME_REFERENCE, NULL);
 
+    continue_channel(session, channel_id, CURRENT_TIME_REFERENCE, "id:" XPRC_SERVER_ID);
+    continue_channel(session, channel_id, CURRENT_TIME_REFERENCE, "name:" XPRC_SERVER_NAME);
+    continue_channel(session, channel_id, CURRENT_TIME_REFERENCE, "version:" XPRC_SERVER_VERSION);
+
+    if (strlen(XPRC_SERVER_WEBSITE) > 0) {
+        continue_channel(session, channel_id, CURRENT_TIME_REFERENCE, "website:" XPRC_SERVER_WEBSITE);
+    }
+
     char *msg_apiversion = dynamic_sprintf("apiversion:%d", session->server->config.xpinfo.xplm_version);
     if (!msg_apiversion) {
         RCLOG_WARN("[SRID] failed to format X-Plane API version");
@@ -81,14 +89,6 @@ static error_t srid_create(void **command_ref, session_t *session, request_t *re
     if (strlen(XPRC_SERVER_BUILD_REF) > 0) {
         continue_channel(session, channel_id, CURRENT_TIME_REFERENCE, "x-build-ref:" XPRC_SERVER_BUILD_REF);
     }
-
-    if (strlen(XPRC_SERVER_WEBSITE) > 0) {
-        continue_channel(session, channel_id, CURRENT_TIME_REFERENCE, "website:" XPRC_SERVER_WEBSITE);
-    }
-
-    continue_channel(session, channel_id, CURRENT_TIME_REFERENCE, "id:" XPRC_SERVER_ID);
-    continue_channel(session, channel_id, CURRENT_TIME_REFERENCE, "name:" XPRC_SERVER_NAME);
-    continue_channel(session, channel_id, CURRENT_TIME_REFERENCE, "version:" XPRC_SERVER_VERSION);
 
     if (strlen(XPRC_SERVER_BUILD_TIME) > 0) {
         continue_channel(session, channel_id, CURRENT_TIME_REFERENCE, "x-build-time:" XPRC_SERVER_BUILD_TIME);
