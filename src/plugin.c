@@ -311,7 +311,7 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
         return 1;
     }
 
-    RCLOG_INFO("starting XPRC server plugin " XPRC_SERVER_ID " version " XPRC_SERVER_VERSION " " XPRC_SERVER_BUILD_ID " " XPRC_SERVER_BUILD_REF);
+    RCLOG_INFO("starting XPRC server plugin " XPRC_SERVER_ID " version " XPRC_SERVER_VERSION " " XPRC_SERVER_BUILD_ID " " XPRC_SERVER_BUILD_REF " built at " XPRC_SERVER_BUILD_TIME " for " XPRC_SERVER_BUILD_TARGET);
 
     XPLMHostApplicationID xplm_host_application_id = {0};
     XPLMGetVersions(&server_base_config.xpinfo.xplane_version, &server_base_config.xpinfo.xplm_version, &xplm_host_application_id);
