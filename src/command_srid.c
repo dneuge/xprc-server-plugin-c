@@ -88,7 +88,13 @@ static error_t srid_create(void **command_ref, session_t *session, request_t *re
 
     continue_channel(session, channel_id, CURRENT_TIME_REFERENCE, "id:" XPRC_SERVER_ID);
     continue_channel(session, channel_id, CURRENT_TIME_REFERENCE, "name:" XPRC_SERVER_NAME);
-    finish_channel(session, channel_id, CURRENT_TIME_REFERENCE, "version:" XPRC_SERVER_VERSION);
+    continue_channel(session, channel_id, CURRENT_TIME_REFERENCE, "version:" XPRC_SERVER_VERSION);
+
+    if (strlen(XPRC_SERVER_BUILD_TIME) > 0) {
+        continue_channel(session, channel_id, CURRENT_TIME_REFERENCE, "x-build-time:" XPRC_SERVER_BUILD_TIME);
+    }
+
+    finish_channel(session, channel_id, CURRENT_TIME_REFERENCE, "x-build-target:" XPRC_SERVER_BUILD_TARGET);
 
     return out_error;
 }
