@@ -32,7 +32,9 @@ typedef struct _command_t command_t;
  * Allocates and initializes a new instance of the command.
  *
  * A pointer to the created command instance's data structure must be set on command_ref as it will be used on
- * subsequent calls regarding this command instance.
+ * subsequent calls regarding this command instance. Commands that can complete instantly may keep the command_ref
+ * pointing to NULL if there actually is no instance and the command has already fully completed (either successfully
+ * or failed).
  *
  * Commands are always instantiated through a request handled by a session. The #request_t provides access to command
  * options and parameters as requested by the client. The required information must be extracted/copied as the
@@ -41,9 +43,9 @@ typedef struct _command_t command_t;
  * The #session_t should be saved for communication and control. It is only provided once but will remain available
  * until the command has been destroyed.
  *
- * #ERROR_NONE must be returned to indicate successful command creation. If the command could not be created, for
- * example due to invalid options/parameters requested by the client, an appropriate error code must be used
- * (#ERROR_NONE must not be used if failed).
+ * #ERROR_NONE must be returned to indicate successful command creation (or instant completion).
+ * If the command could not be created, for example due to invalid options/parameters requested by the client,
+ * an appropriate error code must be used (#ERROR_NONE must not be used if failed).
  *
  * Clean up must be performed before returning in case command creation fails. In particular, all newly allocated memory
  * must be (eventually) freed again.
