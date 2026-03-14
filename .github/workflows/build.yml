@@ -17,6 +17,12 @@ on:
         required: true
       ci_ref:
         description: 'CI system reference'
+      xprc_server_build_id:
+        description: 'build ID (pipeline/job) to bake into binary as XPRC_SERVER_BUILD_ID'
+      xprc_server_version:
+        description: 'version to bake into binary as XPRC_SERVER_VERSION'
+      xprc_server_website:
+        description: 'website URL to bake into binary as XPRC_SERVER_WEBSITE'
       restore_cache:
         description: 'Is this run allowed to load cached files?'
         type: boolean
@@ -28,6 +34,10 @@ on:
 jobs:
   build:
     runs-on: ${{ github.event.inputs.build_runner }}
+    env:
+      XPRC_SERVER_BUILD_ID: ${{ github.event.inputs.xprc_server_build_id }}
+      XPRC_SERVER_VERSION: ${{ github.event.inputs.xprc_server_version }}
+      XPRC_SERVER_WEBSITE: ${{ github.event.inputs.xprc_server_website }}
     steps:
       - name: inputs-echo
         shell: bash
@@ -38,6 +48,9 @@ jobs:
           echo 'xplane_target=${{ github.event.inputs.xplane_target }}'
           echo 'commit_ref=${{ github.event.inputs.commit_ref }}'
           echo 'ci_ref=${{ github.event.inputs.ci_ref }}'
+          echo 'xprc_server_build_id=${{ github.event.inputs.xprc_server_build_id }}'
+          echo 'xprc_server_version=${{ github.event.inputs.xprc_server_version }}'
+          echo 'xprc_server_website=${{ github.event.inputs.xprc_server_website }}'
           echo 'restore_cache=${{ github.event.inputs.restore_cache }}'
           echo 'save_cache=${{ github.event.inputs.save_cache }}'
           echo '#### JOB PARAMETERS - END'
