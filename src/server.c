@@ -76,6 +76,21 @@ static void handle_command_request(session_t *session, request_t *request) {
             RCLOG_WARN("failed to clear dead channel %s after command creation failed, closing connection", channel_name);
             close_network_connection(session->connection);
         }
+    } else if (!channel->command_ref) {
+        RCLOG_DEBUG("command %s completed without command reference on channel %s, freeing channel again (instant command completion)", request->command_name, channel_name);
+
+        // close channel with success indication if still open
+        err = finish_channel(session, channel->id, CURRENT_TIME_REFERENCE, NULL);
+        if (err != ERROR_NONE && err != SESSION_ERROR_INVALID_CHANNEL_STATE) {
+            RCLOG_WARN("terminating connection because finishing channel failed after instant command completion");
+            close_network_connection(session->connection);
+            return;
+        }
+
+        if (!pop_channel(session->channels, channel->id)) {
+            RCLOG_WARN("failed to clear instantly completed channel %s, closing connection", channel_name);
+            close_network_connection(session->connection);
+        }
     }
 }
 
