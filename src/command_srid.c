@@ -12,10 +12,10 @@ static const char *srid_supported_options[] = {
 };
 
 static error_t srid_destroy(void *command_ref) {
-    RCLOG_TRACE("[SRID] destroy");
+    RCLOG_WARN("[SRID] unexpected call to destructor (command completes instantly and does not require destruction)");
     
-    if (!command_ref) {
-        RCLOG_WARN("[SRID] attempted destruction with unexpected command_ref, possible memory corruption");
+    if (command_ref) {
+        RCLOG_WARN("[SRID] attempted destruction with unexpected command_ref %p, possible memory corruption", command_ref);
         return ERROR_UNSPECIFIC;
     }
     
@@ -23,10 +23,10 @@ static error_t srid_destroy(void *command_ref) {
 }
 
 static error_t srid_terminate(void *command_ref) {
-    RCLOG_TRACE("[SRID] terminate");
+    RCLOG_WARN("[SRID] unexpected request to terminate (command completes instantly and does not require termination/destruction)");
     
     if (command_ref) {
-        RCLOG_WARN("[SRID] attempted termination with unexpected command_ref, possible memory corruption");
+        RCLOG_WARN("[SRID] attempted termination with unexpected command_ref %p, possible memory corruption", command_ref);
         return ERROR_UNSPECIFIC;
     }
 
