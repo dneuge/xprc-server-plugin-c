@@ -7,6 +7,8 @@
 #include "session.h"
 #include "utils.h"
 
+#define DRLS_COMMAND_VERSION 1
+
 #define DRLS_SCHEDULE_PHASE TASK_SCHEDULE_BEFORE_FLIGHT_MODEL
 
 // FIXME: add support for rwCheck
@@ -132,7 +134,7 @@ static int count_parameters(command_parameter_t *parameter) {
     return num;
 }
 
-static error_t drls_create(void **command_ref, session_t *session, request_t *request) {
+static error_t drls_create(void **command_ref, session_t *session, request_t *request, command_config_t *config) {
     error_t err = ERROR_NONE;
     error_t out_error = ERROR_NONE;
 
@@ -142,6 +144,11 @@ static error_t drls_create(void **command_ref, session_t *session, request_t *re
     }
     
     channel_id_t channel_id = request->channel_id;
+
+    if (config->version != DRLS_COMMAND_VERSION) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unexpected command version");
+        return ERROR_UNSPECIFIC;
+    }
 
     if (!request_has_only_options(request, (char**)drls_supported_options)) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unsupported options");
@@ -217,9 +224,29 @@ static error_t drls_create(void **command_ref, session_t *session, request_t *re
     return (out_error != ERROR_NONE) ? out_error : ERROR_UNSPECIFIC;
 }
 
+static command_config_t* drls_create_default_config() {
+    return create_command_config(DRLS_COMMAND_VERSION);
+}
+
+static error_t drls_merge_config(command_config_t **new_config, char **err_msg, command_config_t *previous_config, command_config_t *requested_changes) {
+    if (requested_changes->version != DRLS_COMMAND_VERSION) {
+        *err_msg = dynamic_sprintf("only supported version is %u, requested %u", DRLS_COMMAND_VERSION, requested_changes->version);
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (has_command_feature_flags(requested_changes)) {
+        *err_msg = dynamic_sprintf("current command implementation does not support any feature flags");
+        return ERROR_UNSPECIFIC;
+    }
+
+    return ERROR_NONE;
+}
+
 command_t command_drls = {
     .name = "DRLS",
     .create = drls_create,
     .terminate = drls_terminate,
     .destroy = drls_destroy,
+    .create_default_config = drls_create_default_config,
+    .merge_config = drls_merge_config,
 };

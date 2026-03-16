@@ -41,4 +41,46 @@ void destroy_command_factory(command_factory_t *factory);
  */
 error_t create_command(command_factory_t *factory, channel_t *channel, session_t *session, request_t *request);
 
+/**
+ * Merges the requested changes based on the previous configuration, providing the result as new_config.
+ * new_config may be kept set to NULL if the request did not lead to any changes (equal to previous_config).
+ *
+ * If a reference is provided for err_msg (not NULL) and the changes are being declined, err_msg may be set to a
+ * specific message that can be logged or returned to clients. A failing change (as indicated by return value) may
+ * not always provide an err_msg, instead (check error_t for success/failure indication instead of the err_msg pointer).
+ *
+ * previous_config must have come from get_default_config or a previous call to this function. If the new configuration
+ * remains unchanged (same as previous_config), new_config may be left as-is (pointing to NULL).
+ *
+ * Memory is managed by caller, both for input and output parameters.
+ *
+ * @param new_config will be set to the updated configuration (may be NULL if no change has been applied)
+ * @param err_msg optional error message to submit to requesting client if failed; points to NULL on success (must be freed by caller if set)
+ * @param factory command factory
+ * @param command_name name of command to update config for
+ * @param previous_config previous configuration to change from
+ * @param requested_changes requested configuration changes
+ * @return error code describing what prevented reconfiguration; #ERROR_NONE on success
+ */
+error_t merge_command_config(command_config_t **new_config, char **err_msg, command_factory_t *factory, char *command_name, command_config_t *previous_config, command_config_t *requested_changes);
+
+/**
+ * Returns a new instance of the specified command's initial default configuration as to be applied to new sessions.
+ *
+ * Memory is managed by caller.
+ *
+ * @return new instance describing the command's default configuration; NULL on error
+ */
+command_config_t* create_default_command_config(command_factory_t *factory, char *command_name);
+
+/**
+ * Returns a list holding copies of the names of all commands registered to the factory.
+ *
+ * Memory is managed by caller; list and values must be freed when no longer needed.
+ *
+ * @param factory command factory
+ * @return list of registered command names in no particular order; NULL on error
+ */
+list_t* list_command_names(command_factory_t *factory);
+
 #endif

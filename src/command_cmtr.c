@@ -10,6 +10,8 @@
 #include "utils.h"
 #include "xptypes.h"
 
+#define CMTR_COMMAND_VERSION 1
+
 #define INFINITE_REPETITION -2134896
 
 #define CMTR_TASK_PHASE TASK_SCHEDULE_BEFORE_FLIGHT_MODEL
@@ -465,11 +467,16 @@ static cmtr_monitor_mode_t parse_monitor_mode(char *s) {
     return CMTR_INVALID;
 }
 
-static error_t cmtr_create(void **command_ref, session_t *session, request_t *request) {
+static error_t cmtr_create(void **command_ref, session_t *session, request_t *request, command_config_t *config) {
     error_t err = ERROR_NONE;
     error_t out_error = ERROR_NONE;
     
     channel_id_t channel_id = request->channel_id;
+
+    if (config->version != CMTR_COMMAND_VERSION) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unexpected command version");
+        return ERROR_UNSPECIFIC;
+    }
 
     if (!request_has_only_options(request, (char**)cmtr_supported_options)) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unsupported options");
@@ -618,9 +625,29 @@ static error_t cmtr_create(void **command_ref, session_t *session, request_t *re
     return (out_error != ERROR_NONE) ? out_error : ERROR_UNSPECIFIC;
 }
 
+static command_config_t* cmtr_create_default_config() {
+    return create_command_config(CMTR_COMMAND_VERSION);
+}
+
+static error_t cmtr_merge_config(command_config_t **new_config, char **err_msg, command_config_t *previous_config, command_config_t *requested_changes) {
+    if (requested_changes->version != CMTR_COMMAND_VERSION) {
+        *err_msg = dynamic_sprintf("only supported version is %u, requested %u", CMTR_COMMAND_VERSION, requested_changes->version);
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (has_command_feature_flags(requested_changes)) {
+        *err_msg = dynamic_sprintf("current command implementation does not support any feature flags");
+        return ERROR_UNSPECIFIC;
+    }
+
+    return ERROR_NONE;
+}
+
 command_t command_cmtr = {
     .name = "CMTR",
     .create = cmtr_create,
     .terminate = cmtr_terminate,
     .destroy = cmtr_destroy,
+    .create_default_config = cmtr_create_default_config,
+    .merge_config = cmtr_merge_config,
 };

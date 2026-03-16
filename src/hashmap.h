@@ -26,6 +26,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "lists.h"
+
 /// the number of bytes used for a hash result (hash length/size)
 #define HASH_BYTES 2
 /// the number of all possible combinations resulting from hashing
@@ -84,6 +86,44 @@ void* hashmap_get(hashmap_t *map, char *key);
  */
 bool hashmap_put(hashmap_t *map, char *key, void *value, void **old_value);
 
+/**
+ * Checks if the given hashmap is empty, i.e. if it holds no entries.
+ * @param map hashmap to be checked; may be NULL
+ * @return true if map is empty or NULL; false if it holds at least one entry
+ */
+bool is_hashmap_empty(hashmap_t *map);
+
+/**
+ * Returns a list containing references to all keys currently present in the given hashmap.
+ *
+ * Memory management:
+ * - The returned list is to be managed by the caller.
+ * - List values (map keys) are the original pointers contained within the map and must NOT be freed or altered.
+ *
+ * Concurrency:
+ * - Map must not be modified concurrently while this function is being executed.
+ * - If the map gets modified concurrently, memory referenced by the returned list may become invalid. Locks must be
+ *   ensured by caller, if needed.
+ *
+ * @param map hashmap to retrieve keys of
+ * @return all keys currently present in map as shared pointers (must not be modified/freed); NULL on error
+ */
+list_t* hashmap_reference_keys(hashmap_t *map);
+
+/**
+ * Returns a list containing copies of all keys currently present in the given hashmap.
+ *
+ * Memory management:
+ * - The returned list is to be managed by the caller.
+ * - List values (map keys) are copies to be managed by the caller.
+ *
+ * Concurrency:
+ * - Map must not be modified concurrently while this function is being executed.
+ *
+ * @param map hashmap to retrieve keys of
+ * @return copies of all keys currently present in map (must be freed when no longer needed); NULL on error
+ */
+list_t* hashmap_copy_keys(hashmap_t *map);
 /// @}
 
 #endif

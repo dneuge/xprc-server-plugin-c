@@ -11,6 +11,8 @@
 #include "utils.h"
 #include "xptypes.h"
 
+#define DRQV_COMMAND_VERSION 1
+
 #define INFINITE_REPETITION -2134896
 
 typedef struct _drqv_dataref_t drqv_dataref_t;
@@ -432,7 +434,7 @@ static bool is_valid_interval(char *s) {
     return is_suffixed_millis(s) || is_suffixed_frames(s);
 }
 
-static error_t drqv_create(void **command_ref, session_t *session, request_t *request) {
+static error_t drqv_create(void **command_ref, session_t *session, request_t *request, command_config_t *config) {
     error_t err = ERROR_NONE;
     error_t out_error = ERROR_NONE;
     
@@ -442,6 +444,11 @@ static error_t drqv_create(void **command_ref, session_t *session, request_t *re
     }
     
     channel_id_t channel_id = request->channel_id;
+
+    if (config->version != DRQV_COMMAND_VERSION) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unexpected command version");
+        return ERROR_UNSPECIFIC;
+    }
 
     if (!request_has_only_options(request, (char**)drqv_supported_options)) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unsupported options");
@@ -594,9 +601,29 @@ static error_t drqv_create(void **command_ref, session_t *session, request_t *re
     return (out_error != ERROR_NONE) ? out_error : ERROR_UNSPECIFIC;
 }
 
+static command_config_t* drqv_create_default_config() {
+    return create_command_config(DRQV_COMMAND_VERSION);
+}
+
+static error_t drqv_merge_config(command_config_t **new_config, char **err_msg, command_config_t *previous_config, command_config_t *requested_changes) {
+    if (requested_changes->version != DRQV_COMMAND_VERSION) {
+        *err_msg = dynamic_sprintf("only supported version is %u, requested %u", DRQV_COMMAND_VERSION, requested_changes->version);
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (has_command_feature_flags(requested_changes)) {
+        *err_msg = dynamic_sprintf("current command implementation does not support any feature flags");
+        return ERROR_UNSPECIFIC;
+    }
+
+    return ERROR_NONE;
+}
+
 command_t command_drqv = {
     .name = "DRQV",
     .create = drqv_create,
     .terminate = drqv_terminate,
     .destroy = drqv_destroy,
+    .create_default_config = drqv_create_default_config,
+    .merge_config = drqv_merge_config,
 };

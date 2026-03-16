@@ -87,7 +87,9 @@ SET(XPRC_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/command_drls_unspecific.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/command_drqv.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/command_drmu.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/command_srfs.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/command_srid.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/command_srlc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/plugin.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/server.c
@@ -96,6 +98,7 @@ SET(XPRC_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/xpcommands.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/xpqueue.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/session.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/command.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/task_schedule.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/gui.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/gui_utils.c

@@ -11,6 +11,8 @@
 #include "utils.h"
 #include "xptypes.h"
 
+#define CMRG_COMMAND_VERSION 1
+
 #define CMRG_INVALID 127
 
 #define CMRG_TASK_PHASE TASK_SCHEDULE_BEFORE_FLIGHT_MODEL
@@ -216,13 +218,18 @@ static xpcommand_phase_t parse_phase(char *s) {
     return CMRG_INVALID;
 }
 
-static error_t cmrg_create(void **command_ref, session_t *session, request_t *request) {
+static error_t cmrg_create(void **command_ref, session_t *session, request_t *request, command_config_t *config) {
     error_t err = ERROR_NONE;
     error_t out_error = ERROR_NONE;
     char *name = NULL;
     char *description = NULL;
     
     channel_id_t channel_id = request->channel_id;
+
+    if (config->version != CMRG_COMMAND_VERSION) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unexpected command version");
+        return ERROR_UNSPECIFIC;
+    }
 
     if (!request_has_only_options(request, (char**)cmrg_supported_options)) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unsupported options");
@@ -330,9 +337,29 @@ static error_t cmrg_create(void **command_ref, session_t *session, request_t *re
     return (out_error != ERROR_NONE) ? out_error : ERROR_UNSPECIFIC;
 }
 
+static command_config_t* cmrg_create_default_config() {
+    return create_command_config(CMRG_COMMAND_VERSION);
+}
+
+static error_t cmrg_merge_config(command_config_t **new_config, char **err_msg, command_config_t *previous_config, command_config_t *requested_changes) {
+    if (requested_changes->version != CMRG_COMMAND_VERSION) {
+        *err_msg = dynamic_sprintf("only supported version is %u, requested %u", CMRG_COMMAND_VERSION, requested_changes->version);
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (has_command_feature_flags(requested_changes)) {
+        *err_msg = dynamic_sprintf("current command implementation does not support any feature flags");
+        return ERROR_UNSPECIFIC;
+    }
+
+    return ERROR_NONE;
+}
+
 command_t command_cmrg = {
     .name = "CMRG",
     .create = cmrg_create,
     .terminate = cmrg_terminate,
     .destroy = cmrg_destroy,
+    .create_default_config = cmrg_create_default_config,
+    .merge_config = cmrg_merge_config,
 };

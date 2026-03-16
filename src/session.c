@@ -24,6 +24,20 @@
 typedef uint8_t channel_action_t;
 
 error_t create_session(session_t **session, network_connection_t *connection, server_t *server) {
+    error_t out_error = ERROR_NONE;
+    list_t *command_names = NULL;
+
+    if (!server) {
+        RCLOG_ERROR("create_session called without server");
+        return ERROR_UNSPECIFIC;
+    }
+
+    command_factory_t *command_factory = server->config.command_factory;
+    if (!command_factory) {
+        RCLOG_ERROR("create_session called without command factory");
+        return ERROR_UNSPECIFIC;
+    }
+
     *session = malloc(sizeof(session_t));
     if (!(*session)) {
         return ERROR_MEMORY_ALLOCATION;
@@ -40,13 +54,70 @@ error_t create_session(session_t **session, network_connection_t *connection, se
     
     (*session)->channels = create_channels_table();
     if (!(*session)->channels) {
-        mtx_destroy(&(*session)->mutex);
-        free(*session);
-        *session = NULL;
-        return ERROR_MEMORY_ALLOCATION;
+        RCLOG_WARN("create_session: failed to create channel table");
+        out_error = ERROR_MEMORY_ALLOCATION;
+        goto error;
     }
 
-    return ERROR_NONE;
+    (*session)->command_configs = create_hashmap();
+    if (!(*session)->command_configs) {
+        RCLOG_WARN("create_session: failed to create command config map");
+        out_error = ERROR_MEMORY_ALLOCATION;
+        goto error;
+    }
+
+    command_names = list_command_names(command_factory);
+    if (!command_names) {
+        RCLOG_WARN("create_session: failed to list command names");
+        goto error;
+    }
+    for (list_item_t *command_name_item = command_names->head; command_name_item; command_name_item = command_name_item->next) {
+        char *command_name = command_name_item->value;
+        command_config_t *default_config = create_default_command_config(command_factory, command_name);
+        if (!default_config) {
+            RCLOG_WARN("create_session: failed to create default configuration for %s", command_name);
+            goto error;
+        }
+
+        command_config_t *replaced_config = NULL;
+        if (!hashmap_put((*session)->command_configs, command_name, default_config, (void**)&replaced_config)) {
+            RCLOG_WARN("create_session: failed to record default configuration for %s", command_name);
+
+            destroy_command_config(default_config);
+            default_config = NULL;
+
+            goto error;
+        }
+
+        if (replaced_config) {
+            RCLOG_ERROR("create_session: command %s has been initialized multiple times, aborting", command_name);
+
+            // replaced config is not tracked and thus must be freed
+            destroy_command_config(replaced_config);
+            replaced_config = NULL;
+
+            goto error;
+        }
+    }
+
+    goto end;
+
+error:
+    RCLOG_WARN("failed to create session");
+    destroy_session(*session);
+    *session = NULL;
+
+    if (out_error == ERROR_NONE) {
+        out_error = ERROR_UNSPECIFIC;
+    }
+
+end:
+    if (command_names) {
+        destroy_list(command_names, free);
+        command_names = NULL;
+    }
+
+    return out_error;
 }
 
 int64_t millis_since_reference(session_t *session) {
@@ -312,10 +383,18 @@ static void destroy_session_channel(channel_t *channel, void *ref) {
     RCLOG_TRACE("destroy_session_channel: done");
 }
 
+static void destroy_command_config_entry(char *key, void *value) {
+    destroy_command_config(value);
+}
+
 void destroy_session(session_t *session) {
     session->destruction_pending = true;
     lock_session(session); // will fail; needed to make sure all threads noticed pending destruction
-    
+
+    if (session->command_configs) {
+        destroy_hashmap(session->command_configs, destroy_command_config_entry);
+    }
+
     destroy_channels_table(session->channels, destroy_session_channel, session);
     mtx_destroy(&session->mutex);
     free(session);
@@ -340,4 +419,69 @@ bool lock_session(session_t *session) {
 
 void unlock_session(session_t *session) {
     mtx_unlock(&session->mutex);
+}
+
+error_t set_command_configuration(session_t *session, char *command_name, command_config_t *config) {
+    if (!session) {
+        RCLOG_ERROR("set_command_configuration called without session");
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (!command_name) {
+        RCLOG_ERROR("set_command_configuration called without command_name");
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (!config) {
+        RCLOG_ERROR("set_command_configuration called without config");
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (!lock_session(session)) {
+        RCLOG_WARN("set_command_configuration failed to lock session");
+        return ERROR_MUTEX_FAILED;
+    }
+
+    command_config_t *previous_config = NULL;
+    bool success = hashmap_put(session->command_configs, command_name, config, (void**)&previous_config);
+
+    unlock_session(session);
+
+    if (success) {
+        RCLOG_DEBUG("stored command config for %s", command_name);
+    } else {
+        RCLOG_WARN("failed to store command config for %s", command_name);
+        previous_config = NULL; // keep existing config, must not be freed
+    }
+
+    if (previous_config) {
+        RCLOG_DEBUG("freeing old command config for %s at %p", command_name, previous_config)
+        destroy_command_config(previous_config);
+        previous_config = NULL;
+    }
+
+    return success ? ERROR_NONE : ERROR_UNSPECIFIC;
+}
+
+command_config_t* get_command_configuration(session_t *session, char *command_name) {
+    if (!session) {
+        RCLOG_ERROR("get_command_configuration called without session");
+        return NULL;
+    }
+
+    if (!command_name) {
+        RCLOG_ERROR("get_command_configuration called without command_name");
+        return NULL;
+    }
+
+    if (!lock_session(session)) {
+        RCLOG_WARN("get_command_configuration failed to lock session");
+        return NULL;
+    }
+
+    command_config_t *config = hashmap_get(session->command_configs, command_name);
+
+    unlock_session(session);
+
+    return config;
 }

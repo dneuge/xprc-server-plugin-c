@@ -7,6 +7,8 @@
 #include "session.h"
 #include "utils.h"
 
+#define SRID_COMMAND_VERSION 1
+
 static const char *srid_supported_options[] = {
     NULL
 };
@@ -33,11 +35,16 @@ static error_t srid_terminate(void *command_ref) {
     return ERROR_NONE;
 }
 
-static error_t srid_create(void **command_ref, session_t *session, request_t *request) {
+static error_t srid_create(void **command_ref, session_t *session, request_t *request, command_config_t *config) {
     error_t out_error = ERROR_NONE;
     
     channel_id_t channel_id = request->channel_id;
     
+    if (config->version != SRID_COMMAND_VERSION) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unexpected command version");
+        return ERROR_UNSPECIFIC;
+    }
+
     *command_ref = NULL;
 
     if (!request_has_only_options(request, (char**)srid_supported_options)) {
@@ -99,9 +106,29 @@ static error_t srid_create(void **command_ref, session_t *session, request_t *re
     return out_error;
 }
 
+static command_config_t* srid_create_default_config() {
+    return create_command_config(SRID_COMMAND_VERSION);
+}
+
+static error_t srid_merge_config(command_config_t **new_config, char **err_msg, command_config_t *previous_config, command_config_t *requested_changes) {
+    if (requested_changes->version != SRID_COMMAND_VERSION) {
+        *err_msg = dynamic_sprintf("only supported version is %u, requested %u", SRID_COMMAND_VERSION, requested_changes->version);
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (has_command_feature_flags(requested_changes)) {
+        *err_msg = dynamic_sprintf("current command implementation does not support any feature flags");
+        return ERROR_UNSPECIFIC;
+    }
+
+    return ERROR_NONE;
+}
+
 command_t command_srid = {
     .name = "SRID",
     .create = srid_create,
     .terminate = srid_terminate,
     .destroy = srid_destroy,
+    .create_default_config = srid_create_default_config,
+    .merge_config = srid_merge_config,
 };

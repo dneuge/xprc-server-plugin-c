@@ -30,6 +30,12 @@
  * - The last message before command termination should be sent via #finish_channel() to close the channel afterwards.
  *   - If no message is provided, the channel will indicate termination through `-ACK` as per protocol specification.
  *   - This can also be used for the initial (single!) message of instantaneously terminating commands.
+ *
+ * Once connected, clients can list available commands and configure them to switch between versions and change feature
+ * flags, as supported by individual commands. Command configuration is always limited to and therefore tracked by the
+ * current session. All commands start from their default configuration as initialized during session creation. When
+ * the server instantiates a new command, it retrieves the currently active configuration and passes it to the command
+ * factory which in turn provides it to the command being instantiated.
  */
 
 #include <stdint.h>
@@ -38,6 +44,8 @@
 typedef struct _session_t session_t;
 
 #include "channels.h"
+#include "command.h"
+#include "hashmap.h"
 #include "network.h"
 #include "server.h"
 
@@ -77,6 +85,8 @@ typedef struct _session_t {
     network_connection_t *connection;
     /// the XPRC server instance this session belongs to
     server_t *server;
+    /// command configurations indexed by command name
+    hashmap_t *command_configs;
     /// protects concurrent session access
     mtx_t mutex;
     /// if the session is pending destruction (true) all actions must come to an end, locking is no longer permitted
@@ -156,5 +166,35 @@ error_t finish_channel(session_t *session, channel_id_t channel_id, int64_t mill
  * @return error code; #ERROR_NONE on success
  */
 error_t error_channel(session_t *session, channel_id_t channel_id, int64_t millis_since_reference, char *message);
+
+/**
+ * Stores the given command configuration for this session to be applied on next command instantiation.
+ *
+ * If successful:
+ * - memory management for the configuration is taken over by session functions (do not destroy or manipulate)
+ * - the previous configuration for the same command will be destroyed, if available
+ *
+ * If failed:
+ * - memory management has not been taken over, caller is responsible for destroying the provided configuration
+ * - previous configuration remains in effect
+ *
+ * @param session session to store configuration for
+ * @param command_name name of command to configure (case-sensitive)
+ * @param config configuration to store
+ * @return error code; #ERROR_NONE on success
+ */
+error_t set_command_configuration(session_t *session, char *command_name, command_config_t *config);
+
+/**
+ * Retrieves the current configuration of the specified command for this session.
+ *
+ * The returned configuration is the original instance and thus only valid while a session lock is being held. Callers
+ * must (partially) copy the configuration, if required.
+ *
+ * @param session session to retrieve configuration for
+ * @param command_name name of command to retrieve configuration for (case-sensitive)
+ * @return current command configuration (only valid while session lock is being held); NULL if unavailable
+ */
+command_config_t* get_command_configuration(session_t *session, char *command_name);
 
 #endif

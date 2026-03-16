@@ -16,6 +16,8 @@
 #include "utils.h"
 #include "xptypes.h"
 
+#define DRCI_COMMAND_VERSION 1
+
 #define DRCI_ECHO_NONE 0
 #define DRCI_ECHO_XPLANE 1
 #define DRCI_ECHO_OTHER 2
@@ -709,11 +711,16 @@ static error_t parse_steps(command_drci_t *command, char *step_option, char *ste
     return ERROR_NONE;
 }
 
-static error_t drci_create(void **command_ref, session_t *session, request_t *request) {
+static error_t drci_create(void **command_ref, session_t *session, request_t *request, command_config_t *config) {
     error_t err = ERROR_NONE;
     error_t out_error = ERROR_NONE;
     
     channel_id_t channel_id = request->channel_id;
+
+    if (config->version != DRCI_COMMAND_VERSION) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unexpected command version");
+        return ERROR_UNSPECIFIC;
+    }
 
     if (!request_has_only_options(request, (char**)drci_supported_options)) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unsupported options");
@@ -1452,9 +1459,29 @@ static const dataproxy_operations_t drci_dataproxy_operations = {
     .array_update = drci_array_update
 };
 
+static command_config_t* drci_create_default_config() {
+    return create_command_config(DRCI_COMMAND_VERSION);
+}
+
+static error_t drci_merge_config(command_config_t **new_config, char **err_msg, command_config_t *previous_config, command_config_t *requested_changes) {
+    if (requested_changes->version != DRCI_COMMAND_VERSION) {
+        *err_msg = dynamic_sprintf("only supported version is %u, requested %u", DRCI_COMMAND_VERSION, requested_changes->version);
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (has_command_feature_flags(requested_changes)) {
+        *err_msg = dynamic_sprintf("current command implementation does not support any feature flags");
+        return ERROR_UNSPECIFIC;
+    }
+
+    return ERROR_NONE;
+}
+
 command_t command_drci = {
     .name = "DRCI",
     .create = drci_create,
     .terminate = drci_terminate,
     .destroy = drci_destroy,
+    .create_default_config = drci_create_default_config,
+    .merge_config = drci_merge_config,
 };

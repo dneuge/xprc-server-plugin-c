@@ -10,6 +10,8 @@
 #include "utils.h"
 #include "xptypes.h"
 
+#define CMHD_COMMAND_VERSION 1
+
 #define CMHD_TASK_PHASE TASK_SCHEDULE_BEFORE_FLIGHT_MODEL
 
 typedef struct {
@@ -231,12 +233,17 @@ static void cmhd_process(task_t *task, task_schedule_phase_t phase) {
     }
 }
 
-static error_t cmhd_create(void **command_ref, session_t *session, request_t *request) {
+static error_t cmhd_create(void **command_ref, session_t *session, request_t *request, command_config_t *config) {
     error_t err = ERROR_NONE;
     error_t out_error = ERROR_NONE;
     
     channel_id_t channel_id = request->channel_id;
-    
+
+    if (config->version != CMHD_COMMAND_VERSION) {
+        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unexpected command version");
+        return ERROR_UNSPECIFIC;
+    }
+
     if (!request_has_only_options(request, (char**)cmhd_supported_options)) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "unsupported options");
         return ERROR_UNSPECIFIC;
@@ -325,9 +332,29 @@ static error_t cmhd_create(void **command_ref, session_t *session, request_t *re
     return (out_error != ERROR_NONE) ? out_error : ERROR_UNSPECIFIC;
 }
 
+static command_config_t* cmhd_create_default_config() {
+    return create_command_config(CMHD_COMMAND_VERSION);
+}
+
+static error_t cmhd_merge_config(command_config_t **new_config, char **err_msg, command_config_t *previous_config, command_config_t *requested_changes) {
+    if (requested_changes->version != CMHD_COMMAND_VERSION) {
+        *err_msg = dynamic_sprintf("only supported version is %u, requested %u", CMHD_COMMAND_VERSION, requested_changes->version);
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (has_command_feature_flags(requested_changes)) {
+        *err_msg = dynamic_sprintf("current command implementation does not support any feature flags");
+        return ERROR_UNSPECIFIC;
+    }
+
+    return ERROR_NONE;
+}
+
 command_t command_cmhd = {
     .name = "CMHD",
     .create = cmhd_create,
     .terminate = cmhd_terminate,
     .destroy = cmhd_destroy,
+    .create_default_config = cmhd_create_default_config,
+    .merge_config = cmhd_merge_config,
 };

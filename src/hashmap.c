@@ -131,3 +131,86 @@ bool hashmap_put(hashmap_t *map, char *key, void *value, void **old_value) {
 
     return true;
 }
+
+bool is_hashmap_empty(hashmap_t *map) {
+    if (!map) {
+        return true;
+    }
+
+    for (int i=0; i<HASH_COMBINATIONS; i++) {
+        if (map->items[i]) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+list_t* hashmap_reference_keys(hashmap_t *map) {
+    if (!map) {
+        return NULL;
+    }
+
+    list_t *out = create_list();
+    if (!out) {
+        return NULL;
+    }
+
+    bool success = true;
+    for (int i=0; i<HASH_COMBINATIONS; i++) {
+        hashmap_item_t *map_item = map->items[i];
+        while (map_item) {
+            if (!map_item->key || !list_append(out, map_item->key)) {
+                success = false;
+                break;
+            }
+
+            map_item = map_item->next;
+        }
+    }
+
+    if (!success) {
+        destroy_list(out, NULL);
+        out = NULL;
+    }
+
+    return out;
+}
+
+list_t* hashmap_copy_keys(hashmap_t *map) {
+    list_t *out = hashmap_reference_keys(map);
+    if (!out) {
+        return NULL;
+    }
+
+    bool success = true;
+    list_item_t *item = out->head;
+    while (item) {
+        item->value = copy_string(item->value);
+        if (!item->value) {
+            success = false;
+
+            // we must only free already copied strings, i.e. everything that preceeds (prev)
+            // everything that follows (next) has not been copied yet
+            item = item->prev;
+            while (item) {
+                free(item->value);
+                item->value = NULL;
+
+                item = item->prev;
+            }
+
+            break;
+        }
+
+        item = item->next;
+    }
+
+    if (!success) {
+        // copy failed - remaining values in list are NOT copies but shared pointers and must not be freed
+        destroy_list(out, NULL);
+        out = NULL;
+    }
+
+    return out;
+}
