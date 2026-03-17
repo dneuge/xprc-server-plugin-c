@@ -1,18 +1,17 @@
 #include <string.h>
 
 #include "arrays.h"
+#include "utils.h"
 
 dynamic_array_t* create_dynamic_array(size_t item_size, int initial_capacity) {
     if (item_size < 1 || initial_capacity < 0) {
         return NULL;
     }
 
-    dynamic_array_t *arr = malloc(sizeof(dynamic_array_t));
+    dynamic_array_t *arr = zmalloc(sizeof(dynamic_array_t));
     if (!arr) {
         return NULL;
     }
-    
-    memset(arr, 0, sizeof(dynamic_array_t));
 
     arr->item_size = item_size;
 

@@ -1,27 +1,17 @@
 #include <stdlib.h>
-#include <string.h>
 
 #include "lists.h"
 #include "utils.h"
 
 static prealloc_list_block_t* create_preallocated_list_block() {
-    prealloc_list_block_t *block = malloc(sizeof(prealloc_list_block_t));
-    if (!block) {
-        return NULL;
-    }
-
-    memset(block, 0, sizeof(prealloc_list_block_t));
-
-    return block;
+    return zmalloc(sizeof(prealloc_list_block_t));
 }
 
 prealloc_list_t* create_preallocated_list() {
-    prealloc_list_t *list = malloc(sizeof(prealloc_list_t));
+    prealloc_list_t *list = zmalloc(sizeof(prealloc_list_t));
     if (!list) {
         return NULL;
     }
-
-    memset(list, 0, sizeof(prealloc_list_t));
 
     prealloc_list_block_t *block = create_preallocated_list_block();
     if (!block) {

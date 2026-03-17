@@ -91,13 +91,11 @@ static error_t add_option(request_t *request, char *name, int name_length, char 
         options_ref = &(options->next);
     }
 
-    command_option_t *new_option = malloc(sizeof(command_option_t));
+    command_option_t *new_option = zmalloc(sizeof(command_option_t));
     if (!new_option) {
         return ERROR_MEMORY_ALLOCATION;
     }
-    
-    memset(new_option, 0, sizeof(command_option_t));
-    
+
     if (!(new_option->name = copy_partial_string(name, name_length))) {
         free(new_option);
         return ERROR_MEMORY_ALLOCATION;
@@ -129,13 +127,11 @@ static error_t add_parameter(request_t *request, char *parameter, int parameter_
         parameters_ref = &(parameters->next);
     }
 
-    command_parameter_t *new_parameter = malloc(sizeof(command_parameter_t));
+    command_parameter_t *new_parameter = zmalloc(sizeof(command_parameter_t));
     if (!new_parameter) {
         return ERROR_MEMORY_ALLOCATION;
     }
-    
-    memset(new_parameter, 0, sizeof(command_parameter_t));
-    
+
     if (!(new_parameter->parameter = copy_partial_string(parameter, parameter_length))) {
         free(new_parameter);
         return ERROR_MEMORY_ALLOCATION;
@@ -175,13 +171,11 @@ error_t parse_request(request_t **request, char *line, int length) {
         return ERROR_MEMORY_ALLOCATION;
     }
     
-    *request = malloc(sizeof(request_t));
+    *request = zmalloc(sizeof(request_t));
     if (!*request) {
         free(command_name);
         return ERROR_MEMORY_ALLOCATION;
     }
-
-    memset(*request, 0, sizeof(request_t));
 
     (*request)->channel_id = channel_id;
     (*request)->command_name = command_name;

@@ -5,6 +5,7 @@
 #include <time.h>
 
 #include "hashmap.h"
+#include "utils.h"
 
 typedef struct _expected_item_t expected_item_t;
 typedef struct _expected_item_t {
@@ -28,13 +29,11 @@ static int compute_random(int min, int max_exclusive) {
 static char* create_random_string(int min_length, int max_length, char min_char, char max_char) {
     int length = compute_random(min_length, max_length + 1);
 
-    char *s = malloc(length+1);
+    char *s = zmalloc(length+1);
     if (!s) {
         return NULL;
     }
-    
-    memset(s, 0, length+1);
-    
+
     for (int i=0; i<length; i++) {
         char ch = (char) compute_random(min_char, max_char + 1);
         s[i] = ch;
@@ -50,13 +49,11 @@ static void destroy_value(char *key, void *value) {
 }
 
 static expected_item_t* create_expected_item(char *key, void *value) {
-    expected_item_t *item = malloc(sizeof(expected_item_t));
+    expected_item_t *item = zmalloc(sizeof(expected_item_t));
     if (!item) {
         return NULL;
     }
-    
-    memset(item, 0, sizeof(expected_item_t));
-    
+
     item->key = key;
     item->value = value;
 
@@ -218,9 +215,8 @@ int main(int argc, char **argv) {
     printf("%d hashes out of %d combinations used (%.1f %%), maximum list size %d\n", num_hashes, HASH_COMBINATIONS, (double) num_hashes / HASH_COMBINATIONS * 100.0, max_size);
 
     size_t histogram_size = sizeof(int[max_size+1]);
-    int *histogram_by_size = malloc(histogram_size);
-    memset(histogram_by_size, 0, histogram_size);
-    
+    int *histogram_by_size = zmalloc(histogram_size);
+
     for (int i=0; i<HASH_COMBINATIONS; i++) {
         hashmap_item_t *map_item = map->items[i];
         

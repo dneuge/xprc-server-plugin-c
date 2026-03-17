@@ -52,14 +52,7 @@ static HASH_TYPE compute_hash(char *key) {
 }
 
 hashmap_t* create_hashmap() {
-    hashmap_t *map = malloc(sizeof(hashmap_t));
-    if (!map) {
-        return NULL;
-    }
-
-    memset(map, 0, sizeof(hashmap_t));
-    
-    return map;
+    return zmalloc(sizeof(hashmap_t));
 }
 
 static void destroy_item(hashmap_item_t *item, hashmap_value_destructor_f value_destructor) {
@@ -112,12 +105,10 @@ bool hashmap_put(hashmap_t *map, char *key, void *value, void **old_value) {
     }
 
     // if we get here we need to add a new item
-    hashmap_item_t *item = malloc(sizeof(hashmap_item_t));
+    hashmap_item_t *item = zmalloc(sizeof(hashmap_item_t));
     if (!item) {
         return false;
     }
-    
-    memset(item, 0, sizeof(hashmap_item_t));
 
     item->key = copy_string(key);
     if (!item->key) {

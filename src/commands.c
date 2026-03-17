@@ -3,6 +3,7 @@
 
 #include "commands.h"
 #include "logger.h"
+#include "utils.h"
 
 #include "command_cmhd.h"
 #include "command_cmrg.h"
@@ -21,12 +22,10 @@ static bool register_command(command_factory_t *factory, command_t *command) {
 }
 
 command_factory_t* create_command_factory() {
-    command_factory_t *factory = malloc(sizeof(command_factory_t));
+    command_factory_t *factory = zmalloc(sizeof(command_factory_t));
     if (!factory) {
         return NULL;
     }
-
-    memset(factory, 0, sizeof(command_factory_t));
 
     factory->commands_by_name = create_hashmap();
     if (!factory->commands_by_name) {

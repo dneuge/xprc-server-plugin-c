@@ -38,12 +38,10 @@ error_t create_session(session_t **session, network_connection_t *connection, se
         return ERROR_UNSPECIFIC;
     }
 
-    *session = malloc(sizeof(session_t));
+    *session = zmalloc(sizeof(session_t));
     if (!(*session)) {
         return ERROR_MEMORY_ALLOCATION;
     }
-
-    memset(*session, 0, sizeof(session_t));
 
     if (mtx_init(&(*session)->mutex, mtx_plain | mtx_recursive) != thrd_success) {
         return ERROR_UNSPECIFIC;

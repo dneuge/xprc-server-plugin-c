@@ -779,7 +779,7 @@ static int run_server_thread(void *arg) {
         }
         connection->has_send_wait = true;
 
-        connection->send_ringbuffer = malloc(SEND_BUFFER_SIZE);
+        connection->send_ringbuffer = zmalloc(SEND_BUFFER_SIZE);
         if (!connection->send_ringbuffer) {
             RCLOG_ERROR("failed to allocate send ring buffer");
             consecutive_errors++;
@@ -821,12 +821,10 @@ static int run_server_thread(void *arg) {
 }
 
 static struct sockaddr* create_address_ipv4(network_server_config_t *config) {
-    struct sockaddr_in *address = malloc(sizeof(struct sockaddr_in));
+    struct sockaddr_in *address = zmalloc(sizeof(struct sockaddr_in));
     if (!address) {
         return NULL;
     }
-
-    memset(address, 0, sizeof(struct sockaddr_in));
 
     address->sin_family = AF_INET;
     address->sin_port = htons(config->port);
@@ -879,13 +877,12 @@ error_t create_network_server(network_server_t **server, network_server_config_t
         return NETWORK_ERROR_BAD_ADDRESS;
     }
 
-    *server = malloc(sizeof(network_server_t));
+    *server = zmalloc(sizeof(network_server_t));
     if (!*server) {
         free(address);
         return ERROR_MEMORY_ALLOCATION;
     }
 
-    memset(*server, 0, sizeof(network_server_t));
     (*server)->handler = handler;
 
     int family = config->enable_ipv6 ? AF_INET6 : AF_INET;

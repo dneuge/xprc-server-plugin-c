@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "channels.h"
+#include "utils.h"
 
 #define BAD_CHANNEL_ID_SEGMENT 0xFF
 
@@ -66,9 +67,7 @@ static inline uint8_t channel_subtable_address(channel_id_t id) {
 }
 
 channels_table_t* create_channels_table() {
-    channels_table_t *table = malloc(sizeof(channels_table_t));
-    memset(table, 0, sizeof(channels_table_t));
-    return table;
+    return zmalloc(sizeof(channels_table_t));
 }
 
 static void destroy_channels_subtable(channels_subtable_t **subtable_ref, channel_destructor_f destructor, void *destructor_ref) {
@@ -154,12 +153,11 @@ bool put_channel(channels_table_t *table, channel_t *channel) {
     channels_subtable_t *subtable = table->subtables[table_address];
     if (!subtable) {
         // initialize new subtable
-        subtable = malloc(sizeof(channels_subtable_t));
+        subtable = zmalloc(sizeof(channels_subtable_t));
         if (!subtable) {
             return false;
         }
 
-        memset(subtable, 0, sizeof(channels_subtable_t));
         table->subtables[table_address] = subtable;
     }
     

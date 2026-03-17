@@ -7,12 +7,10 @@
 #include "utils.h"
 
 error_t create_task_schedule(task_schedule_t **task_schedule) {
-    *task_schedule = malloc(sizeof(task_schedule_t));
+    *task_schedule = zmalloc(sizeof(task_schedule_t));
     if (!*task_schedule) {
         return ERROR_MEMORY_ALLOCATION;
     }
-
-    memset(*task_schedule, 0, sizeof(task_schedule_t));
 
     if (mtx_init(&(*task_schedule)->mutex, mtx_plain|mtx_recursive) != thrd_success) {
         free(*task_schedule);

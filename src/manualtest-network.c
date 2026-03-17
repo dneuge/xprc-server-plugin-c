@@ -22,7 +22,7 @@ typedef struct {
 } myref_t;
 
 static int new_connection(network_connection_t *connection, void **handler_reference, void *constructor_reference) {
-    myref_t *myref = malloc(sizeof(myref_t));
+    myref_t *myref = zmalloc(sizeof(myref_t));
     if (!myref) {
         RCLOG_WARN("failed to allocate handler reference");
         return ERROR_UNSPECIFIC;

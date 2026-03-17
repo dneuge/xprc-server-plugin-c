@@ -82,12 +82,10 @@ error:
 }
 
 static struct sockaddr* create_address_ipv6(network_server_config_t *config) {
-    struct sockaddr_in6 *address = malloc(sizeof(struct sockaddr_in6));
+    struct sockaddr_in6 *address = zmalloc(sizeof(struct sockaddr_in6));
     if (!address) {
         return NULL;
     }
-
-    memset(address, 0, sizeof(struct sockaddr_in6));
 
     address->sin6_family = AF_INET6;
     address->sin6_port = htons(config->port);
