@@ -225,7 +225,24 @@ static error_t drls_create(void **command_ref, session_t *session, request_t *re
 }
 
 static command_config_t* drls_create_default_config() {
-    return create_command_config(DRLS_COMMAND_VERSION);
+    error_t err = ERROR_NONE;
+
+    command_config_t *config = create_command_config(DRLS_COMMAND_VERSION);
+    if (!config) {
+        return NULL;
+    }
+
+    err = add_command_feature_flag(
+        config,
+        "unspecific",
+        COMMAND_DRLS_UNSPECIFIC_SUPPORTED ? COMMAND_FEATURE_STATE_ENABLED_ALWAYS : COMMAND_FEATURE_STATE_UNAVAILABLE
+    );
+    if (err != ERROR_NONE) {
+        destroy_command_config(config);
+        return NULL;
+    }
+
+    return config;
 }
 
 static error_t drls_merge_config(command_config_t **new_config, char **err_msg, command_config_t *previous_config, command_config_t *requested_changes) {
@@ -235,7 +252,7 @@ static error_t drls_merge_config(command_config_t **new_config, char **err_msg, 
     }
 
     if (has_command_feature_flags(requested_changes)) {
-        *err_msg = dynamic_sprintf("current command implementation does not support any feature flags");
+        *err_msg = dynamic_sprintf("current command implementation does not support changing any feature flags");
         return ERROR_UNSPECIFIC;
     }
 
