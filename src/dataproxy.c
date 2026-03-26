@@ -241,7 +241,7 @@ dataproxy_t* reserve_dataproxy(dataproxy_registry_t *registry, char *dataref_nam
         // previous dataref is still registered after owner dropped it,
         // we need to unregister the dataref before we can redefine it
         RCLOG_DEBUG("[dataproxy] reserve: proxy was dropped, unregistering");
-        error_t err = unregister_dataproxy(proxy);
+        error_t err = unregister_dataproxy(proxy); // FIXME: when called from drci_create this calls XP SDK outside of XP callbacks, crashes 12.4 and later
         if (err != ERROR_NONE) {
             RCLOG_WARN("[dataproxy] reserve: unregistering dropped proxy failed: %d", err);
             unlock_dataproxy_registry(registry);

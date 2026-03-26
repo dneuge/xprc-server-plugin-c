@@ -919,7 +919,8 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
             goto error;
         }
     }
-    
+
+    // FIXME: if data proxy was previously registered this calls XP SDK outside of XP callbacks, crashes 12.4 and later - needs to be deferred to flight loop
     RCLOG_TRACE("[DRCI] reserving proxy");
     command->proxy = reserve_dataproxy(session->server->config.dataproxy_registry, command->dataref_name, command->types, write_permission, command, session, drci_dataproxy_operations);
     if (!command->proxy) {
