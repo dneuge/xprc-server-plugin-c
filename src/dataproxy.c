@@ -513,6 +513,7 @@ prealloc_list_t* list_dataproxies_with_state(dataproxy_registry_t *registry, dat
     
     err = lock_dataproxy_registry(registry);
     if (err != ERROR_NONE) {
+        destroy_preallocated_list(out, NULL, PREALLOC_LIST_OVERRIDE_DEFERRED_DESTRUCTORS);
         return NULL;
     }
 
