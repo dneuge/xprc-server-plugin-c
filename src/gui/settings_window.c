@@ -6,6 +6,7 @@
 #include "../utils.h"
 
 #include "settings_window.h"
+#include "clipboard.h"
 
 #define NETWORK_INTERFACE_LABEL_LOCAL "<local machine only> (safe default)"
 #define NETWORK_INTERFACE_LABEL_ALL "<public on all interfaces> (caution, unsafe!)"
@@ -299,8 +300,10 @@ static void update_view(settings_window_t *settings_window) {
                                                                                : ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_Password;
     igInputText("##password", settings->password, settings_window->password_length, password_text_flags, NULL, NULL);
     igIndent(label_width);
-    settings_window->btn_pwd_copy_state = igButton("Copy", IMGUI_ZERO_SIZE);
-    igSameLine(0.0f, button_spacing);
+    if (settings_window->clipboard_available) {
+        settings_window->btn_pwd_copy_state = igButton("Copy", IMGUI_ZERO_SIZE);
+        igSameLine(0.0f, button_spacing);
+    }
     char *btn_reveal_text = settings_window->reveal_password ? "Hide" : "Reveal";
     settings_window->btn_pwd_reveal_state = igButton(btn_reveal_text, IM_VEC2(80, 0));
     igSameLine(0.0f, button_spacing);
@@ -413,6 +416,8 @@ static void update_view(settings_window_t *settings_window) {
 }
 
 static void handle_view_state(settings_window_t *settings_window) {
+    error_t err = ERROR_NONE;
+
     if (settings_window->btn_pwd_reveal_state) {
         settings_window->reveal_password = !settings_window->reveal_password;
     }
@@ -422,8 +427,23 @@ static void handle_view_state(settings_window_t *settings_window) {
         settings_window->dirty = true;
     }
 
+    if (settings_window->btn_pwd_copy_state) {
+        RCLOG_INFO("user requested to copy password to clipboard");
+
+        settings_window->btn_pwd_copy_state = false;
+
+        if (!settings_window->settings || !settings_window->settings->password) {
+            RCLOG_WARN("settings or password are unavailable; unable to copy");
+        } else {
+            err = copy_plaintext_to_clipboard(settings_window->settings->password);
+            if (err != ERROR_NONE) {
+                RCLOG_WARN("failed to copy password to clipboard: %d", err);
+            }
+        }
+    }
+
     if (settings_window->btn_network_reset_state) {
-        error_t err = reset_network_settings(settings_window->settings);
+        err = reset_network_settings(settings_window->settings);
         if (err != ERROR_NONE) {
             RCLOG_WARN("failed to reset network settings to default");
         } else {
@@ -472,6 +492,8 @@ settings_window_t* create_settings_window(settings_manager_t *settings_manager, 
         RCLOG_ERROR("missing parameters to initialize settings window; settings_manager=%p, server_manager=%p", settings_manager, server_manager);
         return NULL;
     }
+
+    settings_window->clipboard_available = is_clipboard_available();
 
     settings_window->settings_manager = settings_manager;
     settings_window->server_manager = server_manager;

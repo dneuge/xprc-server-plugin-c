@@ -21,6 +21,8 @@ typedef struct {
     bool dirty;
     /// validation state; if true, all fields are valid to be applied; at least one field contains errors if false
     bool valid;
+    /// persists availability of clipboard implementation
+    bool clipboard_available;
 
     // settings
     /// shared settings manager instance
