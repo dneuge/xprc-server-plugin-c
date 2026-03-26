@@ -238,6 +238,7 @@ bool prealloc_list_delete_item(prealloc_list_t *list, prealloc_list_item_t *item
  * @param list list to compact
  * @param value_destructor destructor to be called for non-null values of to be deleted items if no deferred destructor was recorded or this destructor is enforced; may be NULL
  * @param override_deferred_destructors Should the value destructor provided to this function be used unconditionally or only if no deferred destructor was recorded? Use #PREALLOC_LIST_CALL_DEFERRED_DESTRUCTORS and #PREALLOC_LIST_OVERRIDE_DEFERRED_DESTRUCTORS constants.
+ * @return true if successful, false if not
  */
 bool prealloc_list_compact(prealloc_list_t *list, list_value_destructor_f value_destructor, bool override_deferred_destructors);
 

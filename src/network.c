@@ -870,6 +870,11 @@ static struct sockaddr* create_address(network_server_config_t *config) {
 error_t create_network_server(network_server_t **server, network_server_config_t *config, network_handler_t handler) {
     int res;
 
+    if (!server || !config) {
+        RCLOG_WARN("create_network_server missing parameters: server=%p, config=%p", server, config);
+        return ERROR_UNSPECIFIC;
+    }
+
     struct sockaddr *address = create_address(config);
     socklen_t address_size = config->enable_ipv6 ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in);
     if (!address) {
@@ -950,6 +955,10 @@ error_t create_network_server(network_server_t **server, network_server_config_t
 bool destroy_network_server(network_server_t *server) {
     int res;
 
+    if (!server) {
+        return true;
+    }
+
     server->shutdown = true;
     shutdown(server->ssd, SHUT_RD);
     close_socket(server->ssd); // this should unblock the thread
@@ -979,6 +988,11 @@ bool destroy_network_server(network_server_t *server) {
 }
 
 error_t send_to_network(network_connection_t *connection, char *content, int length) {
+    if (!connection || !content) {
+        RCLOG_WARN("send_to_network missing parameters: connection=%p, content=%p", connection, content);
+        return ERROR_UNSPECIFIC;
+    }
+
     if (connection->shutdown || !connection->has_send_mutex) {
         return NETWORK_ERROR_SHUTDOWN;
     }
@@ -989,6 +1003,11 @@ error_t send_to_network(network_connection_t *connection, char *content, int len
 
     if (length == NETWORK_SEND_COMPLETE_STRING) {
         length = strlen(content);
+    }
+
+    if (length < 0) {
+        RCLOG_WARN("send_to_network bad length=%d", length);
+        return ERROR_UNSPECIFIC;
     }
 
     // check that the new content actually fits into the available capacity
@@ -1039,6 +1058,10 @@ error_t send_to_network(network_connection_t *connection, char *content, int len
 }
 
 void close_network_connection(network_connection_t *connection) {
+    if (!connection) {
+        return;
+    }
+
     // FIXME: set closing atomic
     if (connection->closing) {
         return;
@@ -1049,6 +1072,11 @@ void close_network_connection(network_connection_t *connection) {
 }
 
 error_t copy_network_config_to(network_server_config_t *source, network_server_config_t *destination) {
+    if (!source || !destination) {
+        RCLOG_WARN("copy_network_config_to missing parameters: source=%p, destination=%p", source, destination);
+        return ERROR_UNSPECIFIC;
+    }
+
     memcpy(destination, source, sizeof(network_server_config_t));
 
     if (destination->interface_address) {

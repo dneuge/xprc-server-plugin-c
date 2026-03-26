@@ -13,6 +13,10 @@
 #endif
 
 XPLMDataTypeID xprc_parse_type(char *s, int count) {
+    if (!s) {
+        return xplmType_Unknown;
+    }
+
     if ((count == 3) && !strncmp("int", s, count)) {
         return xplmType_Int;
     } else if ((count == 5) && !strncmp("float", s, count)) {

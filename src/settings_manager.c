@@ -9,6 +9,11 @@
 #define SETTINGS_FILENAME "xprc_settings.cfg"
 
 settings_manager_t* create_settings_manager(char *directory) {
+    if (!directory) {
+        RCLOG_WARN("[settings manager] create_settings_manager called with NULL");
+        return NULL;
+    }
+
     settings_manager_t *settings_manager = zalloc(sizeof(settings_manager_t));
     if (!settings_manager) {
         return NULL;
@@ -91,6 +96,7 @@ error_t destroy_settings_manager(settings_manager_t *settings_manager) {
 
 error_t lock_settings_manager(settings_manager_t *settings_manager) {
     if (!settings_manager) {
+        RCLOG_WARN("[settings manager] lock_settings_manager called with NULL");
         return ERROR_UNSPECIFIC;
     }
 
@@ -112,6 +118,7 @@ error_t lock_settings_manager(settings_manager_t *settings_manager) {
 
 void unlock_settings_manager(settings_manager_t *settings_manager) {
     if (!settings_manager) {
+        RCLOG_WARN("[settings manager] unlock_settings_manager called with NULL");
         return;
     }
 
@@ -121,6 +128,11 @@ void unlock_settings_manager(settings_manager_t *settings_manager) {
 error_t configure_settings_manager_from_storage(settings_manager_t *settings_manager) {
     error_t err = ERROR_NONE;
     error_t out_err = ERROR_NONE;
+
+    if (!settings_manager) {
+        RCLOG_WARN("[settings manager] configure_settings_manager_from_storage called with NULL")
+        return ERROR_UNSPECIFIC;
+    }
 
     RCLOG_TRACE("[settings manager] configure_settings_manager_from_storage: locking");
     err = lock_settings_manager(settings_manager);
@@ -210,6 +222,11 @@ error_t persist_settings_from_manager(settings_manager_t *settings_manager) {
     error_t err = ERROR_NONE;
     error_t out_err = ERROR_NONE;
 
+    if (!settings_manager) {
+        RCLOG_WARN("[settings manager] persist_settings_from_manager called with NULL")
+        return ERROR_UNSPECIFIC;
+    }
+
     err = lock_settings_manager(settings_manager);
     if (err != ERROR_NONE) {
         return err;
@@ -236,6 +253,11 @@ error_t copy_settings_to_manager(settings_manager_t *settings_manager, settings_
     error_t err = ERROR_NONE;
     error_t out_err = ERROR_NONE;
 
+    if (!settings_manager || !settings) {
+        RCLOG_WARN("[settings manager] copy_settings_to_manager missing parameters: settings_manager=%p, settings=%p", settings_manager, settings);
+        return ERROR_UNSPECIFIC;
+    }
+
     // only copy valid passwords, indicate error if invalid but continue
     if ((copy_password == SETTINGS_COPY_PASSWORD) && !validate_password(settings->password)) {
         out_err = SETTINGS_MANAGER_ERROR_PASSWORD_INVALID;
@@ -259,6 +281,11 @@ error_t copy_settings_to_manager(settings_manager_t *settings_manager, settings_
 
 error_t copy_settings_from_manager(settings_manager_t *settings_manager, settings_t *settings, bool copy_password) {
     error_t err = ERROR_NONE;
+
+    if (!settings_manager || !settings) {
+        RCLOG_WARN("[settings manager] copy_settings_from_manager missing parameters: settings_manager=%p, settings=%p", settings_manager, settings);
+        return ERROR_UNSPECIFIC;
+    }
 
     err = lock_settings_manager(settings_manager);
     if (err != ERROR_NONE) {

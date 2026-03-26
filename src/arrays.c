@@ -36,6 +36,10 @@ void destroy_dynamic_array(dynamic_array_t *arr) {
 }
 
 void* dynamic_array_get_pointer(dynamic_array_t *arr, int index) {
+    if (!arr) {
+        return NULL;
+    }
+
     if (index < 0 || index >= arr->length) {
         // out of bounds
         return NULL;

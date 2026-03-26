@@ -27,8 +27,8 @@ error_t create_session(session_t **session, network_connection_t *connection, se
     error_t out_error = ERROR_NONE;
     list_t *command_names = NULL;
 
-    if (!server) {
-        RCLOG_ERROR("create_session called without server");
+    if (!session || !connection || !server) {
+        RCLOG_ERROR("create_session missing parameters: session=%p, connection=%p, server=%p", session, connection, server);
         return ERROR_UNSPECIFIC;
     }
 
@@ -120,7 +120,11 @@ end:
 
 int64_t millis_since_reference(session_t *session) {
     // called during flight loop; keep lock-free
-    
+
+    if (!session) {
+        return -1;
+    }
+
     if (session->destruction_pending || session->reference_millis < 0) {
         return -1;
     }
@@ -144,7 +148,7 @@ int64_t millis_since_reference(session_t *session) {
 
 static error_t send_channel(session_t *session, channel_t *channel, channel_action_t action, int64_t timestamp, char *message) {
     error_t err = ERROR_NONE;
-    
+
     if (timestamp == CURRENT_TIME_REFERENCE) {
         timestamp = millis_since_reference(session);
     }
@@ -386,6 +390,10 @@ static void destroy_command_config_entry(char *key, void *value) {
 }
 
 void destroy_session(session_t *session) {
+    if (!session) {
+        return;
+    }
+
     session->destruction_pending = true;
     lock_session(session); // will fail; needed to make sure all threads noticed pending destruction
 
@@ -399,6 +407,11 @@ void destroy_session(session_t *session) {
 }
 
 bool lock_session(session_t *session) {
+    if (!session) {
+        RCLOG_WARN("lock_session called with NULL");
+        return false;
+    }
+
     if (session->destruction_pending) {
         return false;
     }
@@ -416,6 +429,11 @@ bool lock_session(session_t *session) {
 }
 
 void unlock_session(session_t *session) {
+    if (!session) {
+        RCLOG_WARN("unlock_session called with NULL");
+        return;
+    }
+
     mtx_unlock(&session->mutex);
 }
 

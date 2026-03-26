@@ -6,6 +6,11 @@
 #include "xptypes.h"
 
 error_t create_xpcommand_registry(xpcommand_registry_t **registry) {
+    if (!registry) {
+        RCLOG_WARN("[xpcommands] create_xpcommand_registry called with NULL");
+        return ERROR_UNSPECIFIC;
+    }
+
     *registry = zalloc(sizeof(xpcommand_registry_t));
     if (!(*registry)) {
         return ERROR_MEMORY_ALLOCATION;
@@ -29,6 +34,10 @@ error_t create_xpcommand_registry(xpcommand_registry_t **registry) {
 }
 
 error_t destroy_xpcommand_registry(xpcommand_registry_t *registry) {
+    if (!registry) {
+        return ERROR_NONE;
+    }
+
     if (mtx_lock(&registry->mutex) != thrd_success) {
         return ERROR_MUTEX_FAILED;
     }
@@ -217,6 +226,11 @@ static int xp_command_handler(XPLMCommandRef inCommand, XPLMCommandPhase inPhase
 error_t register_xpcommand(xpcommand_t *proxy) {
     error_t err = ERROR_NONE;
 
+    if (!proxy) {
+        RCLOG_WARN("[xpcommands] register_xpcommand called with NULL");
+        return ERROR_UNSPECIFIC;
+    }
+
     RCLOG_TRACE("[xpcommands] register_xpcommand will lock");
     err = lock_xpcommand(proxy);
     RCLOG_TRACE("[xpcommands] register_xpcommand locked");
@@ -292,6 +306,12 @@ static error_t _unregister_destroy_xpcommand(xpcommand_t *proxy, list_item_t *it
 
 error_t unregister_destroy_xpcommand(xpcommand_t *proxy) {
     error_t err = ERROR_NONE;
+
+    if (!proxy) {
+        RCLOG_WARN("[xpcommands] unregister_destroy_xpcommand called with NULL");
+        return ERROR_NONE;
+    }
+
     xpcommand_registry_t *registry = proxy->registry;
 
     err = lock_xpcommand_registry(registry);
@@ -310,6 +330,11 @@ error_t unregister_destroy_xpcommand(xpcommand_t *proxy) {
 error_t unregister_dropped_xpcommands(xpcommand_registry_t *registry) {
     error_t err = ERROR_NONE;
     error_t out_err = ERROR_NONE;
+
+    if (!registry) {
+        RCLOG_WARN("[xpcommands] unregister_dropped_xpcommands called with NULL");
+        return ERROR_UNSPECIFIC;
+    }
 
     err = lock_xpcommand_registry(registry);
     if (err != ERROR_NONE) {
@@ -340,6 +365,11 @@ error_t unregister_dropped_xpcommands(xpcommand_registry_t *registry) {
 error_t drop_xpcommand(xpcommand_t *proxy) {
     error_t err = ERROR_NONE;
     error_t out_err = ERROR_NONE;
+
+    if (!proxy) {
+        RCLOG_WARN("[xpcommands] drop_xpcommand called with NULL");
+        return ERROR_NONE;
+    }
 
     err = lock_xpcommand(proxy);
     if (err != ERROR_NONE) {

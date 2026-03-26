@@ -28,6 +28,9 @@ static segment_t* create_segment(char *data, size_t length) {
 
 static void destroy_segment(void *value) {
     segment_t *segment = value;
+    if (!segment) {
+        return;
+    }
 
     if (segment->data) {
         free(segment->data);
@@ -142,8 +145,9 @@ error_t read_file(char **data, size_t *length, char *path) {
     error_t out_err = ERROR_NONE;
     list_t *list = NULL;
 
-    if (!data || !length) {
-        goto end;
+    if (!data || !length || !path) {
+        RCLOG_WARN("[fileio] read_file misses input: data=%p, length=$lu, path=%s", data, length, path);
+        return ERROR_UNSPECIFIC;
     }
 
     *data = NULL;
@@ -272,6 +276,7 @@ error_t read_lines_from_file(list_t **lines, char *path) {
     error_t err = ERROR_NONE;
 
     if (!lines || !path) {
+        RCLOG_WARN("[fileio] read_lines_from_file misses input: lines=%p, path=%s", lines, path);
         return ERROR_UNSPECIFIC;
     }
 
@@ -293,7 +298,7 @@ error_t read_lines_from_file(list_t **lines, char *path) {
 
 error_t write_lines_to_file(list_t *lines, char *path) {
     if (!lines || !path) {
-        RCLOG_WARN("[fileio] missing input: lines=%p, path=%s", lines, path);
+        RCLOG_WARN("[fileio] write_lines_to_file misses input: lines=%p, path=%s", lines, path);
         return ERROR_UNSPECIFIC;
     }
 
@@ -312,6 +317,11 @@ error_t write_lines_to_file(list_t *lines, char *path) {
 #include <unistd.h>
 #include <errno.h>
 bool check_file_exists(char *path) {
+    if (!path) {
+        RCLOG_ERROR("[fileio] check_file_exists called without path; unpredictable behaviour (indicating file would not exist)");
+        return false;
+    }
+
     if (access(path, F_OK) == 0) {
         return true;
     }
@@ -354,6 +364,11 @@ bool check_file_exists(char *path) {
      * [sdk-api] docs/sdk-api-src/content/stringapiset/nf-stringapiset-multibytetowidechar.md
      * [win32]   docs/desktop-src/Intl/code-page-identifiers.md
      */
+
+    if (!path) {
+        RCLOG_ERROR("[fileio] check_file_exists called without path; unpredictable behaviour (indicating file would not exist)");
+        return false;
+    }
 
     // prepend \\?\ to enable long path handling
     char *long_path = dynamic_sprintf("\\\\?\\%s", path);

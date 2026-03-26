@@ -26,6 +26,10 @@ prealloc_list_t* create_preallocated_list() {
 }
 
 void destroy_preallocated_list(prealloc_list_t *list, list_value_destructor_f value_destructor, bool override_deferred_destructors) {
+    if (!list) {
+        return;
+    }
+
     prealloc_list_block_t *block = list->head_block;
 
     while (block) {
@@ -52,6 +56,10 @@ void destroy_preallocated_list(prealloc_list_t *list, list_value_destructor_f va
 }
 
 bool prealloc_list_append(prealloc_list_t *list, void *value) {
+    if (!list) {
+        return false;
+    }
+
     prealloc_list_block_t *block = list->tail_block;
     if (block->first_pristine_item_index >= PREALLOC_LIST_BLOCK_SIZE) {
         // last block is full, we need to allocate a new one
@@ -87,6 +95,10 @@ bool prealloc_list_append(prealloc_list_t *list, void *value) {
 }
 
 prealloc_list_item_t* prealloc_list_get_item(prealloc_list_t *list, int index) {
+    if (!list) {
+        return NULL;
+    }
+
     if (index < 0 || index >= list->size) {
         return NULL;
     }
@@ -101,6 +113,10 @@ prealloc_list_item_t* prealloc_list_get_item(prealloc_list_t *list, int index) {
 }
 
 bool prealloc_list_delete_item(prealloc_list_t *list, prealloc_list_item_t *item, list_value_destructor_f value_destructor, bool defer_value_destruction) {
+    if (!list || !item) {
+        return false;
+    }
+
     if (item->status != PREALLOC_ITEM_STATUS_IN_USE) {
         return false;
     }
@@ -139,6 +155,10 @@ bool prealloc_list_delete_item(prealloc_list_t *list, prealloc_list_item_t *item
 }
 
 bool prealloc_list_compact(prealloc_list_t *list, list_value_destructor_f value_destructor, bool override_deferred_destructors) {
+    if (!list) {
+        return false;
+    }
+
     if (!list->dirty) {
         // there is nothing to compact, avoid useless copy operations
         return true;
@@ -230,6 +250,10 @@ list_t* create_list() {
 }
 
 void destroy_list(list_t *list, list_value_destructor_f value_destructor) {
+    if (!list) {
+        return;
+    }
+
     list_item_t *item = list->head;
     while (item) {
         if (item->value && value_destructor) {
@@ -245,6 +269,10 @@ void destroy_list(list_t *list, list_value_destructor_f value_destructor) {
 }
 
 bool list_append(list_t *list, void *value) {
+    if (!list) {
+        return false;
+    }
+
     list_item_t *item = zalloc(sizeof(list_item_t));
     if (!item) {
         return false;
@@ -268,6 +296,10 @@ bool list_append(list_t *list, void *value) {
 }
 
 bool list_prepend(list_t *list, void *value) {
+    if (!list) {
+        return false;
+    }
+
     list_item_t *item = zalloc(sizeof(list_item_t));
     if (!item) {
         return false;
@@ -291,6 +323,10 @@ bool list_prepend(list_t *list, void *value) {
 }
 
 list_item_t* list_find(list_t *list, void *value) {
+    if (!list) {
+        return NULL;
+    }
+
     list_item_t *item = list->head;
     while (item) {
         if (item->value == value) {
@@ -302,6 +338,10 @@ list_item_t* list_find(list_t *list, void *value) {
 }
 
 list_item_t* list_find_test(list_t *list, list_value_test_f *test, void *ref) {
+    if (!list || !test) {
+        return NULL;
+    }
+
     list_item_t *item = list->head;
     while (item) {
         if (test(item->value, ref)) {
@@ -313,6 +353,10 @@ list_item_t* list_find_test(list_t *list, list_value_test_f *test, void *ref) {
 }
 
 void list_delete_item(list_t *list, list_item_t *item, list_value_destructor_f value_destructor) {
+    if (!list || !item) {
+        return;
+    }
+
     if (item->prev) {
         item->prev->next = item->next;
     }
@@ -339,6 +383,10 @@ void list_delete_item(list_t *list, list_item_t *item, list_value_destructor_f v
 }
 
 void list_delete_items_where(list_t *list, list_value_test_f *test, void *ref, list_value_destructor_f value_destructor) {
+    if (!list || !test) {
+        return;
+    }
+
     list_item_t *item = list->head;
     while (item) {
         list_item_t *next = item->next;
@@ -349,7 +397,7 @@ void list_delete_items_where(list_t *list, list_value_test_f *test, void *ref, l
     }
 }
 
-int sort_list_items_partition(list_item_t **items, int lowerLimit, int upperLimit, list_item_comparator_f comparator) {
+static int sort_list_items_partition(list_item_t **items, int lowerLimit, int upperLimit, list_item_comparator_f comparator) {
     // Quick Sort algorithm by Hoare as reproduced in pseudocode on Wikipedia as of 29 Jun 2024
     // https://en.wikipedia.org/wiki/Quicksort
 
@@ -371,7 +419,7 @@ int sort_list_items_partition(list_item_t **items, int lowerLimit, int upperLimi
     }
 }
 
-void sort_list_items_quicksort(list_item_t **items, int lowerLimit, int upperLimit, list_item_comparator_f comparator) {
+static void sort_list_items_quicksort_internal(list_item_t **items, int lowerLimit, int upperLimit, list_item_comparator_f comparator) {
     // Quick Sort algorithm by Hoare as reproduced in pseudocode on Wikipedia as of 29 Jun 2024
     // https://en.wikipedia.org/wiki/Quicksort
 
@@ -380,8 +428,16 @@ void sort_list_items_quicksort(list_item_t **items, int lowerLimit, int upperLim
     }
 
     int pivotIndex = sort_list_items_partition(items, lowerLimit, upperLimit, comparator);
-    sort_list_items_quicksort(items, lowerLimit, pivotIndex, comparator);
-    sort_list_items_quicksort(items, pivotIndex + 1, upperLimit, comparator);
+    sort_list_items_quicksort_internal(items, lowerLimit, pivotIndex, comparator);
+    sort_list_items_quicksort_internal(items, pivotIndex + 1, upperLimit, comparator);
+}
+
+void sort_list_items_quicksort(list_item_t **items, int lowerLimit, int upperLimit, list_item_comparator_f comparator) {
+    if (!items || !comparator) {
+        return;
+    }
+
+    sort_list_items_quicksort_internal(items, lowerLimit, upperLimit, comparator);
 }
 
 list_t* copy_list_sorted(list_t *original, list_item_comparator_f comparator) {

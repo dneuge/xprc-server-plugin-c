@@ -54,11 +54,20 @@ command_factory_t* create_command_factory() {
 }
 
 void destroy_command_factory(command_factory_t *factory) {
+    if (!factory) {
+        return;
+    }
+
     destroy_hashmap(factory->commands_by_name, NULL);
     free(factory);
 }
 
 error_t create_command(command_factory_t *factory, channel_t *channel, session_t *session, request_t *request) {
+    if (!factory || !channel || !session || !request) {
+        RCLOG_ERROR("create_command called with at least one mandatory parameter being NULL");
+        return ERROR_UNSPECIFIC;
+    }
+
     command_t *command = hashmap_get(factory->commands_by_name, request->command_name);
     if (!command) {
         return ERROR_UNSPECIFIC;

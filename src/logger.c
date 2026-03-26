@@ -161,6 +161,10 @@ static bool format_message(char *buffer, xprc_log_level_t level, char *format, v
 }
 
 void xprc_log(xprc_log_level_t level, const char *format, ...) {
+    if (!format) {
+        return;
+    }
+
     // skip if log level is disabled
     if (level < min_log_level) {
         return;

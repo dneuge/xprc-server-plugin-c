@@ -71,6 +71,10 @@ static void destroy_item(hashmap_item_t *item, hashmap_value_destructor_f value_
 }
 
 void destroy_hashmap(hashmap_t *map, hashmap_value_destructor_f value_destructor) {
+    if (!map) {
+        return;
+    }
+
     for (int i=0; i<HASH_COMBINATIONS; i++) {
         destroy_item(map->items[i], value_destructor);
     }
@@ -79,6 +83,10 @@ void destroy_hashmap(hashmap_t *map, hashmap_value_destructor_f value_destructor
 }
 
 void* hashmap_get(hashmap_t *map, char *key) {
+    if (!map || !key) {
+        return NULL;
+    }
+
     HASH_TYPE hash = compute_hash(key);
     hashmap_item_t *item = map->items[hash];
     while (item) {
@@ -91,6 +99,10 @@ void* hashmap_get(hashmap_t *map, char *key) {
 }
 
 bool hashmap_put(hashmap_t *map, char *key, void *value, void **old_value) {
+    if (!map || !key || !old_value) {
+        return false;
+    }
+
     HASH_TYPE hash = compute_hash(key);
     hashmap_item_t **reference = &(map->items[hash]);
     while (*reference) {
@@ -169,6 +181,10 @@ list_t* hashmap_reference_keys(hashmap_t *map) {
 }
 
 list_t* hashmap_copy_keys(hashmap_t *map) {
+    if (!map) {
+        return NULL;
+    }
+
     list_t *out = hashmap_reference_keys(map);
     if (!out) {
         return NULL;

@@ -7,6 +7,11 @@
 #include "xptypes.h"
 
 error_t create_xpqueue(xpqueue_t **queue) {
+    if (!queue) {
+        RCLOG_ERROR("[xpqueue] create_xpqueue called with NULL");
+        return ERROR_UNSPECIFIC;
+    }
+
     *queue = zalloc(sizeof(xpqueue_t));
     if (!(*queue)) {
         return ERROR_MEMORY_ALLOCATION;
@@ -53,6 +58,10 @@ static void unlock_xpqueue(xpqueue_t *queue) {
 error_t destroy_xpqueue(xpqueue_t *queue) {
     error_t err = ERROR_NONE;
 
+    if (!queue) {
+        return ERROR_NONE;
+    }
+
     err = lock_xpqueue(queue);
     if (err != ERROR_NONE) {
         RCLOG_ERROR("[xpqueue] failed to lock queue for destruction, error %d", err);
@@ -87,6 +96,11 @@ error_t destroy_xpqueue(xpqueue_t *queue) {
 error_t queue_XPLMCommandEnd(xpqueue_t *queue, XPLMCommandRef xp_ref) {
     error_t err = ERROR_NONE;
     error_t out_err = ERROR_NONE;
+
+    if (!queue) {
+        RCLOG_ERROR("[xpqueue] queue_XPLMCommandEnd called with queue=%p", queue);
+        return ERROR_UNSPECIFIC;
+    }
 
     if (xp_ref == NO_XP_COMMAND) {
         return ERROR_UNSPECIFIC;

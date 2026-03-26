@@ -36,6 +36,10 @@ static char channel_id_segment_to_char(channel_id_segment_t segment) {
 }
 
 channel_id_t string_to_channel_id(char* s) {
+    if (!s) {
+        return BAD_CHANNEL_ID;
+    }
+
     channel_id_t id = 0;
     channel_id_segment_t segment = 0;
     
@@ -52,6 +56,10 @@ channel_id_t string_to_channel_id(char* s) {
 }
 
 void channel_id_to_string(channel_id_t id, char* destination) {
+    if (!destination) {
+        return;
+    }
+
     for (int i=3; i>=0; i--) {
         destination[i] = channel_id_segment_to_char(id & 0b00111111);
         id = id >> 6;
@@ -90,6 +98,10 @@ static void destroy_channels_subtable(channels_subtable_t **subtable_ref, channe
 }
 
 void destroy_channels_table(channels_table_t *table, channel_destructor_f destructor, void *destructor_ref) {
+    if (!table || !destructor) {
+        return;
+    }
+
     table->destruction_pending = true;
     
     for (int i=0; i<CHANNELS_NUM_SUBTABLES; i++) {
@@ -104,6 +116,10 @@ void destroy_channels_table(channels_table_t *table, channel_destructor_f destru
 }
 
 channel_t* get_channel(channels_table_t *table, channel_id_t id) {
+    if (!table) {
+        return NULL;
+    }
+
     channels_subtable_t *subtable = table->subtables[channel_table_address(id)];
     if (!subtable) {
         return NULL;
@@ -117,6 +133,10 @@ bool has_channel(channels_table_t *table, channel_id_t id) {
 }
 
 channel_t* pop_channel(channels_table_t *table, channel_id_t id) {
+    if (!table) {
+        return NULL;
+    }
+
     uint32_t table_address = channel_table_address(id);
     channels_subtable_t *subtable = table->subtables[table_address];
     if (!subtable) {
@@ -145,7 +165,7 @@ channel_t* pop_channel(channels_table_t *table, channel_id_t id) {
 }
 
 bool put_channel(channels_table_t *table, channel_t *channel) {
-    if (table->destruction_pending) {
+    if (!table || !channel || table->destruction_pending) {
         return false;
     }
     

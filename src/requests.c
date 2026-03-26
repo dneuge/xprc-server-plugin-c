@@ -18,6 +18,10 @@
 #define REQUEST_PART_SEPARATOR ' '
 
 bool request_has_option(request_t *request, char *name) {
+    if (!request || !name) {
+        return false;
+    }
+
     command_option_t *option = request->options;
     while (option) {
         if (!strcmp(option->name, name)) {
@@ -30,6 +34,10 @@ bool request_has_option(request_t *request, char *name) {
 }
 
 bool request_has_only_options(request_t *request, char **names) {
+    if (!request || !names) {
+        return false;
+    }
+
     command_option_t *option = request->options;
 
     // for each option...
@@ -58,6 +66,10 @@ bool request_has_only_options(request_t *request, char **names) {
 }
 
 char* request_get_option(request_t *request, char *name, char *default_value) {
+    if (!request || !name) {
+        return default_value;
+    }
+
     command_option_t *option = request->options;
     while (option) {
         if (!strcmp(option->name, name)) {
@@ -144,7 +156,11 @@ static error_t add_parameter(request_t *request, char *parameter, int parameter_
 
 error_t parse_request(request_t **request, char *line, int length) {
     int res;
-    
+
+    if (!request || !line || length < 0) {
+        return ERROR_UNSPECIFIC;
+    }
+
     *request = NULL;
     
     if (length < MINIMUM_REQUEST_LENGTH) {
@@ -305,6 +321,10 @@ static void destroy_parameters(command_parameter_t *parameters) {
 }
 
 void destroy_request(request_t *request) {
+    if (!request) {
+        return;
+    }
+
     destroy_options(request->options);
     destroy_parameters(request->parameters);
     free(request->command_name);

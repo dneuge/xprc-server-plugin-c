@@ -13,6 +13,10 @@
 #endif
 
 char* dynamic_sprintf(char *format, ...) {
+    if (!format) {
+        return NULL;
+    }
+
     va_list args;
     va_start(args, format);
     char *out = dynamic_vsprintf(format, args);
@@ -22,6 +26,10 @@ char* dynamic_sprintf(char *format, ...) {
 }
 
 char* dynamic_vsprintf(char *format, va_list args) {
+    if (!format) {
+        return NULL;
+    }
+
     va_list args_copy;
     va_copy(args_copy, args);
     int required_size = vsnprintf(NULL, 0, format, args_copy);
@@ -149,6 +157,10 @@ MAY_INLINE void* zalloc(size_t size) {
 }
 
 void* copy_memory(void *src, size_t size) {
+    if (!src) {
+        return NULL;
+    }
+
     if (size <= 0) {
         return NULL;
     }
@@ -164,6 +176,10 @@ void* copy_memory(void *src, size_t size) {
 }
 
 char* copy_partial_string(char *s, size_t length) {
+    if (!s) {
+        return NULL;
+    }
+
     char *copy = malloc(length + 1);
     if (!copy) {
         return NULL;
@@ -186,6 +202,10 @@ char* copy_string(char *s) {
 }
 
 char* copy_partial_unescaped_string(char *s, int max_length) {
+    if (!s) {
+        return NULL;
+    }
+
     char *copy = zalloc(max_length + 1);
     if (!copy) {
         return NULL;
@@ -247,7 +267,7 @@ int num_digits(int value) {
 }
 
 int64_t millis_of_timespec(struct timespec *ts) {
-    if (ts->tv_sec < 0) {
+    if (!ts || ts->tv_sec < 0) {
         return -1;
     }
     
@@ -255,6 +275,10 @@ int64_t millis_of_timespec(struct timespec *ts) {
 }
 
 bool timespec_now_plus_millis(struct timespec *out, int base, uint16_t millis) {
+    if (!out) {
+        return false;
+    }
+
     if (millis < 0) {
         return false;
     }
@@ -273,6 +297,11 @@ bool timespec_now_plus_millis(struct timespec *out, int base, uint16_t millis) {
 }
 
 int count_chars(char *s, char needle, int length) {
+    if (!s) {
+        // FIXME: should warn somehow
+        return 0;
+    }
+
     if (length <= 0) {
         return 0;
     }

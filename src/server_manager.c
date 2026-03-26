@@ -135,6 +135,11 @@ end:
 static error_t update_wanted_state(server_manager_t *server_manager, bool first, bool next) {
     error_t err = ERROR_NONE;
 
+    if (!server_manager) {
+        RCLOG_WARN("[server manager] update_wanted_state called with NULL");
+        return ERROR_UNSPECIFIC;
+    }
+
     err = lock_server_manager(server_manager);
     if (err != ERROR_NONE) {
         return err;
@@ -198,6 +203,11 @@ static error_t update_server_config(server_manager_t *server_manager) {
     error_t err = ERROR_NONE;
     char *password_copy = NULL;
     char *network_interface_copy = NULL;
+
+    if (!server_manager) {
+        RCLOG_WARN("[server manager] update_server_config called with NULL");
+        return ERROR_UNSPECIFIC;
+    }
 
     settings_t *settings = create_settings();
     if (!settings) {
@@ -309,6 +319,11 @@ static managed_server_state_t get_managed_server_state_locked(server_manager_t *
 
 error_t maintain_server_manager(server_manager_t *server_manager) {
     error_t err = ERROR_NONE;
+
+    if (!server_manager) {
+        RCLOG_WARN("[server manager] maintain_server_manager called with NULL");
+        return ERROR_UNSPECIFIC;
+    }
 
     err = lock_server_manager(server_manager);
     if (err != ERROR_NONE) {

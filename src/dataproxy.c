@@ -8,6 +8,11 @@
 #include "logger.h"
 
 error_t create_dataproxy_registry(dataproxy_registry_t **registry) {
+    if (!registry) {
+        RCLOG_ERROR("[dataproxy] create_dataproxy_registry called without registry reference");
+        return ERROR_UNSPECIFIC;
+    }
+
     *registry = zalloc(sizeof(dataproxy_registry_t));
     if (!(*registry)) {
         return ERROR_MEMORY_ALLOCATION;
@@ -30,10 +35,9 @@ error_t create_dataproxy_registry(dataproxy_registry_t **registry) {
     return ERROR_NONE;
 }
 
-
 static void destroy_dataproxy(dataproxy_t *proxy) {
     if (proxy->state != DATAPROXY_STATE_INACTIVE) {
-        RCLOG_ERROR("dataproxy is active and must not be destroyed; this is a memleak and may be followed by a crash: %s", proxy->dataref_name);
+        RCLOG_ERROR("[dataproxy] dataproxy is active and must not be destroyed; this is a memleak and may be followed by a crash: %s", proxy->dataref_name);
         return;
     }
 
@@ -50,6 +54,10 @@ static void destroy_dataproxy_hashmap_value(char *_key, void *proxy) {
 }
 
 error_t destroy_dataproxy_registry(dataproxy_registry_t *registry) {
+    if (!registry) {
+        return ERROR_NONE;
+    }
+
     if (registry->destruction_pending) {
         // called twice?!
         return ERROR_DESTRUCTION_PENDING;
@@ -107,6 +115,11 @@ error_t lock_dataproxy_registry(dataproxy_registry_t *registry) {
 }
 
 void unlock_dataproxy_registry(dataproxy_registry_t *registry) {
+    if (!registry) {
+        RCLOG_ERROR("[dataproxy] unlock_dataproxy_registry called with NULL");
+        return;
+    }
+
     mtx_unlock(&registry->mutex);
 }
 
@@ -120,6 +133,11 @@ error_t lock_dataproxy(dataproxy_t *proxy) {
 }
 
 void unlock_dataproxy(dataproxy_t *proxy) {
+    if (!proxy) {
+        RCLOG_ERROR("[dataproxy] unlock_dataproxy called with NULL");
+        return;
+    }
+
     unlock_dataproxy_registry(proxy->registry);
 }
 
@@ -176,6 +194,11 @@ static bool has_all_operations(dataproxy_operations_t *operations) {
 
 dataproxy_t* reserve_dataproxy(dataproxy_registry_t *registry, char *dataref_name, XPLMDataTypeID types, dataproxy_permission_t write_permission, void *operations_ref, session_t *session, dataproxy_operations_t operations) {
     RCLOG_TRACE("[dataproxy] reserve");
+
+    if (!registry || !dataref_name || !session) {
+        RCLOG_ERROR("[dataproxy] reserve_dataproxy called with at least one mandatory parameter being NULL");
+        return NULL;
+    }
     
     bool is_valid = is_valid_combined_type(types) && is_valid_write_permission(write_permission) && has_all_operations(&operations);
     if (!is_valid) {
@@ -460,7 +483,8 @@ error_t drop_dataproxy(dataproxy_t *proxy) {
 dataproxy_t* find_registered_dataproxy(dataproxy_registry_t *registry, char *dataref_name) {
     error_t err = ERROR_NONE;
 
-    if (!dataref_name) {
+    if (!registry || !dataref_name) {
+        RCLOG_ERROR("[dataproxy] find_registered_dataproxy called with at least one mandatory parameter being NULL");
         return NULL;
     }
 
@@ -518,8 +542,13 @@ prealloc_list_t* list_dataproxies_with_state(dataproxy_registry_t *registry, dat
 
 error_t dataproxy_get_name(dataproxy_t *proxy, char **dest) {
     // QUESTION: would it be better to lock and copy the char name despite being immutable? (unless asked for the constant?)
-    
-    if (!proxy || !proxy->registry || proxy->registry->destruction_pending) {
+
+    if (!proxy || !dest) {
+        RCLOG_ERROR("[dataproxy] dataproxy_get_name called with at least one mandatory parameter being NULL");
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (!proxy->registry || proxy->registry->destruction_pending) {
         return ERROR_DESTRUCTION_PENDING;
     }
     
@@ -532,6 +561,11 @@ error_t dataproxy_get_types(dataproxy_t *proxy, XPLMDataTypeID *dest) {
     error_t err = ERROR_NONE;
     error_t out_err = ERROR_NONE;
     
+    if (!proxy || !dest) {
+        RCLOG_ERROR("[dataproxy] dataproxy_get_types called with at least one mandatory parameter being NULL");
+        return ERROR_UNSPECIFIC;
+    }
+
     err = lock_dataproxy(proxy);
     if (err != ERROR_NONE) {
         *dest = xplmType_Unknown;
@@ -689,6 +723,11 @@ error_t dataproxy_array_get(dataproxy_t *proxy, XPLMDataTypeID type, void *dest,
 error_t dataproxy_array_length(dataproxy_t *proxy, XPLMDataTypeID type, int *length) {
     error_t err = ERROR_NONE;
     error_t out_err = ERROR_NONE;
+
+    if (!length) {
+        RCLOG_ERROR("[dataproxy] dataproxy_array_length called without length reference");
+        return ERROR_UNSPECIFIC;
+    }
 
     err = lock_dataproxy(proxy);
     if (err != ERROR_NONE) {

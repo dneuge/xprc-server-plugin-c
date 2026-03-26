@@ -292,6 +292,11 @@ static void on_connection_closing(void *handler_reference) {
 }
 
 server_config_t* copy_server_config(server_config_t *source) {
+    if (!source) {
+        RCLOG_WARN("copy_server_config called with NULL");
+        return NULL;
+    }
+
     server_config_t *out = copy_memory(source, sizeof(server_config_t));
 
     if (out->password) {
@@ -332,6 +337,11 @@ void destroy_server_config(server_config_t *config) {
 }
 
 error_t start_server(server_t **server, server_config_t *config) {
+    if (!server || !config) {
+        RCLOG_WARN("start_server missing parameters: server=%p, config=%p", server, config);
+        return ERROR_UNSPECIFIC;
+    }
+
     // TODO: check password after copy
     if (!config || !validate_password(config->password)) {
         RCLOG_WARN("bad password, refusing to start");
@@ -386,6 +396,11 @@ error_t start_server(server_t **server, server_config_t *config) {
 }
 
 error_t stop_server(server_t *server) {
+    if (!server) {
+        RCLOG_WARN("stop_server called with NULL");
+        return ERROR_UNSPECIFIC;
+    }
+
     destroy_network_server(server->network); // TODO: use return value
     destroy_list(server->sessions, NULL);
     mtx_destroy(&server->mutex);
@@ -395,6 +410,11 @@ error_t stop_server(server_t *server) {
 }
 
 error_t register_session(server_t *server, session_t *session) {
+    if (!server || !session) {
+        RCLOG_WARN("register_session missing parameters: server=%p, session=%p", server, session);
+        return ERROR_UNSPECIFIC;
+    }
+
     if (mtx_lock(&server->mutex) != thrd_success) {
         return ERROR_MUTEX_FAILED;
     }
@@ -407,6 +427,11 @@ error_t register_session(server_t *server, session_t *session) {
 }
 
 error_t unregister_session(server_t *server, session_t *session) {
+    if (!server || !session) {
+        RCLOG_WARN("unregister_session missing parameters: server=%p, session=%p", server, session);
+        return ERROR_UNSPECIFIC;
+    }
+
     if (mtx_lock(&server->mutex) != thrd_success) {
         return ERROR_MUTEX_FAILED;
     }
@@ -458,6 +483,11 @@ static void destroy_pending_channels(channels_table_t *channels) {
 
 error_t maintain_server(server_t *server) {
     error_t out_err = ERROR_NONE;
+
+    if (!server) {
+        RCLOG_WARN("maintain_server called with NULL");
+        return ERROR_UNSPECIFIC;
+    }
     
     if (mtx_lock(&server->mutex) != thrd_success) {
         return ERROR_MUTEX_FAILED;

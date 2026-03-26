@@ -7,6 +7,11 @@
 #include "utils.h"
 
 error_t create_task_schedule(task_schedule_t **task_schedule) {
+    if (!task_schedule) {
+        RCLOG_WARN("create_task_schedule called with NULL");
+        return ERROR_UNSPECIFIC;
+    }
+
     *task_schedule = zmalloc(sizeof(task_schedule_t));
     if (!*task_schedule) {
         return ERROR_MEMORY_ALLOCATION;
@@ -37,6 +42,10 @@ error_t create_task_schedule(task_schedule_t **task_schedule) {
 
 error_t destroy_task_schedule(task_schedule_t *task_schedule) {
     error_t err;
+
+    if (!task_schedule) {
+        return ERROR_NONE;
+    }
     
     err = lock_schedule(task_schedule);
     if (err != ERROR_NONE) {
@@ -107,6 +116,11 @@ error_t destroy_task_schedule(task_schedule_t *task_schedule) {
 }
 
 error_t lock_schedule(task_schedule_t *task_schedule) {
+    if (!task_schedule) {
+        RCLOG_WARN("lock_schedule called with NULL");
+        return ERROR_UNSPECIFIC;
+    }
+
     if (task_schedule->destruction_pending) {
         return ERROR_DESTRUCTION_PENDING;
     }
@@ -124,6 +138,11 @@ error_t lock_schedule(task_schedule_t *task_schedule) {
 }
 
 error_t lock_schedule_try(task_schedule_t *task_schedule) {
+    if (!task_schedule) {
+        RCLOG_WARN("lock_schedule_try called with NULL");
+        return ERROR_UNSPECIFIC;
+    }
+
     if (task_schedule->destruction_pending) {
         return ERROR_DESTRUCTION_PENDING;
     }
@@ -141,6 +160,11 @@ error_t lock_schedule_try(task_schedule_t *task_schedule) {
 }
 
 error_t lock_schedule_timeout(task_schedule_t *task_schedule, uint16_t timeout_millis) {
+    if (!task_schedule) {
+        RCLOG_WARN("lock_schedule_timeout called with NULL");
+        return ERROR_UNSPECIFIC;
+    }
+
     struct timespec max_wait = {0};
     if (!timespec_now_plus_millis(&max_wait, TIME_UTC, timeout_millis)) {
         return ERROR_UNSPECIFIC;
@@ -166,6 +190,11 @@ error_t lock_schedule_timeout(task_schedule_t *task_schedule, uint16_t timeout_m
 }
 
 void unlock_schedule(task_schedule_t *task_schedule) {
+    if (!task_schedule) {
+        RCLOG_WARN("unlock_schedule called with NULL");
+        return;
+    }
+
     mtx_unlock(&task_schedule->mutex);
 }
 
@@ -201,6 +230,11 @@ static void run_tasks_post_processing(task_schedule_t *task_schedule) {
 }
 
 void run_tasks(task_schedule_t *task_schedule, task_schedule_phase_t phase) {
+    if (!task_schedule) {
+        RCLOG_WARN("run_tasks called with NULL");
+        return;
+    }
+
     if (phase == TASK_SCHEDULE_POST_PROCESSING) {
         run_tasks_post_processing(task_schedule);
         return;
@@ -236,10 +270,11 @@ end:
 }
 
 error_t schedule_task(task_schedule_t *task_schedule, task_t *task, task_schedule_phase_t phase) {
-    if (!task) {
+    if (!task_schedule || !task) {
+        RCLOG_WARN("schedule_task missing parameters: task_schedule=%p, task=%p", task_schedule, task);
         return ERROR_UNSPECIFIC;
     }
-    
+
     if (phase < 0 || phase >= TASK_SCHEDULE_NUM_TASK_QUEUES) {
         return TASK_SCHEDULE_ERROR_INVALID_PHASE;
     }
@@ -264,6 +299,11 @@ static error_t unschedule_task_queue_item(task_schedule_t *task_schedule, preall
 }
 
 error_t unschedule_task(task_schedule_t *task_schedule, task_t *task, task_schedule_phase_t phase) {
+    if (!task_schedule || !task) {
+        RCLOG_WARN("unschedule_task missing parameters: task_schedule=%p, task=%p", task_schedule, task);
+        return ERROR_UNSPECIFIC;
+    }
+
     if (phase < 0 || phase >= TASK_SCHEDULE_NUM_TASK_QUEUES) {
         return TASK_SCHEDULE_ERROR_INVALID_PHASE;
     }
@@ -294,7 +334,12 @@ error_t unschedule_task(task_schedule_t *task_schedule, task_t *task, task_sched
 
 error_t clean_schedule(task_schedule_t *task_schedule) {
     bool success = true;
-    
+
+    if (!task_schedule) {
+        RCLOG_WARN("clean_schedule called with NULL");
+        return ERROR_UNSPECIFIC;
+    }
+
     if (task_schedule->destruction_pending) {
         return ERROR_DESTRUCTION_PENDING;
     }
