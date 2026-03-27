@@ -13,7 +13,7 @@ error_t create_dataproxy_registry(dataproxy_registry_t **registry) {
         return ERROR_UNSPECIFIC;
     }
 
-    *registry = zalloc(sizeof(dataproxy_registry_t));
+    *registry = zmalloc(sizeof(dataproxy_registry_t));
     if (!(*registry)) {
         return ERROR_MEMORY_ALLOCATION;
     }
@@ -153,7 +153,7 @@ static void clear_dataproxy(dataproxy_t *proxy) {
 }
 
 static dataproxy_t* create_dataproxy(dataproxy_registry_t *registry, char *dataref_name) {
-    dataproxy_t *proxy = zalloc(sizeof(dataproxy_t));
+    dataproxy_t *proxy = zmalloc(sizeof(dataproxy_t));
     if (!proxy) {
         return NULL;
     }

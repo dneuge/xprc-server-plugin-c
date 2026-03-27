@@ -231,7 +231,7 @@ static void register_flight_loop(XPLMFlightLoopPhaseType phase, XPLMFlightLoop_f
  * @return X-Plane preference directory path, null-terminated without trailing directory separator; NULL on error
  */
 static char* get_xp_preferences_directory() {
-    char *buffer = zalloc(XP_PATH_BUFFER_SIZE);
+    char *buffer = zmalloc(XP_PATH_BUFFER_SIZE);
     if (!buffer) {
         RCLOG_WARN("failed to allocate XP path buffer (%d bytes)", XP_PATH_BUFFER_SIZE);
         return NULL;

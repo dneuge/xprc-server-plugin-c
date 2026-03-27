@@ -724,7 +724,7 @@ static void submit_monitor_data(command_drmu_t *command, bool will_continue) {
         dataref = dataref->next;
     }
 
-    char *out = zalloc(total_length+1);
+    char *out = zmalloc(total_length+1);
     if (!out) {
         error_channel(command->session, command->channel_id, command->timestamp, "failed to allocate memory to concatenate encoded values");
         command->failed = true;
@@ -1011,7 +1011,7 @@ static error_t drmu_create(void **command_ref, session_t *session, request_t *re
         return ERROR_UNSPECIFIC;
     }
     
-    command_drmu_t *command = zalloc(sizeof(command_drmu_t));
+    command_drmu_t *command = zmalloc(sizeof(command_drmu_t));
     if (!command) {
         return ERROR_MEMORY_ALLOCATION;
     }
@@ -1179,7 +1179,7 @@ static error_t drmu_create(void **command_ref, session_t *session, request_t *re
             goto error;
         }
         
-        drmu_dataref_t *dataref = zalloc(sizeof(drmu_dataref_t));
+        drmu_dataref_t *dataref = zmalloc(sizeof(drmu_dataref_t));
         if (!dataref) {
             error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "internal dataref could not be allocated");
             out_error = ERROR_MEMORY_ALLOCATION;
@@ -1300,7 +1300,7 @@ static error_t drmu_create(void **command_ref, session_t *session, request_t *re
         return complete_without_schedule(command);
     }
 
-    task_t *task = zalloc(sizeof(task_t));
+    task_t *task = zmalloc(sizeof(task_t));
     if (!task) {
         out_error = ERROR_MEMORY_ALLOCATION;
         goto error;

@@ -48,7 +48,7 @@ static void handle_command_request(session_t *session, request_t *request) {
         return;
     }
 
-    channel_t *channel = zalloc(sizeof(channel_t));
+    channel_t *channel = zmalloc(sizeof(channel_t));
     if (!channel) {
         send_or_close(session->connection, "-ERR %s %ld channel creation failed\n", channel_name, millis_since_reference(session));
         return;
@@ -348,7 +348,7 @@ error_t start_server(server_t **server, server_config_t *config) {
         return ERROR_UNSPECIFIC;
     }
 
-    *server = zalloc(sizeof(server_t));
+    *server = zmalloc(sizeof(server_t));
     if (!(*server)) {
         return ERROR_MEMORY_ALLOCATION;
     }

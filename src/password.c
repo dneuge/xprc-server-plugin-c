@@ -22,7 +22,7 @@ static const char password_chars[] = "abcdefghijklmnopqrstuvwxyz"
                                      "-.";
 
 char* generate_password() {
-    char *out = zalloc(PASSWORD_LENGTH + 1);
+    char *out = zmalloc(PASSWORD_LENGTH + 1);
     if (!out) {
         return NULL;
     }

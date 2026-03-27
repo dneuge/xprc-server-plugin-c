@@ -483,7 +483,7 @@ static bool imgui_show(img_window window, void *ref) {
 }
 
 settings_window_t* create_settings_window(settings_manager_t *settings_manager, server_manager_t *server_manager) {
-    settings_window_t *settings_window = zalloc(sizeof(settings_window_t));
+    settings_window_t *settings_window = zmalloc(sizeof(settings_window_t));
     if (!settings_window) {
         return NULL;
     }

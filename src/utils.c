@@ -40,7 +40,7 @@ char* dynamic_vsprintf(char *format, va_list args) {
     }
 
     int out_size = required_size + 1;
-    char *out = zalloc(out_size);
+    char *out = zmalloc(out_size);
     if (out) {
         int res = vsnprintf(out, out_size, format, args);
         if (res != required_size) {
@@ -151,11 +151,6 @@ void* zmalloc(size_t size) {
     return addr;
 }
 
-MAY_INLINE void* zalloc(size_t size) {
-    // FIXME: migrate all calls to zmalloc, then delete
-    return zmalloc(size);
-}
-
 void* copy_memory(void *src, size_t size) {
     if (!src) {
         return NULL;
@@ -206,7 +201,7 @@ char* copy_partial_unescaped_string(char *s, int max_length) {
         return NULL;
     }
 
-    char *copy = zalloc(max_length + 1);
+    char *copy = zmalloc(max_length + 1);
     if (!copy) {
         return NULL;
     }

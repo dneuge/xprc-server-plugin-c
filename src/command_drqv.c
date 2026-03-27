@@ -371,7 +371,7 @@ static void drqv_process_post(command_drqv_t *command) {
         dataref = dataref->next;
     }
 
-    char *out = zalloc(total_length+1);
+    char *out = zmalloc(total_length+1);
     if (!out) {
         error_channel(command->session, command->channel_id, command->timestamp, "failed to allocate memory to concatenate encoded values");
         command->failed = true;
@@ -455,7 +455,7 @@ static error_t drqv_create(void **command_ref, session_t *session, request_t *re
         return ERROR_UNSPECIFIC;
     }
     
-    command_drqv_t *command = zalloc(sizeof(command_drqv_t));
+    command_drqv_t *command = zmalloc(sizeof(command_drqv_t));
     if (!command) {
         return ERROR_MEMORY_ALLOCATION;
     }
@@ -520,7 +520,7 @@ static error_t drqv_create(void **command_ref, session_t *session, request_t *re
             goto error;
         }
 
-        drqv_dataref_t *dataref = zalloc(sizeof(drqv_dataref_t));
+        drqv_dataref_t *dataref = zmalloc(sizeof(drqv_dataref_t));
         if (!dataref) {
             error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "internal dataref could not be allocated");
             out_error = ERROR_MEMORY_ALLOCATION;
@@ -542,7 +542,7 @@ static error_t drqv_create(void **command_ref, session_t *session, request_t *re
         if (wanted_type == xplmType_Int || wanted_type == xplmType_Float || wanted_type == xplmType_Double) {
             // single value: exact size is already known by type
             dataref->value_buffer_size = (wanted_type == xplmType_Double) ? SIZE_XPLM_DOUBLE : SIZE_XPLM_INT_FLOAT;
-            dataref->value_buffer = zalloc(dataref->value_buffer_size);
+            dataref->value_buffer = zmalloc(dataref->value_buffer_size);
             if (!dataref->value_buffer) {
                 error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "internal dataref direct value buffer could not be allocated");
                 out_error = ERROR_MEMORY_ALLOCATION;
@@ -568,7 +568,7 @@ static error_t drqv_create(void **command_ref, session_t *session, request_t *re
         dataref_ref = &dataref->next;
     }
 
-    task_t *task = zalloc(sizeof(task_t));
+    task_t *task = zmalloc(sizeof(task_t));
     if (!task) {
         out_error = ERROR_MEMORY_ALLOCATION;
         goto error;

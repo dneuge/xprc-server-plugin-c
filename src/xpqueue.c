@@ -12,7 +12,7 @@ error_t create_xpqueue(xpqueue_t **queue) {
         return ERROR_UNSPECIFIC;
     }
 
-    *queue = zalloc(sizeof(xpqueue_t));
+    *queue = zmalloc(sizeof(xpqueue_t));
     if (!(*queue)) {
         return ERROR_MEMORY_ALLOCATION;
     }
@@ -106,7 +106,7 @@ error_t queue_XPLMCommandEnd(xpqueue_t *queue, XPLMCommandRef xp_ref) {
         return ERROR_UNSPECIFIC;
     }
     
-    xpqueue_task_t *task = zalloc(sizeof(xpqueue_task_t));
+    xpqueue_task_t *task = zmalloc(sizeof(xpqueue_task_t));
     if (!task) {
         return ERROR_MEMORY_ALLOCATION;
     }

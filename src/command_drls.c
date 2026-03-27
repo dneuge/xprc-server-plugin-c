@@ -155,7 +155,7 @@ static error_t drls_create(void **command_ref, session_t *session, request_t *re
         return ERROR_UNSPECIFIC;
     }
     
-    command_drls_t *command = zalloc(sizeof(command_drls_t));
+    command_drls_t *command = zmalloc(sizeof(command_drls_t));
     if (!command) {
         return ERROR_MEMORY_ALLOCATION;
     }
@@ -182,7 +182,7 @@ static error_t drls_create(void **command_ref, session_t *session, request_t *re
         goto error;
     }
     
-    task_t *task = zalloc(sizeof(task_t));
+    task_t *task = zmalloc(sizeof(task_t));
     if (!task) {
         out_error = ERROR_MEMORY_ALLOCATION;
         goto error;

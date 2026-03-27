@@ -15,7 +15,7 @@ typedef struct {
 } segment_t;
 
 static segment_t* create_segment(char *data, size_t length) {
-    segment_t *segment = zalloc(sizeof(segment_t));
+    segment_t *segment = zmalloc(sizeof(segment_t));
     if (!segment) {
         return NULL;
     }
@@ -113,7 +113,7 @@ char* join_lines(list_t *lines) {
         item = item->next;
     }
 
-    char *out = zalloc(total_length + 1);
+    char *out = zmalloc(total_length + 1);
     if (!out) {
         return NULL;
     }
@@ -153,7 +153,7 @@ error_t read_file(char **data, size_t *length, char *path) {
     *data = NULL;
     *length = 0;
 
-    buffer = zalloc(BUFFER_SIZE);
+    buffer = zmalloc(BUFFER_SIZE);
     if (!buffer) {
         out_err = ERROR_MEMORY_ALLOCATION;
         goto end;
@@ -395,7 +395,7 @@ bool check_file_exists(char *path) {
 
     size_t buffer_size = buffer_length * sizeof(WCHAR);
 
-    WCHAR *mb_long_path = zalloc(buffer_size);
+    WCHAR *mb_long_path = zmalloc(buffer_size);
     if (!mb_long_path) {
         RCLOG_WARN("failed to allocate %lu bytes for path string conversion", buffer_size);
         free(long_path);

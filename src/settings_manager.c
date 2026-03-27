@@ -14,7 +14,7 @@ settings_manager_t* create_settings_manager(char *directory) {
         return NULL;
     }
 
-    settings_manager_t *settings_manager = zalloc(sizeof(settings_manager_t));
+    settings_manager_t *settings_manager = zmalloc(sizeof(settings_manager_t));
     if (!settings_manager) {
         return NULL;
     }

@@ -11,7 +11,7 @@ list_t* get_network_interfaces(bool include_ipv6) {
         return NULL;
     }
 
-    char *ntop_buffer = zalloc(NTOP_BUFFER_SIZE);
+    char *ntop_buffer = zmalloc(NTOP_BUFFER_SIZE);
     if (!ntop_buffer) {
         goto error;
     }

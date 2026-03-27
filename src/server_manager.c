@@ -9,7 +9,7 @@ server_manager_t* create_server_manager(settings_manager_t *settings_manager) {
         return NULL;
     }
 
-    server_manager_t *out = zalloc(sizeof(server_manager_t));
+    server_manager_t *out = zmalloc(sizeof(server_manager_t));
     if (!out) {
         RCLOG_WARN("[server manager] creation failed (out of memory?)");
         return NULL;

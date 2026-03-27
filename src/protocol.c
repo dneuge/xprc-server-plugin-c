@@ -122,7 +122,7 @@ char* xprc_encode_array(XPLMDataTypeID type, dynamic_array_t *arr) {
     }
 
     // concatenate everything to a single string
-    char *out = zalloc(total_length+1);
+    char *out = zmalloc(total_length+1);
     if (out) {
         char *dest = out;
         prealloc_list_item_t *item = list->first_in_use_item;
@@ -196,7 +196,7 @@ char* xprc_encode_types(XPLMDataTypeID types) {
         + (is_blob ? XPRC_TYPE_BLOB_LENGTH : 0)
         + ((num_types-1) * XPRC_TYPE_SEPARATOR_LENGTH);
 
-    char *out = zalloc(length + 1);
+    char *out = zmalloc(length + 1);
     if (!out) {
         return NULL;
     }

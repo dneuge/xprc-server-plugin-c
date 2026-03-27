@@ -11,7 +11,7 @@ error_t create_xpcommand_registry(xpcommand_registry_t **registry) {
         return ERROR_UNSPECIFIC;
     }
 
-    *registry = zalloc(sizeof(xpcommand_registry_t));
+    *registry = zmalloc(sizeof(xpcommand_registry_t));
     if (!(*registry)) {
         return ERROR_MEMORY_ALLOCATION;
     }
@@ -128,7 +128,7 @@ xpcommand_t* create_xpcommand(xpcommand_registry_t *registry, char *name, char *
         return NULL;
     }
 
-    xpcommand_t *proxy = zalloc(sizeof(xpcommand_t));
+    xpcommand_t *proxy = zmalloc(sizeof(xpcommand_t));
     if (!proxy) {
         return NULL;
     }

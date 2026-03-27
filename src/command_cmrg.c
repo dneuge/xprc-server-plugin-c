@@ -236,7 +236,7 @@ static error_t cmrg_create(void **command_ref, session_t *session, request_t *re
         return ERROR_UNSPECIFIC;
     }
     
-    command_cmrg_t *command = zalloc(sizeof(command_cmrg_t));
+    command_cmrg_t *command = zmalloc(sizeof(command_cmrg_t));
     if (!command) {
         return ERROR_MEMORY_ALLOCATION;
     }
@@ -295,7 +295,7 @@ static error_t cmrg_create(void **command_ref, session_t *session, request_t *re
         description = NULL;
     }
 
-    task_t *task = zalloc(sizeof(task_t));
+    task_t *task = zmalloc(sizeof(task_t));
     if (!task) {
         out_error = ERROR_MEMORY_ALLOCATION;
         goto error;

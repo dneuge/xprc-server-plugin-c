@@ -303,7 +303,7 @@ static error_t deserialize_settings(settings_t *settings, list_t *lines) {
 settings_t* create_settings() {
     RCLOG_TRACE("[settings] creating new instance");
 
-    settings_t *out = zalloc(sizeof(settings_t));
+    settings_t *out = zmalloc(sizeof(settings_t));
     if (!out) {
         RCLOG_WARN("[settings] failed to create settings (out of memory?)");
         return NULL;

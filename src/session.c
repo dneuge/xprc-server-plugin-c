@@ -196,7 +196,7 @@ static error_t send_channel(session_t *session, channel_t *channel, channel_acti
         out_length += 4 /* ACK/ERR + space */;
     }
     
-    char *out = zalloc(out_length + 1);
+    char *out = zmalloc(out_length + 1);
     if (!out) {
         // TODO: close channel?
         return ERROR_MEMORY_ALLOCATION;

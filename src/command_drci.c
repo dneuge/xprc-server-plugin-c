@@ -727,7 +727,7 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
         return ERROR_UNSPECIFIC;
     }
     
-    command_drci_t *command = zalloc(sizeof(command_drci_t));
+    command_drci_t *command = zmalloc(sizeof(command_drci_t));
     if (!command) {
         return ERROR_MEMORY_ALLOCATION;
     }
@@ -930,7 +930,7 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     }
     RCLOG_TRACE("[DRCI] proxy reserved");
     
-    task_t *task = zalloc(sizeof(task_t));
+    task_t *task = zmalloc(sizeof(task_t));
     if (!task) {
         out_error = ERROR_MEMORY_ALLOCATION;
         goto error;
@@ -1116,7 +1116,7 @@ static char* concat(prealloc_list_t *list, int total_length) {
         return NULL;
     }
 
-    char *out = zalloc(total_length + 1);
+    char *out = zmalloc(total_length + 1);
     char *write = out;
     prealloc_list_item_t *item = list->first_in_use_item;
     while (item) {

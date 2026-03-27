@@ -39,7 +39,7 @@ int* get_random_ints(int count, int min, int max) {
         goto error;
     }
 
-    out = zalloc(sizeof(int) * count);
+    out = zmalloc(sizeof(int) * count);
     if (!out) {
         goto error;
     }

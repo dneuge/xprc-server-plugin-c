@@ -246,7 +246,7 @@ bool prealloc_list_compact(prealloc_list_t *list, list_value_destructor_f value_
 }
 
 list_t* create_list() {
-    return zalloc(sizeof(list_t));
+    return zmalloc(sizeof(list_t));
 }
 
 void destroy_list(list_t *list, list_value_destructor_f value_destructor) {
@@ -273,7 +273,7 @@ bool list_append(list_t *list, void *value) {
         return false;
     }
 
-    list_item_t *item = zalloc(sizeof(list_item_t));
+    list_item_t *item = zmalloc(sizeof(list_item_t));
     if (!item) {
         return false;
     }
@@ -300,7 +300,7 @@ bool list_prepend(list_t *list, void *value) {
         return false;
     }
 
-    list_item_t *item = zalloc(sizeof(list_item_t));
+    list_item_t *item = zmalloc(sizeof(list_item_t));
     if (!item) {
         return false;
     }

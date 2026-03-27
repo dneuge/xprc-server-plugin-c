@@ -483,7 +483,7 @@ static error_t cmtr_create(void **command_ref, session_t *session, request_t *re
         return ERROR_UNSPECIFIC;
     }
     
-    command_cmtr_t *command = zalloc(sizeof(command_cmtr_t));
+    command_cmtr_t *command = zmalloc(sizeof(command_cmtr_t));
     if (!command) {
         return ERROR_MEMORY_ALLOCATION;
     }
@@ -564,7 +564,7 @@ static error_t cmtr_create(void **command_ref, session_t *session, request_t *re
     }
     
     while (parameter) {
-        cmtr_entry_t *entry = zalloc(sizeof(cmtr_entry_t));
+        cmtr_entry_t *entry = zmalloc(sizeof(cmtr_entry_t));
         if (!entry) {
             out_error = ERROR_MEMORY_ALLOCATION;
             error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "failed to allocate XP command entry");
@@ -592,7 +592,7 @@ static error_t cmtr_create(void **command_ref, session_t *session, request_t *re
         parameter = parameter->next;
     }
 
-    task_t *task = zalloc(sizeof(task_t));
+    task_t *task = zmalloc(sizeof(task_t));
     if (!task) {
         out_error = ERROR_MEMORY_ALLOCATION;
         goto error;

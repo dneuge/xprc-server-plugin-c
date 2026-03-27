@@ -99,7 +99,7 @@ static void update_menu(gui_t *gui) {
 gui_t* gui_create(settings_manager_t *settings_manager, server_manager_t *server_manager) {
     // called inside XP context
 
-    gui_t *gui = zalloc(sizeof(gui_t));
+    gui_t *gui = zmalloc(sizeof(gui_t));
     if (!gui) {
         return NULL;
     }
