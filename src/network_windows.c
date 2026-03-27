@@ -76,7 +76,7 @@ list_t* get_network_interfaces(bool include_ipv6) {
         }
 
         long unsigned int original_result_buffer_size = result_buffer_size;
-        result_buffer = zalloc(result_buffer_size);
+        result_buffer = zmalloc(result_buffer_size);
         if (!result_buffer) {
             goto error;
         }
@@ -134,7 +134,7 @@ list_t* get_network_interfaces(bool include_ipv6) {
             // something users can't select as it's not a parseable address (probably would just show up as an empty
             // or severely shortened string).
             long unsigned int address_string_length = ADDRESS_STRING_BUFFER_SIZE;
-            char *address_string = zalloc(address_string_length * 4);
+            char *address_string = zmalloc(address_string_length * 4);
             if (!address_string) {
                 RCLOG_WARN("failed to allocate address_string");
                 goto error;

@@ -73,7 +73,7 @@ int* get_random_ints(int count, int min, int max) {
     usable_max--; // last value would result in modulo 0
     //RCLOG_TRACE("get_random_ints: min=%d, max=%d, span=%d, usable_max=%d", min, max, span, usable_max); // DEBUG: only for development, does not change at runtime
 
-    int *out = zalloc(sizeof(int) * count);
+    int *out = zmalloc(sizeof(int) * count);
     if (!out) {
         return NULL;
     }
