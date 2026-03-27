@@ -329,7 +329,9 @@ error_t unregister_dropped_dataproxies(dataproxy_registry_t *registry); // run o
  * registered before it can be accessed by X-Plane or through XPRC. It must either be unregistered and released or
  * dropped when it can no longer be served.
  *
- * Data proxies can be reserved at any time, it is not necessary to be in an active X-Plane context.
+ * This function must only be run within an X-Plane context: In case a previously registered proxy for the dataref has
+ * recently been dropped it will need to be deregistered from X-Plane before it can be used again. Doing so requires
+ * an active X-Plane context (e.g. flight loop callback).
  *
  * @param registry reference to the registry to link with
  * @param dataref_name name/path of the dataref as it should appear in X-Plane

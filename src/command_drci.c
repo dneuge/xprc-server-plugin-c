@@ -87,6 +87,7 @@ typedef struct {
     
     char *dataref_name;
     XPLMDataTypeID types;
+    dataproxy_permission_t write_permission;
 
     drci_echo_mode_t echo_mode;
     dynamic_array_t *ranges;
@@ -233,6 +234,18 @@ static void drci_process_flightloop(command_drci_t *command) {
     if (command->failed || command->registered) {
         return;
     }
+
+    session_t *session = command->session;
+
+    RCLOG_TRACE("[DRCI] reserving proxy");
+    command->proxy = reserve_dataproxy(session->server->config.dataproxy_registry, command->dataref_name, command->types, command->write_permission, command, session, drci_dataproxy_operations);
+    if (!command->proxy) {
+        RCLOG_TRACE("[DRCI] failed to reserve proxy");
+        command->failed = true;
+        error_channel(session, command->channel_id, CURRENT_TIME_REFERENCE, "dataproxy could not be reserved (is the dataref already claimed?)");
+        return;
+    }
+    RCLOG_TRACE("[DRCI] proxy reserved");
 
     error_t err = register_dataproxy(command->proxy);
     if (err != ERROR_NONE) {
@@ -764,8 +777,8 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     }
     #endif
     
-    dataproxy_permission_t write_permission = DATAPROXY_PERMISSION_SESSION;
-    if (!parse_permission(&write_permission, request_get_option(request, "writable", "all"))) {
+    command->write_permission = DATAPROXY_PERMISSION_SESSION;
+    if (!parse_permission(&command->write_permission, request_get_option(request, "writable", "all"))) {
         error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "invalid mode for writable");
         goto error;
     }
@@ -920,16 +933,6 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
         }
     }
 
-    // FIXME: if data proxy was previously registered this calls XP SDK outside of XP callbacks, crashes 12.4 and later - needs to be deferred to flight loop
-    RCLOG_TRACE("[DRCI] reserving proxy");
-    command->proxy = reserve_dataproxy(session->server->config.dataproxy_registry, command->dataref_name, command->types, write_permission, command, session, drci_dataproxy_operations);
-    if (!command->proxy) {
-        RCLOG_TRACE("[DRCI] failed to reserve proxy");
-        error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "dataproxy could not be reserved (is the dataref already claimed?)");
-        goto error;
-    }
-    RCLOG_TRACE("[DRCI] proxy reserved");
-    
     task_t *task = zmalloc(sizeof(task_t));
     if (!task) {
         out_error = ERROR_MEMORY_ALLOCATION;
@@ -965,14 +968,6 @@ static error_t drci_create(void **command_ref, session_t *session, request_t *re
     // FIXME: log specific warnings if something goes wrong
     RCLOG_TRACE("[DRCI] create error handling");
     if (command) {
-        if (command->proxy) {
-            err = release_dataproxy(command->proxy);
-            if (err != ERROR_NONE) {
-                RCLOG_WARN("[DRCI] failed to release dataproxy on error handling during creation: %d", err);
-            }
-            command->proxy = NULL;
-        }
-
         if (command->values_int) {
             destroy_dynamic_array(command->values_int);
             command->values_int = NULL;
