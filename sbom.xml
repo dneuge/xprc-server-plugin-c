@@ -309,7 +309,7 @@
                     <id>rackableSystems</id>
                     <event>acquisition</event>
                     <date>2009-05-11</date>
-                    <source>https://en.wikipedia.org/wiki/Silicon_Graphics</source>
+                    <source checked="2026-04-02">https://en.wikipedia.org/wiki/Silicon_Graphics</source>
                 </successor>
             </defunct>
         </legalEntity>
@@ -320,7 +320,7 @@
                 <successor>
                     <id>sgi-intl</id>
                     <event>renaming</event>
-                    <source>https://en.wikipedia.org/wiki/Silicon_Graphics_International</source>
+                    <source checked="2026-04-02">https://en.wikipedia.org/wiki/Silicon_Graphics_International</source>
                 </successor>
             </defunct>
         </legalEntity>
@@ -332,31 +332,31 @@
                     <id>hpe</id>
                     <event>acquisition</event>
                     <date>2016-11-01</date>
-                    <source>https://en.wikipedia.org/wiki/Silicon_Graphics_International</source>
+                    <source checked="2026-04-02">https://en.wikipedia.org/wiki/Silicon_Graphics_International</source>
                 </successor>
             </defunct>
         </legalEntity>
         <legalEntity id="hpe">
             <name>Hewlett Packard Enterprise Company</name>
             <type>organization</type>
-            <contact type="website" checked="2025-09-29">https://www.hpe.com/</contact>
+            <contact type="website" checked="2026-04-02">https://www.hpe.com/</contact>
         </legalEntity>
         <legalEntity id="rad">
             <name>RAD Game Tools</name>
             <type>organization</type>
-            <contact type="website" checked="2025-09-29">https://www.radgametools.com</contact>
+            <contact type="website" checked="2026-04-02">https://www.radgametools.com</contact>
             <association>
                 <type>alias</type>
                 <id>epicGamesTools</id>
-                <source checked="2025-09-29">https://www.radgametools.com/aboutrad.htm</source>
-                <source checked="2025-09-29">https://www.epicgames.com/site/en-US/news/epic-acquires-rad-game-tools</source>
+                <source checked="2026-04-02">https://www.radgametools.com/aboutrad.htm</source>
+                <source checked="2026-04-02">https://www.epicgames.com/site/en-US/news/epic-acquires-rad-game-tools</source>
             </association>
             <association>
                 <type>acquired-by</type>
                 <id>epicGames</id>
                 <from>2021-01-07</from>
-                <source checked="2025-09-29">https://www.radgametools.com/aboutrad.htm</source>
-                <source checked="2025-09-29">https://www.epicgames.com/site/en-US/news/epic-acquires-rad-game-tools</source>
+                <source checked="2026-04-02">https://www.radgametools.com/aboutrad.htm</source>
+                <source checked="2026-04-02">https://www.epicgames.com/site/en-US/news/epic-acquires-rad-game-tools</source>
             </association>
         </legalEntity>
         <legalEntity id="epicGames">
@@ -366,29 +366,31 @@
         <legalEntity id="epicGamesTools">
             <name>Epic Games Tools LLC</name>
             <type>organization</type>
-            <contact type="website" checked="2025-09-29">https://www.radgametools.com</contact>
+            <contact type="website" checked="2026-04-02">https://www.radgametools.com</contact>
         </legalEntity>
         <legalEntity id="khronos">
             <name>The Khronos® Group Inc.</name>
             <type>organization</type>
-            <contact type="website" checked="2025-09-29">https://www.khronos.org/</contact>
+            <contact type="website" checked="2026-04-02">https://www.khronos.org/</contact>
         </legalEntity>
         <legalEntity id="aerosoft">
             <name>Aerosoft GmbH</name>
             <type>organization</type>
+            <contact type="website" checked="2026-04-02">https://www.aerosoft.com/</contact>
         </legalEntity>
         <legalEntity id="laminarResearch">
             <name>Laminar Research</name>
             <type>organization</type>
-            <contact type="website" checked="2025-09-29">https://www.x-plane.com/</contact>
-            <contact type="website" checked="2025-09-29">https://web.archive.org/web/20190304032539/http://www.laminarresearch.com/</contact>
+            <contact type="website" checked="2026-04-02">https://www.x-plane.com/</contact>
+            <contact type="website" checked="2026-04-02">https://web.archive.org/web/20190304032539/http://www.laminarresearch.com/</contact>
             <!-- business registration moved from South Carolina to New Hampshire in 2025 -->
         </legalEntity>
         <legalEntity id="AmyParent">
             <name>Amy Parent</name>
             <type>person</type>
-            <contact type="website" checked="2025-09-30">https://github.com/amyinorbit</contact>
-            <contact type="website" checked="2025-09-30">https://amyparent.com</contact>
+            <contact type="website" checked="2026-04-02">https://github.com/amyinorbit</contact>
+            <contact type="website" checked="2026-04-02">https://codeberg.org/amyinorbit</contact>
+            <contact type="website" checked="2026-04-02">https://amyparent.com</contact>
         </legalEntity>
         <legalEntity id="AustinMeyer">
             <name>Austin Meyer</name>
@@ -414,14 +416,15 @@
         <legalEntity id="ChristopherCollins">
             <name>Christopher Collins</name>
             <type>person</type>
-            <contact type="website" checked="2025-09-30">https://chris.collins.id.au/</contact>
-            <contact type="website" checked="2025-09-30">https://github.com/kuroneko</contact>
+            <contact type="website" checked="2026-04-02">https://chris.collins.id.au/</contact>
+            <contact type="website" checked="2026-04-02">https://github.com/kuroneko</contact>
         </legalEntity>
         <legalEntity id="DanielNeugebauer">
             <name>Daniel Neugebauer</name>
             <type>person</type>
-            <contact type="website" checked="2025-09-30">http://www.energiequant.de/</contact>
-            <contact type="website" checked="2025-09-30">https://github.com/dneuge</contact>
+            <contact type="website" checked="2026-04-02">http://www.energiequant.de/</contact>
+            <contact type="website" checked="2026-04-02">https://github.com/dneuge</contact>
+            <contact type="website" checked="2026-04-02">https://codeberg.org/dneuge</contact>
         </legalEntity>
         <legalEntity id="LevPovalahev">
             <name>Lev Povalahev</name>
@@ -442,8 +445,8 @@
         <legalEntity id="OmarCornut">
             <name>Omar Cornut</name>
             <type>person</type>
-            <contact type="website" checked="2025-09-30">https://www.miracleworld.net/</contact>
-            <contact type="website" checked="2025-09-30">https://github.com/ocornut</contact>
+            <contact type="website" checked="2026-04-02">https://www.miracleworld.net/</contact>
+            <contact type="website" checked="2026-04-02">https://github.com/ocornut</contact>
         </legalEntity>
         <legalEntity id="SandyBarbour">
             <name>Sandy Barbour</name>
@@ -452,35 +455,38 @@
         <legalEntity id="SasoKiselkov">
             <name>Saso Kiselkov</name>
             <type>person</type>
-            <contact type="website" checked="2025-09-30">https://github.com/skiselkov</contact>
+            <contact type="website" checked="2026-04-02">https://codeberg.org/skiselkov</contact>
+            <contact type="website" checked="2026-04-02">https://github.com/skiselkov</contact>
         </legalEntity>
         <legalEntity id="SeanBarrett">
             <name>Sean Barrett</name>
             <type>person</type>
-            <contact type="website" checked="2025-09-30">https://nothings.org/</contact>
-            <contact type="website" checked="2025-09-30">https://github.com/nothings</contact>
+            <contact type="website" checked="2026-04-02">https://nothings.org/</contact>
+            <contact type="website" checked="2026-04-02">https://github.com/nothings</contact>
         </legalEntity>
         <legalEntity id="StephanDilly">
             <name>Stephan Dilly</name>
             <type>person</type>
-            <contact type="website" checked="2025-09-30">https://github.com/extrawurst</contact>
+            <contact type="website" checked="2026-04-02">https://github.com/extrawurst</contact>
+            <contact type="website" checked="2026-04-02">https://bsky.app/profile/rusticorn.bsky.social</contact>
         </legalEntity>
         <legalEntity id="TristanGrimmer">
             <name>Tristan Grimmer</name>
             <type>person</type>
-            <contact type="website" checked="2025-09-30">http://upperboundsinteractive.com/</contact>
-            <contact type="website" checked="2025-09-30">https://github.com/bluescan</contact>
+            <contact type="website" checked="2026-04-02">https://github.com/bluescan</contact>
+            <contact type="website" checked="2026-04-02">https://web.archive.org/web/20250816154836/http://upperboundsinteractive.com/</contact>
         </legalEntity>
         <legalEntity id="VictorBombi">
             <name>Victor Bombi</name>
             <type>person</type>
-            <contact type="website" checked="2025-09-30">https://github.com/sonoro1234</contact>
+            <contact type="website" checked="2026-04-02">https://github.com/sonoro1234</contact>
         </legalEntity>
         <legalEntity id="yohhoy">
             <!-- nickname only? -->
             <name>yohhoy</name>
             <type>person</type>
-            <contact type="website" checked="2025-09-29">https://github.com/yohhoy</contact>
+            <contact type="website" checked="2026-04-02">https://github.com/yohhoy</contact>
+            <contact type="website" checked="2026-04-02">https://yohhoy.hatenadiary.jp</contact>
         </legalEntity>
         <legalEntity id="YonggangLuo">
             <name>Yonggang Luo</name>
@@ -542,9 +548,10 @@
     </licenses>
     <trademarks>
         <trademark>
-            <name mark="tm">Khronos</name>
+            <name mark="reg">Khronos</name>
             <owner>khronos</owner>
             <display>Khronos and the Khronos Group logo are registered trademarks of the Khronos Group Inc.</display>
+            <source checked="2026-04-02">https://www.khronos.org/legal/trademarks</source>
         </trademark>
         <!-- outdated?
         <trademark>
@@ -558,22 +565,22 @@
             <name mark="reg">OpenGL</name>
             <owner>hpe</owner>
             <display>OpenGL® and the oval logo are trademarks or registered trademarks of Hewlett Packard Enterprise in the United States and/or other countries worldwide.</display>
-            <source checked="2025-09-29">https://www.khronos.org/legal/trademarks</source>
+            <source checked="2026-04-02">https://www.khronos.org/legal/trademarks</source>
         </trademark>
         <trademark>
             <name mark="none">OpenGL® ES</name>
             <owner>hpe</owner>
             <display>OpenGL is a registered trademark and the OpenGL ES logo is a trademark of Hewlett Packard Enterprise used by permission by Khronos.</display>
-            <source checked="2025-09-29">https://www.khronos.org/legal/trademarks</source>
+            <source checked="2026-04-02">https://www.khronos.org/legal/trademarks</source>
         </trademark>
         <trademark>
-            <name>X-Plane</name>
+            <name mark="none">X-Plane</name>
             <owner>AustinMeyer</owner>
             <owner expiration="2025-10-06">aerosoft</owner>
             <display>X-Plane is a registered trademark of Austin Meyer and Aerosoft.</display>
-            <source checked="2025-09-29">https://www.tmdn.org/tmview/#/tmview/detail/US500000076484507</source>
-            <source checked="2025-09-29">https://www.tmdn.org/tmview/#/tmview/detail/EM500000014648372</source>
-            <source checked="2025-09-29">https://www.tmdn.org/tmview/#/tmview/detail/GB500000914648372</source>
+            <source checked="2026-04-02">https://www.tmdn.org/tmview/#/tmview/detail/US500000076484507</source>
+            <source checked="2026-04-02">https://www.tmdn.org/tmview/#/tmview/detail/EM500000014648372</source>
+            <source checked="2026-04-02">https://www.tmdn.org/tmview/#/tmview/detail/GB500000914648372</source>
         </trademark>
     </trademarks>
 </sbom>
