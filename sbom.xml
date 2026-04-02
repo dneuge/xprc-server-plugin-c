@@ -523,6 +523,7 @@
             <standard spdx="MIT">
                 <variation>materials instead of software</variation>
             </standard>
+            <copy file="licenses/MIT-materials.txt" />
         </license>
         <license id="MIT-mesa7">
             <standard spdx="MIT">
