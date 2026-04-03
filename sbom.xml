@@ -301,6 +301,11 @@
         </dependency>
     </dependencies>
     <legalEntities>
+        <legalEntity id="appleInc">
+            <name>Apple Inc.</name>
+            <type>organization</type>
+            <contact type="website" checked="2026-04-03">https://www.apple.com/</contact>
+        </legalEntity>
         <legalEntity id="sgi-inc">
             <name>Silicon Graphics, Inc.</name>
             <type>organization</type>
@@ -373,6 +378,11 @@
             <type>organization</type>
             <contact type="website" checked="2026-04-02">https://www.khronos.org/</contact>
         </legalEntity>
+        <legalEntity id="microsoftCorp">
+            <name>Microsoft Corporation</name>
+            <type>organization</type>
+            <contact type="website" checked="2026-04-03">https://www.microsoft.com/de-de/rechtliche-hinweise/impressum</contact>
+        </legalEntity>
         <legalEntity id="aerosoft">
             <name>Aerosoft GmbH</name>
             <type>organization</type>
@@ -428,6 +438,10 @@
         </legalEntity>
         <legalEntity id="LevPovalahev">
             <name>Lev Povalahev</name>
+            <type>person</type>
+        </legalEntity>
+        <legalEntity id="LinusTorvalds">
+            <name>Linus Torvalds</name>
             <type>person</type>
         </legalEntity>
         <legalEntity id="NigelStewart">
@@ -582,6 +596,33 @@
             <source checked="2026-04-02">https://www.tmdn.org/tmview/#/tmview/detail/US500000076484507</source>
             <source checked="2026-04-02">https://www.tmdn.org/tmview/#/tmview/detail/EM500000014648372</source>
             <source checked="2026-04-02">https://www.tmdn.org/tmview/#/tmview/detail/GB500000914648372</source>
+        </trademark>
+        <trademark>
+            <!-- Apple expressly instructs not to mark trademark names if there is a possibility it could be distributed
+                 outside the US; 3 April 2026, section 2a of "Proper Trademark Notice and Attribution":
+                 "Do not use trademark symbols on products, product documentation, or other product communications that
+                 will be distributed outside the United States."
+             -->
+            <!-- note that Apple also prohibits of their trademarks standalone, they must only be used in association
+                 with neutral other words, e.g. "the macOS operating system" or "the Xcode development suite" -->
+            <name mark="none">macOS</name>
+            <name mark="none">Xcode</name>
+            <owner>appleInc</owner>
+            <display>macOS and XCode are trademarks of Apple Inc., registered in the U.S. and other countries and regions.</display>
+            <source checked="2026-04-03">https://www.apple.com/legal/intellectual-property/guidelinesfor3rdparties.html</source>
+            <source checked="2026-04-03">https://www.apple.com/legal/intellectual-property/trademark/appletmlist.html</source>
+        </trademark>
+        <trademark>
+            <name mark="reg">Windows</name>
+            <owner>microsoftCorp</owner>
+            <!-- there does not appear to be any prescribed way of indicating Microsoft's trademarks -->
+            <display>Windows is a registered trademark of Microsoft Corporation.</display>
+        </trademark>
+        <trademark>
+            <name mark="reg" markFirstUseOnly="true">Linux</name>
+            <owner>LinusTorvalds</owner>
+            <display>Linux® is the registered trademark of Linus Torvalds in the U.S. and other countries.</display>
+            <source checked="2026-04-03">https://www.linuxfoundation.org/legal/the-linux-mark</source>
         </trademark>
     </trademarks>
 </sbom>
