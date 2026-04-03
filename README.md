@@ -55,6 +55,10 @@ form. Patches included with this project, which are being applied to dependencie
 file/location being patched, while original content added by patches is released under MIT license as well
 (dual-licensing), if applicable and not restricted by upstream licenses.
 
+Official builds carry an additional [binary distribution license](licenses/xprc-binary-distribution.txt) to account for
+the complex extra requirements that affect statically linked binary software blobs as compared to clearly separable
+modules or source archives.
+
 ### Note on the use of/for AI
 
 Usage for AI training is subject to individual source licenses, there is no exception. This generally means that proper
