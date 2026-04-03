@@ -47,6 +47,9 @@
             <location>lib/mesa</location>
             <method>static</method>
             <excerpt>C11 compatibility only</excerpt>
+            <activation>
+                <tag>compiler-mingw</tag>
+            </activation>
             <patch>
                 <source>lib/mesa-01-add_c11_only.patch</source>
                 <description>add CMake file to only build C11 compatibility files</description>
@@ -79,6 +82,9 @@
             <location>src/threads_macos_compat.h</location>
             <location>src/threads_macos_compat.c</location>
             <method>static</method>
+            <activation>
+                <tag>target-macos</tag>
+            </activation>
             <copyright license="MIT" years="2024-2025">
                 <author>DanielNeugebauer</author>
             </copyright>
