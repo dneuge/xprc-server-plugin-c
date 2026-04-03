@@ -1,0 +1,65 @@
+          XPRC BINARY DISTRIBUTION LICENSE AND DISCLAIMER
+                            Draft Version
+
+The X-Plane Remote Control plugin (also referred to as XPRC) depends on
+and may incorporate various other software dependencies in order to
+function. XPRC itself is developed under the MIT license, its various
+dependencies however are subject to a multitude of additional licenses.
+Use in X-Plane requires compilation to a binary plugin which, together
+with supplemental files, forms a redistributable binary containing not
+only the original XPRC project but also all or most of its dependencies
+in a single package (referred to as the Product).
+
+The terms and conditions set by all licenses must be accepted and
+obeyed in order to legally use this Product. Information about all
+software dependencies and their licenses can be found in the "About"
+dialog of XPRC and accompanying documentation. The intention of this
+extra license and disclaimer, not modifying or restricting any other
+licenses/disclaimers, is to make the user aware of additional
+conditions introduced by compilation and distribution, and highlighting
+important key points commonly shared between the applicable software
+licenses. This extra license does not restrict original source licenses
+in any way.
+
+It may be possible that you or your country are subject to additional
+regulations such as US export restrictions incl. special terms of use
+concerning the operating system you are using the Product on. You, the
+user, acknowledge that such restrictions are not always feasible to be
+checked for you when it comes to distribution of free and Open Source
+software such as this Product. Therefore, you accept that it is your
+own responsibility to remain in compliance with all additional terms
+and conditions concerning for example, but not limited to, your local
+jurisdiction, the place of import/use of this Product or the computer
+environment you install the Product to, incl. proper licensing of the
+operating system and its components.
+
+If you do not agree to or cannot fulfill any of the terms set by either
+license or the following disclaimer (written in all-caps), then you are
+required to immediately discontinue use of this Product and may be
+obliged to delete all copies you received or created.
+
+IN ADDITION TO ALL INDIVIDUAL LICENSES AND ASSOCIATED DISCLAIMERS
+(EXTENDING, NOT RESTRICTING) YOU ACCEPT THAT THIS PRODUCT IS PROVIDED
+"AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+IN NO EVENT SHALL THE AUTHORS, COPYRIGHT HOLDERS OR DISTRIBUTORS OF ANY
+PART OF THE PRODUCT, WHETHER IN BINARY OR SOURCE FORM, ORIGINAL OR
+REPACKAGED, BE HELD LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY
+ASSOCIATED WITH THE USE OR POSESSION OF A COPY OF THIS PRODUCT.
+THE USER IS SOLELY REPONSIBLE FOR ANY IMPLICATIONS OF ACQUIRING,
+INSTALLING AND USING THIS PRODUCT. ALL USE IS AT YOUR OWN RISK.
+
+XPRC offers other, external applications access to the X-Plane simulator
+over a network connection. This distribution license and additional
+disclaimer explicitly does not cover or restrict those applications.
+Each interfacing application is free to choose its own license(s) and
+disclaimer(s) as long as it does not interfere with any terms and
+conditions set by any of the individual licenses of this product.
+
+In case any condition of this license may be invalid or conflict with
+an original license of the various dependencies of this Product incl.
+its source code's MIT license, the part that is in question shall be
+substituted while maintaining the original intent as closely as
+possible. Original licenses always take precedence, if in conflict.
