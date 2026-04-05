@@ -70,7 +70,11 @@ echo
 
 echo
 echo "------ BUILD LICENSE SOURCE FILES"
-python3 tools/license-writer/main.py || die "Failed to generate license source files"
+if [[ "${XPRC_SKIP_LICENSE_REGEN:-0}" == "1" ]]; then
+  echo "skipped"
+else
+  python3 tools/license-writer/main.py || die "Failed to generate license source files"
+fi
 echo "------ END OF BUILD LICENSE SOURCE FILES"
 echo
 

@@ -48,6 +48,11 @@ For local development only (keeping the compilation result to yourself), you may
 by declaring `I_WILL_NOT_DISTRIBUTE_BUILD_RESULTS` to `True` or `1`; either as an environment variable (when using the
 included build scripts) or in your CMake toolchain configuration (when using an IDE).
 
+In case Python is not available (or only an unsupported correct version) environment variable `XPRC_SKIP_LICENSE_REGEN`
+can be set to `1` in order to skip generation of `src/_licenses.c` during `build.sh`. The file must still be present.
+Since it is not being committed to the repository, you must supply it from another system/environment instead, if
+skipped.
+
 Depending on the target platform...
 
 * when targeting Linux, please build on Linux with standard build tools, CMake and Clang
