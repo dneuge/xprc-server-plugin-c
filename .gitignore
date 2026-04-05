@@ -23,6 +23,7 @@ user.cfg
 
 manualtest*
 !src/manualtest-fileio.c
+!src/manualtest-licenses.c
 !src/manualtest-network.c
 !src/manualtest-network-interfaces.c
 !src/manualtest-parser.c
