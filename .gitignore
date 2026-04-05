@@ -18,6 +18,7 @@ lib/*
 !lib/*.patch
 release/
 src/_buildinfo.h
+src/_licenses.c
 user.cfg
 
 manualtest*

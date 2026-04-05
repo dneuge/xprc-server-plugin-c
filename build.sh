@@ -68,6 +68,12 @@ cat "${build_info_path}"
 echo "------ END OF BUILD INFO FILE"
 echo
 
+echo
+echo "------ BUILD LICENSE SOURCE FILES"
+python3 tools/license-writer/main.py || die "Failed to generate license source files"
+echo "------ END OF BUILD LICENSE SOURCE FILES"
+echo
+
 ## BUILD
 cd "${build_dir}"
 

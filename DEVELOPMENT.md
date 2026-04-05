@@ -8,6 +8,17 @@
 * any change to dependencies or patches needs to be recorded in the [SBOM](sbom.xml)
 * do not use "AI" (LLMs), only submit original work - see the [ReadMe](README.md) for an explanation
 
+## Build prerequisites
+
+Quick checklist:
+
+* Bash to run build scripts
+  * generally needed CLI tools commonly available on GNU environments (e.g. `patch`)
+* Python 3 (reasonably recent version, at least 3.11, tested with 3.13)
+* a supported compiler for the target platform
+
+More details follow below. 
+
 ## Recommended Environment
 
 * Linux
@@ -20,7 +31,11 @@ The project comes with several build scripts; [`do_all.sh`](do_all.sh) can be us
 
 1. [`fetch-libs.sh`](fetch-libs.sh) downloads all dependencies into `lib` and patches them, if needed
 2. [`build-libs.sh`](build-libs.sh) builds all dependencies in `lib` to `lib/_build`
-3. [`build.sh`](build.sh) builds the plugin itself in `build` and packages it to `release`
+3. [`build.sh`](build.sh)
+   - dumps build version information to `src/_buildinfo.h`
+   - generates `src/_licenses.c` containing all license texts that need to be available within the build artifact
+     (via `tools/license-writer`)
+   - builds the plugin itself in `build` and packages it to `release`
 4. [`deploy.sh`](deploy.sh) copies the plugin from `release` to X-Plane, if configured in `user.cfg` (see [template](user.cfg.template))
 
 Most scripts accept two optional parameters, target platform (`linux`, `windows`, `macos`) and X-Plane target version

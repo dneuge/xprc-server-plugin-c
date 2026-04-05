@@ -62,6 +62,7 @@ ADD_DEFINITIONS(-DRCLOG_COMPILED_MIN_LOG_LEVEL=RCLOG_LEVEL_TRACE)
 
 SET(COMMON_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/settings.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/licenses.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/requests.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/channels.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/network.c
@@ -284,11 +285,15 @@ IF(BUILD_TESTS)
     ADD_EXECUTABLE(manualtest-fileio ${CMAKE_CURRENT_SOURCE_DIR}/src/manualtest-fileio.c ${COMMON_SOURCES})
     TARGET_INCLUDE_DIRECTORIES(manualtest-fileio PUBLIC "${LIB_BUILD}")
     TARGET_LINK_LIBRARIES(manualtest-fileio PUBLIC ${LINK_C11_COMPAT_STATIC} ${OS_LIBRARIES})
-    
+
+    ADD_EXECUTABLE(manualtest-licenses ${CMAKE_CURRENT_SOURCE_DIR}/src/manualtest-licenses.c ${COMMON_SOURCES})
+    TARGET_INCLUDE_DIRECTORIES(manualtest-licenses PUBLIC "${LIB_BUILD}")
+    TARGET_LINK_LIBRARIES(manualtest-licenses PUBLIC ${LINK_C11_COMPAT_STATIC} ${OS_LIBRARIES})
+
     ADD_EXECUTABLE(manualtest-network ${CMAKE_CURRENT_SOURCE_DIR}/src/manualtest-network.c ${COMMON_SOURCES})
     TARGET_INCLUDE_DIRECTORIES(manualtest-network PUBLIC "${LIB_BUILD}")
     TARGET_LINK_LIBRARIES(manualtest-network PUBLIC ${LINK_C11_COMPAT_STATIC} ${OS_LIBRARIES})
-    
+
     ADD_EXECUTABLE(manualtest-network-interfaces ${CMAKE_CURRENT_SOURCE_DIR}/src/manualtest-network-interfaces.c ${COMMON_SOURCES})
     TARGET_INCLUDE_DIRECTORIES(manualtest-network-interfaces PUBLIC "${LIB_BUILD}")
     TARGET_LINK_LIBRARIES(manualtest-network-interfaces PUBLIC ${LINK_C11_COMPAT_STATIC} ${OS_LIBRARIES})
