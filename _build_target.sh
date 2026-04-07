@@ -195,6 +195,13 @@ else
 	NUM_CPUS=$(cat /proc/cpuinfo | grep -E 'processor\s*:' | nl | tail -n1 | sed -e 's/\s*\([0-9]\+\)\s.*/\1/')
 fi
 
+# license parameters
+if [[ "${CPP_COMPILER}" =~ mingw ]]; then
+  export XPRC_LICENSE_PARAMS="--activation compiler-mingw"
+elif [[ "${BUILD_TARGET}" == "macos" ]]; then
+  export XPRC_LICENSE_PARAMS="--activation target-macos"
+fi
+
 # normalize paths
 if [[ "${CMAKE_TOOLCHAIN_FILE}" != "" ]]; then
 	CMAKE_TOOLCHAIN_FILE=$(realpath "${CMAKE_TOOLCHAIN_FILE}")

@@ -73,7 +73,7 @@ echo "------ BUILD LICENSE SOURCE FILES"
 if [[ "${XPRC_SKIP_LICENSE_REGEN:-0}" == "1" ]]; then
   echo "skipped"
 else
-  python3 tools/license-writer/main.py || die "Failed to generate license source files"
+  python3 tools/license-writer/main.py ${XPRC_LICENSE_PARAMS:-} || die "Failed to generate license source files"
 fi
 echo "------ END OF BUILD LICENSE SOURCE FILES"
 echo
@@ -116,5 +116,8 @@ ${exec_wrapper} ./test-hashmap${ext_executable} || die "Failed tests for hashmap
 ${exec_wrapper} ./test-list${ext_executable} || die "Failed tests for lists"
 ${exec_wrapper} ./test-prealloc-list${ext_executable} || die "Failed tests for preallocated lists"
 ${exec_wrapper} ./test-network-addresses${ext_executable} || die "Failed tests for network addresses"
+
+${exec_wrapper} ./manualtest-licenses${ext_executable} >/dev/null || die "License information could not be retrieved, check manualtest-licenses"
+${exec_wrapper} ./manualtest-dependencies${ext_executable} || die "Dependency information could not be retrieved"
 
 echo Build complete.
