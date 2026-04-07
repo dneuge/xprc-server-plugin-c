@@ -18,10 +18,12 @@ lib/*
 !lib/*.patch
 release/
 src/_buildinfo.h
+src/_dependencies.c
 src/_licenses.c
 user.cfg
 
 manualtest*
+!src/manualtest-dependencies.c
 !src/manualtest-fileio.c
 !src/manualtest-licenses.c
 !src/manualtest-network.c
