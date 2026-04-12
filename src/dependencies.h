@@ -15,6 +15,7 @@ typedef struct {
     char *name;
     char *version; // may be omitted by NULL
     char *url; // may be omitted by NULL
+    char *excerpt; // may be omitted by NULL
 
     bool active;
     char *activation; // may be omitted by NULL

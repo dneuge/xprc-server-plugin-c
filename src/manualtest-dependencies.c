@@ -16,6 +16,7 @@ static int print_dependency(xprc_dependency_t *dependency, int index) {
     printf("    name:       %s\n", dependency->name);
     printf("    version:    %s\n", dependency->version);
     printf("    url:        %s\n", dependency->url);
+    printf("    excerpt:    %s\n", dependency->excerpt);
     printf("    active?     %s\n", dependency->active ? "yes" : "no");
     printf("    activation: %s\n", dependency->activation);
     printf("\n");

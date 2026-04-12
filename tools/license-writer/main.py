@@ -335,6 +335,10 @@ for dependency in sorted(sbom.dependencies.values(), key=lambda x: x.name):
         dependencies_out.append('static const char _xprc_dependency_%s_url[] = "%s";' % (output_index_string, format_c_string_content(out_url)))
     else:
         dependencies_out.append('// _xprc_dependency_%s has no url' % output_index_string)
+    if dependency.excerpt is not None:
+        dependencies_out.append('static const char _xprc_dependency_%s_excerpt[] = "%s";' % (output_index_string, format_c_string_content(dependency.excerpt)))
+    else:
+        dependencies_out.append('// _xprc_dependency_%s has no excerpt' % output_index_string)
     dependencies_out.append('static const bool _xprc_dependency_%s_active = %s;' % (output_index_string, 'true' if is_active else 'false'))
     if has_activation:
         dependencies_out.append('static const char _xprc_dependency_%s_activation[] = "%s";' % (output_index_string, format_c_string_content(out_activation)))
@@ -406,6 +410,10 @@ for dependency in sorted(sbom.dependencies.values(), key=lambda x: x.name):
         dependencies_out_links.append('        .url = (char*) _xprc_dependency_%s_url,' % output_index_string)
     else:
         dependencies_out_links.append('        .url = NULL,')
+    if dependency.excerpt is not None:
+        dependencies_out_links.append('        .excerpt = (char*) _xprc_dependency_%s_excerpt,' % output_index_string)
+    else:
+        dependencies_out_links.append('        .excerpt = NULL,')
     dependencies_out_links.append('        .active = _xprc_dependency_%s_active,' % output_index_string)
     if has_activation:
         dependencies_out_links.append('        .activation = (char*) _xprc_dependency_%s_activation,' % output_index_string)
@@ -423,6 +431,7 @@ dependencies_out.append('        .id = NULL,')
 dependencies_out.append('        .name = NULL,')
 dependencies_out.append('        .version = NULL,')
 dependencies_out.append('        .url = NULL,')
+dependencies_out.append('        .excerpt = NULL,')
 dependencies_out.append('        .active = true,')
 dependencies_out.append('        .activation = NULL,')
 dependencies_out.append('        ._copyrights = NULL,')
