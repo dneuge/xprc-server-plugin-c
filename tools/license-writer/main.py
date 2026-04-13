@@ -298,7 +298,7 @@ def prefix_all_lines(prefix:str, s:str) -> str:
 
 output_index = 0
 dependencies_out_links : list[str] = []
-for dependency in sorted(sbom.dependencies.values(), key=lambda x: x.name):
+for dependency in sorted(sbom.dependencies.values(), key=lambda x: x.name.lower()):
     if len(dependency.copyrights) == 0:
         print(f'Dependency has no copyrights, skipping: {dependency.id}')
         continue
