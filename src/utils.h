@@ -161,6 +161,30 @@ void* zmalloc(size_t size);
  */
 bool parse_int(int *dest, char *s);
 
+typedef struct {
+    int year;
+    int month;
+    int day;
+} xprc_date_t;
+
+/**
+ * Attempts to parse the given ISO 8601 compatible date or date/time string to extract only date information.
+ * Only 20th and 21st century dates are supported.
+ *
+ * @param s ISO 8601 compatible date or date/time string; may be NULL
+ * @return parsed date; invalid on error
+ */
+xprc_date_t parse_iso_date(char *s);
+
+/**
+ * Checks if the given date is valid.
+ * Only 20th and 21st century dates are supported.
+ *
+ * @param date date to check
+ * @return true if valid, false if invalid
+ */
+bool is_valid_date(xprc_date_t *date);
+
 /**
  * Sets the current thread's name according to the given format string. The name will be cut off at the
  * maximum possible length.

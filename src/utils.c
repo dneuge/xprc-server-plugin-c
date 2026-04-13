@@ -12,6 +12,9 @@
 #define MAY_INLINE inline
 #endif
 
+#define MIN_YEAR (1900)
+#define MAX_YEAR (2100)
+
 char* dynamic_sprintf(char *format, ...) {
     if (!format) {
         return NULL;
@@ -338,6 +341,105 @@ bool parse_int(int *dest, char *s) {
     free(verification);
 
     return success;
+}
+
+static const xprc_date_t invalid_date = {
+    .year = -1,
+    .month = -1,
+    .day = -1,
+};
+
+static bool is_digit(const char ch) {
+    return (ch >= '0') && (ch <= '9');
+}
+
+bool is_valid_date(xprc_date_t *date) {
+    if (!date) {
+        return false;
+    }
+
+    if (date->year < MIN_YEAR || date->year > MAX_YEAR) {
+        return false;
+    }
+
+    if (date->month < 1 || date->month > 12) {
+        return false;
+    }
+
+    int max_days = 31;
+    if (date->month == 2) {
+        max_days = 28;
+        if (date->year % 4 == 0) {
+            max_days = 29;
+        }
+    } else if (date->month == 4 || date->month == 6 || date->month == 9 || date->month == 11) {
+        max_days = 30;
+    }
+
+    if (date->day < 1 || date->day > max_days) {
+        return false;
+    }
+
+    return true;
+}
+
+xprc_date_t parse_iso_date(char *s) {
+    xprc_date_t out = invalid_date;
+
+    char *copy = copy_string(s);
+    if (!copy) {
+        return invalid_date;
+    }
+
+    size_t length = strlen(copy);
+    if (length < 10) {
+        goto error;
+    }
+
+    bool valid_pattern = is_digit(copy[0]) && is_digit(copy[1]) && is_digit(copy[2]) && is_digit(copy[3])
+        && (copy[4] == '-') && is_digit(copy[5]) && is_digit(copy[6])
+        && (copy[7] == '-') && is_digit(copy[8]) && is_digit(copy[9]);
+    if (length > 10) {
+        valid_pattern &= (copy[10] == 'T');
+    }
+    if (!valid_pattern) {
+        goto error;
+    }
+
+    copy[4] = 0;
+    copy[7] = 0;
+    copy[10] = 0;
+
+    // skip leading zeros, otherwise parse_int will fail (not matching string format check)
+    int month_offset = 5;
+    if (copy[month_offset] == '0') {
+        month_offset++;
+    }
+
+    int day_offset = 8;
+    if (copy[day_offset] == '0') {
+        day_offset++;
+    }
+
+    if (!parse_int(&out.year, &copy[0]) || !parse_int(&out.month, &copy[month_offset]) || !parse_int(&out.day, &copy[day_offset])) {
+        goto error;
+    }
+
+    if (!is_valid_date(&out)) {
+        goto error;
+    }
+
+    goto end;
+
+error:
+    out = invalid_date;
+
+end:
+    if (copy) {
+        free(copy);
+    }
+
+    return out;
 }
 
 #ifndef HAVE_PTHREAD
