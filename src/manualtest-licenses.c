@@ -34,6 +34,8 @@ static int print_license(char *id) {
     printf("Hash: %u\n", license->hash);
     printf("\n");
     printf("%s\n", license->text);
+
+    return 0;
 }
 
 int main(int argc, char **argv) {
