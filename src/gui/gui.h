@@ -5,20 +5,20 @@
  * @file gui.h XPRC GUI root
  */
 
-#include <stdbool.h>
-
 #include <XPLMMenus.h>
 
 typedef struct _gui_t gui_t;
 
-#include "../server_manager.h"
-#include "../settings_manager.h"
+#include "about_window.h"
 #include "settings_window.h"
 
 /// XPRC GUI root
 typedef struct _gui_t {
     /// the window providing access to all XPRC settings
     settings_window_t *settings_window;
+
+    /// the window detailing license and dependency information
+    about_window_t *about_window;
 
     /// shared manager controlling server instances
     server_manager_t *server_manager;

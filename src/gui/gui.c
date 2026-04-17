@@ -50,7 +50,8 @@ static void xp_menu_callback(void *inMenuRef, void *inItemRef) {
             break;
 
         case MENU_ITEM_ABOUT:
-            RCLOG_DEBUG("menu handler called for about"); // FIXME: implement
+            RCLOG_DEBUG("menu handler called for about");
+            open_about_window(gui->about_window);
             break;
 
         default:
@@ -111,6 +112,11 @@ gui_t* gui_create(settings_manager_t *settings_manager, server_manager_t *server
     gui->actual_managed_server_state = SERVER_STATE_UNKNOWN;
 
     img_window_init_globals();
+
+    gui->about_window = create_about_window(settings_manager, server_manager);
+    if (!gui->about_window) {
+        goto error;
+    }
 
     gui->settings_window = create_settings_window(settings_manager, server_manager);
     if (!gui->settings_window) {
@@ -194,7 +200,11 @@ void gui_destroy(gui_t *gui) {
 
     gui->xp_plugins_menu_id = NULL;
 
+    destroy_about_window(gui->about_window);
+    gui->about_window = NULL;
+
     destroy_settings_window(gui->settings_window);
+    gui->settings_window = NULL;
 
     free(gui);
 
