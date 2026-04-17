@@ -64,6 +64,7 @@ SET(COMMON_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/settings.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/dependencies.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/licenses.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/trademarks.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/requests.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/channels.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/network.c
@@ -310,6 +311,10 @@ IF(BUILD_TESTS)
     ADD_EXECUTABLE(manualtest-password-generator ${CMAKE_CURRENT_SOURCE_DIR}/src/manualtest-password-generator.c ${COMMON_SOURCES})
     TARGET_INCLUDE_DIRECTORIES(manualtest-password-generator PUBLIC "${LIB_BUILD}")
     TARGET_LINK_LIBRARIES(manualtest-password-generator PUBLIC ${LINK_C11_COMPAT_STATIC} ${OS_LIBRARIES})
+
+    ADD_EXECUTABLE(manualtest-trademarks ${CMAKE_CURRENT_SOURCE_DIR}/src/manualtest-trademarks.c ${COMMON_SOURCES})
+    TARGET_INCLUDE_DIRECTORIES(manualtest-trademarks PUBLIC "${LIB_BUILD}")
+    TARGET_LINK_LIBRARIES(manualtest-trademarks PUBLIC ${LINK_C11_COMPAT_STATIC} ${OS_LIBRARIES})
 
     ADD_EXECUTABLE(test-hashmap ${CMAKE_CURRENT_SOURCE_DIR}/src/test-hashmap.c ${COMMON_SOURCES})
     TARGET_INCLUDE_DIRECTORIES(test-hashmap PUBLIC "${LIB_BUILD}")

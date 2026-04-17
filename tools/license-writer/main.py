@@ -25,6 +25,7 @@ spdx_licenses_dir = licenses_dir + os.sep + 'spdx'
 
 license_out_path = src_dir + os.sep + '_licenses.c'
 dependencies_out_path = src_dir + os.sep + '_dependencies.c'
+trademarks_out_path = src_dir + os.sep + '_trademarks.c'
 
 generated_source_note = '// THIS FILE HAS BEEN AUTOMATICALLY GENERATED AND WILL BE OVERWRITTEN DURING BUILD, DO NOT EDIT'
 
@@ -54,6 +55,7 @@ def require_new_or_generated(path:str):
 
 require_new_or_generated(license_out_path)
 require_new_or_generated(dependencies_out_path)
+require_new_or_generated(trademarks_out_path)
 
 license_names : dict[str,str] = {}
 license_texts : dict[str,str] = {}
@@ -441,4 +443,43 @@ dependencies_out.append('};')
 print(f'Writing {dependencies_out_path}')
 with open(dependencies_out_path, 'w', encoding=ASCII_FILE_ENCODING) as fh:
     fh.write('\n'.join(dependencies_out))
+print('... done')
+
+
+trademarks_out : list[str] = [
+    generated_source_note,
+    '',
+    '// This file holds all trademark information and other acknowledgements relevant',
+    '// for binary distribution of XPRC.',
+    '// The whole purpose of collecting them here is to reproduce them in the compiled',
+    '// binary to comply with the trademark owner\'s trademark policies etc.',
+    '// Doing so does NOT indicate or imply any kind of affiliation with any of the',
+    '// parties listed here.',
+    '',
+    '#include <stdio.h>',
+    '',
+]
+
+output_index = 0
+trademarks_out_links: list[str] = []
+for trademark in sorted(sbom.trademarks, key=lambda x: x.display.strip().lower()):
+    output_index_string = format_output_index(output_index)
+
+    trademarks_out.append('static const char _xprc_trademark_acknowledgment_%s[] =' % output_index_string)
+    trademarks_out += format_c_multiline_string(trademark.display, rstrip=True)
+    trademarks_out.append(';')
+    trademarks_out.append('')
+
+    trademarks_out_links.append('    _xprc_trademark_acknowledgment_%s,' % output_index_string)
+
+    output_index += 1
+
+trademarks_out.append('static const char *_xprc_trademarks_acknowledgments[] = {')
+trademarks_out += trademarks_out_links
+trademarks_out.append('    NULL,')
+trademarks_out.append('};')
+
+print(f'Writing {trademarks_out_path}')
+with open(trademarks_out_path, 'w', encoding=ASCII_FILE_ENCODING) as fh:
+    fh.write('\n'.join(trademarks_out))
 print('... done')
