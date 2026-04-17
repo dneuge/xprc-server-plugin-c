@@ -90,6 +90,7 @@ if [[ "${BUILD_SYSTEM}" == "vs" ]]; then
     MSYS_NO_PATHCONV=1 msbuild.exe test-network-addresses.vcxproj /t:Build /p:Configuration=Release || die "msbuild test-network-addresses failed"
     MSYS_NO_PATHCONV=1 msbuild.exe manualtest-licenses.vcxproj /t:Build /p:Configuration=Release || die "msbuild manualtest-licenses failed"
     MSYS_NO_PATHCONV=1 msbuild.exe manualtest-dependencies.vcxproj /t:Build /p:Configuration=Release || die "msbuild manualtest-dependencies failed"
+    MSYS_NO_PATHCONV=1 msbuild.exe manualtest-trademarks.vcxproj /t:Build /p:Configuration=Release || die "msbuild manualtest-trademarks failed"
 else
     make -j$num_jobs || die "make failed"
 fi
