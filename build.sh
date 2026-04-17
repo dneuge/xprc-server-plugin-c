@@ -120,6 +120,7 @@ ${exec_wrapper} ./test-prealloc-list${ext_executable} || die "Failed tests for p
 ${exec_wrapper} ./test-network-addresses${ext_executable} || die "Failed tests for network addresses"
 
 ${exec_wrapper} ./manualtest-licenses${ext_executable} >/dev/null || die "License information could not be retrieved, check manualtest-licenses"
+${exec_wrapper} ./manualtest-trademarks${ext_executable} >/dev/null || die "Trademark information could not be retrieved, check manualtest-trademarks"
 ${exec_wrapper} ./manualtest-dependencies${ext_executable} || die "Dependency information could not be retrieved"
 
 echo Build complete.
