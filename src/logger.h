@@ -15,33 +15,33 @@
 #endif
 
 #if (RCLOG_COMPILED_MIN_LOG_LEVEL <= RCLOG_LEVEL_ERROR)
-#define RCLOG_ERROR(format, ...) ;xprc_log(RCLOG_LEVEL_ERROR, format __VA_OPT__(,) __VA_ARGS__);
+#define RCLOG_ERROR(format, ...) xprc_log(RCLOG_LEVEL_ERROR, format __VA_OPT__(,) __VA_ARGS__)
 #else
-#define RCLOG_ERROR(format, ...) ;
+#define RCLOG_ERROR(format, ...)
 #endif
 
 #if (RCLOG_COMPILED_MIN_LOG_LEVEL <= RCLOG_LEVEL_WARN)
-#define RCLOG_WARN(format, ...) ;xprc_log(RCLOG_LEVEL_WARN, format __VA_OPT__(,) __VA_ARGS__);
+#define RCLOG_WARN(format, ...) xprc_log(RCLOG_LEVEL_WARN, format __VA_OPT__(,) __VA_ARGS__)
 #else
-#define RCLOG_WARN(format, ...) ;
+#define RCLOG_WARN(format, ...)
 #endif
 
 #if (RCLOG_COMPILED_MIN_LOG_LEVEL <= RCLOG_LEVEL_INFO)
-#define RCLOG_INFO(format, ...) ;xprc_log(RCLOG_LEVEL_INFO, format __VA_OPT__(,) __VA_ARGS__);
+#define RCLOG_INFO(format, ...) xprc_log(RCLOG_LEVEL_INFO, format __VA_OPT__(,) __VA_ARGS__)
 #else
-#define RCLOG_INFO(format, ...) ;
+#define RCLOG_INFO(format, ...)
 #endif
 
 #if (RCLOG_COMPILED_MIN_LOG_LEVEL <= RCLOG_LEVEL_DEBUG)
-#define RCLOG_DEBUG(format, ...) ;xprc_log(RCLOG_LEVEL_DEBUG, format __VA_OPT__(,) __VA_ARGS__);
+#define RCLOG_DEBUG(format, ...) xprc_log(RCLOG_LEVEL_DEBUG, format __VA_OPT__(,) __VA_ARGS__)
 #else
-#define RCLOG_DEBUG(format, ...) ;
+#define RCLOG_DEBUG(format, ...)
 #endif
 
 #if (RCLOG_COMPILED_MIN_LOG_LEVEL <= RCLOG_LEVEL_TRACE)
-#define RCLOG_TRACE(format, ...) ;xprc_log(RCLOG_LEVEL_TRACE, format __VA_OPT__(,) __VA_ARGS__);
+#define RCLOG_TRACE(format, ...) xprc_log(RCLOG_LEVEL_TRACE, format __VA_OPT__(,) __VA_ARGS__)
 #else
-#define RCLOG_TRACE(format, ...) ;
+#define RCLOG_TRACE(format, ...)
 #endif
 
 #ifdef __cplusplus
