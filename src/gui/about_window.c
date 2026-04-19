@@ -197,6 +197,11 @@ static void render_tab_content_licenses(about_window_t *about_window) {
     ImGuiID id_license_scrollpane = igGetID_Int(IMGUI_ID_LICENSE_SCROLLPANE);
     bool license_scrollpane_visible = igBeginChild_ID(id_license_scrollpane, IM_VEC2(available_space.x, available_space.y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
     if (license_scrollpane_visible) {
+        if (about_window->reset_scroll_position) {
+            igSetScrollY_Float(0.0f);
+            about_window->reset_scroll_position = false;
+        }
+
         igTextWrapped("%s", selected_license->text);
     }
     igEndChild();
@@ -275,6 +280,10 @@ static void handle_view_state(about_window_t *about_window) {
     }
 
     if (about_window->select_license) {
+        if (about_window->selected_license != about_window->select_license) {
+            about_window->reset_scroll_position = true;
+        }
+
         about_window->select_tab = ABOUT_WINDOW_TAB_LICENSES;
         about_window->selected_license = about_window->select_license;
         about_window->select_license = NULL;
@@ -295,6 +304,8 @@ static bool imgui_show(img_window window, void *ref) {
     if (!about_window) {
         return false;
     }
+
+    about_window->reset_scroll_position = true;
 
     if (!about_window->select_license) {
         about_window->selected_license = about_window->default_license;

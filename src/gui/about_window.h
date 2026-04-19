@@ -38,6 +38,7 @@ typedef struct {
     // requested state changes (will be reset once processed)
     uint8_t select_tab;
     xprc_license_t *select_license;
+    bool reset_scroll_position;
 
     // more efficient data structures and cached values need to be prepared ahead of time
     list_t *licenses;
