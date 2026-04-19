@@ -142,7 +142,7 @@ error:
         }
 
         if (!memory_handle_locked) {
-            RCLOG_WARN("copy_plaintext_to_clipboard: memleak - failed to lock memory handle to free during error handling")
+            RCLOG_WARN("copy_plaintext_to_clipboard: memleak - failed to lock memory handle to free during error handling");
         } else {
             RCLOG_DEBUG("copy_plaintext_to_clipboard: freeing memory handle (error handling)");
 
