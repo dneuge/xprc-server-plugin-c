@@ -415,7 +415,7 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
     }
 
     if (mtx_init(&flight_loop_mutex, mtx_plain) != thrd_success) {
-        RCLOG_ERROR("flight loop mutex could not be created - simulator restart required")
+        RCLOG_ERROR("flight loop mutex could not be created - simulator restart required");
         fatal_error = 1;
         return 1;
     }

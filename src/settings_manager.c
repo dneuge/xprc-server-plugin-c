@@ -130,7 +130,7 @@ error_t configure_settings_manager_from_storage(settings_manager_t *settings_man
     error_t out_err = ERROR_NONE;
 
     if (!settings_manager) {
-        RCLOG_WARN("[settings manager] configure_settings_manager_from_storage called with NULL")
+        RCLOG_WARN("[settings manager] configure_settings_manager_from_storage called with NULL");
         return ERROR_UNSPECIFIC;
     }
 
@@ -223,7 +223,7 @@ error_t persist_settings_from_manager(settings_manager_t *settings_manager) {
     error_t out_err = ERROR_NONE;
 
     if (!settings_manager) {
-        RCLOG_WARN("[settings manager] persist_settings_from_manager called with NULL")
+        RCLOG_WARN("[settings manager] persist_settings_from_manager called with NULL");
         return ERROR_UNSPECIFIC;
     }
 

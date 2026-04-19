@@ -471,7 +471,7 @@ error_t set_command_configuration(session_t *session, char *command_name, comman
     }
 
     if (previous_config) {
-        RCLOG_DEBUG("freeing old command config for %s at %p", command_name, previous_config)
+        RCLOG_DEBUG("freeing old command config for %s at %p", command_name, previous_config);
         destroy_command_config(previous_config);
         previous_config = NULL;
     }
