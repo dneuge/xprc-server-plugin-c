@@ -64,3 +64,13 @@ img_window create_centered_window(int width, int height, img_window_build_interf
                              xplm_WindowDecorationRoundRectangle, xplm_WindowLayerFloatingWindows,
                              build_interface, on_show, ref);
 }
+
+void offset_imgui_cursor(const float x_offset, const float y_offset) {
+    if (x_offset != 0.0f) {
+        igSetCursorPosX(igGetCursorPosX() + x_offset);
+    }
+
+    if (y_offset != 0.0f) {
+        igSetCursorPosY(igGetCursorPosY() + y_offset);
+    }
+}

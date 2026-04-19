@@ -10,6 +10,7 @@
 typedef struct _gui_t gui_t;
 
 #include "about_window.h"
+#include "license_window.h"
 #include "settings_window.h"
 
 /// XPRC GUI root
@@ -19,6 +20,9 @@ typedef struct _gui_t {
 
     /// the window detailing license and dependency information
     about_window_t *about_window;
+
+    /// the "modal" window requiring user to accept new licenses
+    license_window_t *license_window;
 
     /// shared manager controlling server instances
     server_manager_t *server_manager;

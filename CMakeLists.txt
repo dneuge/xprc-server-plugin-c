@@ -108,6 +108,7 @@ SET(XPRC_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/img_window.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/about_window.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/settings_window.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/license_window.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/clipboard.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/settings_manager.c
     ${COMMON_SOURCES}

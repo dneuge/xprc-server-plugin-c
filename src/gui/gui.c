@@ -118,6 +118,11 @@ gui_t* gui_create(settings_manager_t *settings_manager, server_manager_t *server
         goto error;
     }
 
+    gui->license_window = create_license_window(settings_manager, server_manager);
+    if (!gui->license_window) {
+        goto error;
+    }
+
     gui->settings_window = create_settings_window(settings_manager, server_manager);
     if (!gui->settings_window) {
         goto error;
@@ -202,6 +207,9 @@ void gui_destroy(gui_t *gui) {
 
     destroy_about_window(gui->about_window);
     gui->about_window = NULL;
+
+    destroy_license_window(gui->license_window);
+    gui->license_window = NULL;
 
     destroy_settings_window(gui->settings_window);
     gui->settings_window = NULL;

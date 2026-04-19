@@ -47,4 +47,12 @@
  */
 img_window create_centered_window(int width, int height, img_window_build_interface_f build_interface, img_window_on_show_f on_show, void *ref);
 
+/**
+ * Moves the imgui cursor by th given offset if not 0.
+ *
+ * @param x_offset X offset to apply
+ * @param y_offset Y offset to apply
+ */
+void offset_imgui_cursor(float x_offset, float y_offset);
+
 #endif
