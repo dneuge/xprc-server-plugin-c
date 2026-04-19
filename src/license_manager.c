@@ -9,8 +9,6 @@
 
 #include "license_manager.h"
 
-#include "imgui.h"
-
 #define ACCEPTED_LICENSES_FILENAME "xprc_accepted_licenses.cfg"
 #define LICENSE_ID_SEPARATOR "\t"
 
