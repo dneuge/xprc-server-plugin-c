@@ -2,6 +2,7 @@
 #define SERVER_MANAGER_H
 
 #include "server.h"
+#include "license_manager.h"
 #include "settings_manager.h"
 
 typedef enum {
@@ -31,6 +32,7 @@ bool is_running_server_state(managed_server_state_t state);
 typedef void (*server_state_listener_f)(void *context, managed_server_state_t new_state);
 
 typedef struct {
+    license_manager_t *license_manager;
     settings_manager_t *settings_manager;
     /// locally created and memory-managed copy of the provided base configuration
     server_config_t *server_config;
@@ -63,10 +65,11 @@ typedef struct {
 
 /**
  * Creates a new server manager instance.
+ * @param license_manager license manager
  * @param settings_manager used to retrieve user-specific configuration details from
  * @return server manager instance; NULL on error
  */
-server_manager_t* create_server_manager(settings_manager_t *settings_manager);
+server_manager_t* create_server_manager(license_manager_t *license_manager, settings_manager_t *settings_manager);
 /**
  * Destroys the given server manager instance.
  * @param server_manager instance to destroy

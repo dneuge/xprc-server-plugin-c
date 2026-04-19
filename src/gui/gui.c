@@ -97,7 +97,7 @@ static void update_menu(gui_t *gui) {
     }
 }
 
-gui_t* gui_create(settings_manager_t *settings_manager, server_manager_t *server_manager) {
+gui_t* gui_create(license_manager_t *license_manager, settings_manager_t *settings_manager, server_manager_t *server_manager) {
     // called inside XP context
 
     gui_t *gui = zmalloc(sizeof(gui_t));
@@ -118,7 +118,7 @@ gui_t* gui_create(settings_manager_t *settings_manager, server_manager_t *server
         goto error;
     }
 
-    gui->license_window = create_license_window(settings_manager, server_manager);
+    gui->license_window = create_license_window(license_manager);
     if (!gui->license_window) {
         goto error;
     }

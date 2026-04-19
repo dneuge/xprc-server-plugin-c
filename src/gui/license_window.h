@@ -3,7 +3,7 @@
 
 #include "img_window.h"
 #include "../licenses.h"
-
+#include "../license_manager.h"
 #include "../server_manager.h"
 #include "../settings_manager.h"
 
@@ -30,19 +30,16 @@ typedef struct {
     list_t *licenses;
 
     // settings
-    /// shared settings manager instance
-    settings_manager_t *settings_manager;
-    /// shared server manager instance
-    server_manager_t *server_manager;
+    /// shared license manager instance
+    license_manager_t *license_manager;
 } license_window_t;
 
 /**
  * Creates a new license window instance.
- * @param settings_manager shared settings manager instance to connect with
- * @param server_manager server manager to connect with
+ * @param license_manager license manager to connect with
  * @return license window instance; NULL on error
  */
-license_window_t* create_license_window(settings_manager_t *settings_manager, server_manager_t *server_manager);
+license_window_t* create_license_window(license_manager_t *license_manager);
 
 /**
  * Destroy an license window instance.

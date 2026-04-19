@@ -3,9 +3,9 @@
 
 #include "server_manager.h"
 
-server_manager_t* create_server_manager(settings_manager_t *settings_manager) {
-    if (!settings_manager) {
-        RCLOG_WARN("[server manager] settings manager missing on creation");
+server_manager_t* create_server_manager(license_manager_t *license_manager, settings_manager_t *settings_manager) {
+    if (!license_manager || !settings_manager) {
+        RCLOG_WARN("[server manager] parameters missing on creation: license_manager=%p, settings_manager=%p", license_manager, settings_manager);
         return NULL;
     }
 
@@ -21,6 +21,7 @@ server_manager_t* create_server_manager(settings_manager_t *settings_manager) {
         return NULL;
     }
 
+    out->license_manager = license_manager;
     out->settings_manager = settings_manager;
 
     return out;
@@ -270,6 +271,11 @@ error:
 
 static error_t do_server_start(server_manager_t *server_manager) {
     // NOTE: callers must ensure thread-safety
+
+    if (!all_licenses_accepted(server_manager->license_manager)) {
+        RCLOG_WARN("[server manager] licenses have not been accepted, blocking startup");
+        return ERROR_UNSPECIFIC;
+    }
 
     error_t err = update_server_config(server_manager);
     if (err != ERROR_NONE) {

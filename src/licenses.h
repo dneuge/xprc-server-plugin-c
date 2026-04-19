@@ -5,12 +5,33 @@
 
 #include "lists.h"
 
+typedef uint32_t xprc_license_hash_t;
+
 typedef struct {
     char *id;
     char *name;
     char *text;
-    uint32_t hash;
+    xprc_license_hash_t hash;
 } xprc_license_t;
+
+/**
+ * Parses a license hash from given string.
+ *
+ * @param out will be set to read hash, if successful
+ * @param s string to parse
+ * @return true if successful, false on error
+ */
+bool xprc_parse_license_hash(xprc_license_hash_t *out, char *s);
+
+/**
+ * Formats the given hash to a string representation that can be read by #xprc_parse_license_hash again.
+ *
+ * Caller has to manage the returned string.
+ *
+ * @param hash hash to be formatted
+ * @return null-terminated string representing the hash; NULL on error
+ */
+char* xprc_format_license_hash(xprc_license_hash_t hash);
 
 /**
  * Creates a new list containing the IDs of all available licenses.

@@ -26,8 +26,6 @@
 #define SMALL_VERTICAL_SPACING (3.0f)
 #define SPACE_ADJUSTMENT_TOLERANCE (0.05f)
 
-// FIXME: inhibit server start while not accepted
-// FIXME: check & show automatically on startup if needed
 // TODO: indicate to user which licenses changed/have been added since last accepted? (and the reason why the dialog is shown again)
 // TODO: add button to about dialog to decline later?
 
@@ -94,14 +92,12 @@ static void update_view(license_window_t *license_window) {
     offset_imgui_cursor(LIST_WIDTH + LICENSE_PANE_SPACING + CHECKBOX_LABEL_OFFSET, SMALL_VERTICAL_SPACING);
     igBeginDisabled(license_window->accepted);
     if (igButton("Decline & disable XPRC##" IMGUI_ID_PREFIX "btn_decline", IM_VEC2(0, 0))) {
-        RCLOG_ERROR("[license window] user declines licenses and wants to disable XPRC");
         license_window->should_disable = true;
     }
     igEndDisabled();
     igSameLine(0, BUTTON_SPACING);
     igBeginDisabled(!license_window->accepted);
     if (igButton("Save & enable XPRC##" IMGUI_ID_PREFIX "btn_accept", IM_VEC2(0, 0))) {
-        RCLOG_INFO("[license window] user accepts licenses and wants to enable XPRC");
         license_window->should_save = true;
     }
     igEndDisabled();
@@ -130,16 +126,25 @@ static void handle_view_state(license_window_t *license_window) {
     }
 
     if (license_window->should_disable) {
-        // FIXME: XPRC should not be initialized
-        igCloseCurrentPopup();
+        RCLOG_ERROR("[license window] user declines licenses and wants to disable XPRC");
 
         license_window->should_disable = false;
+        img_window_set_visible(license_window->window, false);
+
+        error_t err = reject_licenses(license_window->license_manager);
+        if (err != ERROR_NONE) {
+            RCLOG_ERROR("[license window] failed to reject licenses (%d)", err);
+        }
     } else if (license_window->should_save && license_window->accepted) {
-        // FIXME: update & store settings
-        // FIXME: XPRC should continue to initialize
-        igCloseCurrentPopup();
+        RCLOG_INFO("[license window] user accepts licenses and wants to enable XPRC");
 
         license_window->should_save = false;
+        img_window_set_visible(license_window->window, false);
+
+        error_t err = accept_all_licenses(license_window->license_manager);
+        if (err != ERROR_NONE) {
+            RCLOG_ERROR("[license window] failed to accept licenses (%d)", err);
+        }
     }
 }
 
@@ -171,9 +176,9 @@ static bool imgui_show(img_window window, void *ref) {
     return true;
 }
 
-license_window_t* create_license_window(settings_manager_t *settings_manager, server_manager_t *server_manager) {
-    if (!settings_manager || !server_manager) {
-        RCLOG_ERROR("[license window] missing parameters to initialize; settings_manager=%p, server_manager=%p", settings_manager, server_manager);
+license_window_t* create_license_window(license_manager_t *license_manager) {
+    if (!license_manager) {
+        RCLOG_ERROR("[license window] missing parameters to initialize; license_manager=%p", license_manager);
         return NULL;
     }
 
@@ -182,8 +187,7 @@ license_window_t* create_license_window(settings_manager_t *settings_manager, se
         return NULL;
     }
 
-    license_window->settings_manager = settings_manager;
-    license_window->server_manager = server_manager;
+    license_window->license_manager = license_manager;
 
     license_window->default_license = xprc_get_license(DEFAULT_LICENSE_ID);
     if (!license_window->default_license) {
@@ -249,8 +253,7 @@ void destroy_license_window(license_window_t* license_window) {
         license_window->licenses = NULL;
     }
 
-    license_window->settings_manager = NULL;
-    license_window->server_manager = NULL;
+    license_window->license_manager = NULL;
 
     free(license_window);
 }
@@ -260,5 +263,6 @@ void open_license_window(license_window_t* license_window) {
         return;
     }
 
+    RCLOG_DEBUG("requesting imgui to open license window");
     img_window_set_visible(license_window->window, true);
 }

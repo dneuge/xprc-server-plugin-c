@@ -343,6 +343,31 @@ bool parse_int(int *dest, char *s) {
     return success;
 }
 
+bool parse_long(long *dest, char *s) {
+    bool success = false;
+
+    if (!dest || !s) {
+        return false;
+    }
+
+    long parsed = atol(s);
+
+    char *verification = dynamic_sprintf("%ld", parsed);
+    if (!verification) {
+        return false;
+    }
+
+    if (!strcmp(s, verification)) {
+        // value matches; parsing successful
+        *dest = parsed;
+        success = true;
+    }
+
+    free(verification);
+
+    return success;
+}
+
 static const xprc_date_t invalid_date = {
     .year = -1,
     .month = -1,

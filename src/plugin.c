@@ -23,6 +23,7 @@
 #include "xpcommands.h"
 #include "gui/gui.h"
 
+#define STOP_CALLBACKS 0.0f
 #define CALL_ON_NEXT_FRAME -1.0f
 #define SCHEDULE_CLEANING_INTERVAL 500
 #define SERVER_MAINTENANCE_INTERVAL 120
@@ -47,6 +48,9 @@ bool flight_loop_registered = false;
 
 command_factory_t *command_factory = NULL;
 
+static bool auto_start = false;
+
+license_manager_t *license_manager = NULL;
 settings_manager_t *settings_manager = NULL;
 server_manager_t *server_manager = NULL;
 
@@ -289,6 +293,64 @@ fatal_error:
     return NULL;
 }
 
+static void on_plugin_licenses_accepted(void *ref) {
+    RCLOG_INFO("licenses accepted, continuing startup");
+
+    if (!auto_start) {
+        RCLOG_INFO("server is not being started automatically");
+    } else {
+        error_t err = start_managed_server(server_manager);
+        if (err != ERROR_NONE) {
+            RCLOG_WARN("initial server start failed: %d", err);
+        }
+    }
+
+    register_flight_loop(xplm_FlightLoop_Phase_BeforeFlightModel, process_flight_loop_before_flight_model, &flight_loop_before_flight_model_id);
+    register_flight_loop(xplm_FlightLoop_Phase_AfterFlightModel,  process_flight_loop_after_flight_model,  &flight_loop_after_flight_model_id);
+    flight_loop_registered = true;
+
+    RCLOG_INFO("post-license-check initialization complete");
+}
+
+typedef struct {
+    XPLMFlightLoopID flight_loop_id;
+} license_rejection_flight_loop_t;
+
+static float on_plugin_licenses_rejected_flight_loop(float inElapsedSinceLastCall, float inElapsedTimeSinceLastFlightLoop, int inCounter, void *inRefcon) {
+    license_rejection_flight_loop_t *data = inRefcon;
+
+    // plugin gets disabled immediately, so we must not use anything from XPRC after this line
+    XPLMDisablePlugin(XPLMGetMyID());
+
+    // return value does not unschedule, we need to attempt to self-destruct the flight loop callback
+    if (data) {
+        XPLMDestroyFlightLoop(data->flight_loop_id);
+        free(data);
+    }
+
+    return STOP_CALLBACKS;
+}
+
+static void on_plugin_licenses_rejected(void *ref) {
+    RCLOG_ERROR("user rejected licenses, disabling plugin");
+
+    license_rejection_flight_loop_t *flight_loop_data = zmalloc(sizeof(license_rejection_flight_loop_t));
+
+    XPLMCreateFlightLoop_t params = {
+        .structSize = sizeof(XPLMCreateFlightLoop_t),
+        .phase = xplm_FlightLoop_Phase_AfterFlightModel,
+        .callbackFunc = on_plugin_licenses_rejected_flight_loop,
+        .refcon = flight_loop_data,
+    };
+
+    XPLMFlightLoopID flight_loop_id = XPLMCreateFlightLoop(&params);
+    if (flight_loop_data) {
+        flight_loop_data->flight_loop_id = flight_loop_id;
+    }
+
+    XPLMScheduleFlightLoop(flight_loop_id, CALL_ON_NEXT_FRAME, 1);
+}
+
 PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
     strcpy(name, XPRC_SERVER_NAME);
     strcpy(sig, XPRC_SERVER_ID);
@@ -419,6 +481,12 @@ PLUGIN_API int XPluginEnable() {
         return 1;
     }
 
+    if (license_manager) {
+        RCLOG_ERROR("license manager already/still exist; did you install the plugin twice? simulator restart required");
+        fatal_error = true;
+        return 1;
+    }
+
     char *preferences_directory = get_xp_preferences_directory();
     if (!preferences_directory) {
         RCLOG_ERROR("failed to get preferences directory from X-Plane; simulator restart required");
@@ -426,17 +494,27 @@ PLUGIN_API int XPluginEnable() {
         return 1;
     }
 
-    settings_manager = create_settings_manager(preferences_directory);
-    free(preferences_directory);
-    preferences_directory = NULL;
+    license_manager = create_license_manager(
+        preferences_directory,
+        on_plugin_licenses_accepted, NULL,
+        on_plugin_licenses_rejected, NULL
+    );
+    if (!license_manager) {
+        RCLOG_ERROR("failed to create license manager; plugin cannot run");
+        return 1;
+    }
 
+    settings_manager = create_settings_manager(preferences_directory);
     if (!settings_manager) {
         RCLOG_ERROR("failed to create settings manager; plugin cannot run without configuration");
         return 1;
     }
 
+    free(preferences_directory);
+    preferences_directory = NULL;
+
     RCLOG_DEBUG("Loading settings...");
-    bool auto_start = false;
+    auto_start = false;
     err = configure_settings_manager_from_storage(settings_manager);
     if (err != ERROR_NONE) {
         // TODO: inform user via popup according to error code
@@ -450,13 +528,13 @@ PLUGIN_API int XPluginEnable() {
     // reconfigure logger according to settings (direct access is safe because nothing else runs yet)
     configure_logger_from_settings(settings_manager->settings);
 
-    server_manager = create_server_manager(settings_manager);
+    server_manager = create_server_manager(license_manager, settings_manager);
     if (!server_manager) {
         RCLOG_ERROR("failed to create server manager; plugin cannot run");
         return 1;
     }
 
-    gui = gui_create(settings_manager, server_manager);
+    gui = gui_create(license_manager, settings_manager, server_manager);
     if (!gui) {
         RCLOG_ERROR("failed to initialize GUI - simulator restart required");
         fatal_error = true;
@@ -524,18 +602,10 @@ PLUGIN_API int XPluginEnable() {
         return 1;
     }
 
-    if (!auto_start) {
-        RCLOG_INFO("server is not being started automatically");
-    } else {
-        err = start_managed_server(server_manager);
-        if (err != ERROR_NONE) {
-            RCLOG_WARN("initial server start failed: %d", err);
-        }
+    perform_initial_license_check(license_manager);
+    if (!all_licenses_accepted(license_manager)) {
+        open_license_window(gui->license_window);
     }
-
-    register_flight_loop(xplm_FlightLoop_Phase_BeforeFlightModel, process_flight_loop_before_flight_model, &flight_loop_before_flight_model_id);
-    register_flight_loop(xplm_FlightLoop_Phase_AfterFlightModel,  process_flight_loop_after_flight_model,  &flight_loop_after_flight_model_id);
-    flight_loop_registered = true;
 
     return 1;
 }
@@ -687,6 +757,11 @@ PLUGIN_API void XPluginDisable() {
             return;
         }
         settings_manager = NULL;
+    }
+
+    if (license_manager) {
+        destroy_license_manager(license_manager);
+        license_manager = NULL;
     }
 }
 

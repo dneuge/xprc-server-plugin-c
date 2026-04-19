@@ -48,11 +48,12 @@ typedef struct _gui_t {
 
 /**
  * Creates a new GUI root instance.
+ * @param license_manager shared license manager to connect with
  * @param settings_manager shared settings manager instance to connect with
  * @param server_manager shared server manager instance to connect with
  * @return GUI root instance; NULL on error
  */
-gui_t* gui_create(settings_manager_t *settings_manager, server_manager_t *server_manager);
+gui_t* gui_create(license_manager_t *license_manager, settings_manager_t *settings_manager, server_manager_t *server_manager);
 
 /**
  * Destroys the given GUI root instance.

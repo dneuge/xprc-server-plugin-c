@@ -161,6 +161,14 @@ void* zmalloc(size_t size);
  */
 bool parse_int(int *dest, char *s);
 
+/**
+ * Attempts to parse the given string to a long integer; destination will only be manipulated if successful.
+ * @param dest where to write the parsed value to; will not be modified in case of error
+ * @param s null-terminated string to parse
+ * @return true if successfully parsed, false on error
+ */
+bool parse_long(long *dest, char *s);
+
 typedef struct {
     int year;
     int month;
