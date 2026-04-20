@@ -21,7 +21,7 @@
 #define LICENSE_WINDOW_WIDTH 1020
 #define LICENSE_WINDOW_HEIGHT 750
 
-#define LIST_WIDTH (220.0f)
+#define LIST_WIDTH (250.0f) /* short name + longest possible change tag */
 #define LICENSE_PANE_SPACING (10.0f)
 #define BUTTON_SPACING (10.0f)
 #define CHECKBOX_LABEL_OFFSET (24.0f)
@@ -69,9 +69,21 @@ static void update_view(license_window_t *license_window) {
         igEndListBox();
     }
 
+    // We want to display the license text underneath the license name.
+    // Since the license list is to the left we need to instruct imgui to continue "on the same line"
+    // to draw the name, then reposition manually to continue underneath that text label, otherwise
+    // we would end up below the list box.
     igSameLine(0, LICENSE_PANE_SPACING);
-    igGetContentRegionAvail(&available_space);
+    float license_x = igGetCursorPosX();
+    float license_name_y = igGetCursorPosY();
 
+    igSeparatorText(selected_license->name);
+
+    float textLineHeight = igGetTextLineHeightWithSpacing();
+    igSetCursorPos(IM_VEC2(license_x, license_name_y + 2*textLineHeight));
+    middle_space_available -= 2*textLineHeight;
+
+    igGetContentRegionAvail(&available_space);
     if (available_space.x > 0) {
         ImGuiID id_license_scrollpane = igGetID_Int(IMGUI_ID_LICENSE_SCROLLPANE);
         bool license_scrollpane_visible = igBeginChild_ID(id_license_scrollpane, IM_VEC2(available_space.x, middle_space_available), ImGuiChildFlags_None, ImGuiWindowFlags_None);
@@ -224,13 +236,13 @@ static license_window_license_t* create_license_window_license(license_manager_t
     }
 
     if (!pending_license) {
-        out->label = dynamic_sprintf("%s##%slist_item__%s", license->name, IMGUI_ID_PREFIX, license->id);
+        out->label = dynamic_sprintf("%s##%slist_item__%s", license->short_name, IMGUI_ID_PREFIX, license->id);
         if (!out->label) {
             RCLOG_WARN("[license window] create_license_window_license failed to create label for untagged license");
             goto error;
         }
     } else {
-        out->label = dynamic_sprintf("%s [%s]##%slist_item__%s", license->name, (pending_license->previously_accepted ? "changed" : "new"), IMGUI_ID_PREFIX, license->id);
+        out->label = dynamic_sprintf("%s [%s]##%slist_item__%s", license->short_name, (pending_license->previously_accepted ? "changed" : "new"), IMGUI_ID_PREFIX, license->id);
         if (!out->label) {
             RCLOG_WARN("[license window] create_license_window_license failed to create label for tagged license");
             goto error;
