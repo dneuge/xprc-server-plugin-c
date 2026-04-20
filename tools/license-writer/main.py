@@ -57,7 +57,8 @@ require_new_or_generated(license_out_path)
 require_new_or_generated(dependencies_out_path)
 require_new_or_generated(trademarks_out_path)
 
-license_names : dict[str,str] = {}
+license_full_names : dict[str,str] = {}
+license_short_names : dict[str,str] = {}
 license_texts : dict[str,str] = {}
 
 # import all licenses declared in SBOM
@@ -78,18 +79,20 @@ for license in sbom.licenses.values():
 
         text = load_spdx_license(license.standard.spdx)
 
-    license_names[license.id] = license.id  # FIXME: define in SBOM or include for all SPDX licenses?
+    license_full_names[license.id] = license.name or license.short_name or license.id
+    license_short_names[license.id] = license.short_name or license.id
     license_texts[license.id] = text
 
 print('Formatting licenses...')
 
-# establish alphabetic license order prior to prepending our binary license
+# establish alphabetic license order by name prior to prepending our binary license
 license_ids = list(license_texts.keys())
-license_ids.sort()
+license_ids.sort(key=lambda license_id: (license_full_names.get(license_id) or license_id).lower())
 
 # add our own distribution license, prepended
 XPRC_BINARY_LICENSE_ID = '_xprc-binary'
-license_names[XPRC_BINARY_LICENSE_ID] = 'XPRC binary license'
+license_full_names[XPRC_BINARY_LICENSE_ID] = 'XPRC Binary Distribution License'
+license_short_names[XPRC_BINARY_LICENSE_ID] = 'XPRC Binary Distribution'
 license_texts[XPRC_BINARY_LICENSE_ID] = load_text_file(licenses_dir + os.sep + 'xprc-binary-distribution.txt')
 license_ids : list[str] = [XPRC_BINARY_LICENSE_ID] + license_ids
 
@@ -164,7 +167,8 @@ for license_id in license_ids:
     output_index_string = format_output_index(output_index)
 
     license_out.append('static const char _xprc_license__id_%s[] = "%s";' % (output_index_string, format_c_string_content(license_id)))
-    license_out.append('static const char _xprc_license__name_%s[] = "%s";' % (output_index_string, format_c_string_content(license_names[license_id])))
+    license_out.append('static const char _xprc_license__name_%s[] = "%s";' % (output_index_string, format_c_string_content(license_full_names[license_id])))
+    license_out.append('static const char _xprc_license__short_name_%s[] = "%s";' % (output_index_string, format_c_string_content(license_short_names[license_id])))
     license_out.append('static const uint32_t _xprc_license__hash_%s = %d;' % (output_index_string, hash_to_uint32(text)))
     license_out.append('static const char _xprc_license__text_%s[] =' % output_index_string)
     license_out += format_c_multiline_string(text)
@@ -172,10 +176,11 @@ for license_id in license_ids:
     license_out.append('')
 
     license_out_links.append('    {')
-    license_out_links.append('        .id   = (char*) _xprc_license__id_%s,' % output_index_string)
-    license_out_links.append('        .name = (char*) _xprc_license__name_%s,' % output_index_string)
-    license_out_links.append('        .text = (char*) _xprc_license__text_%s,' % output_index_string)
-    license_out_links.append('        .hash = _xprc_license__hash_%s,' % output_index_string)
+    license_out_links.append('        .id         = (char*) _xprc_license__id_%s,' % output_index_string)
+    license_out_links.append('        .name       = (char*) _xprc_license__name_%s,' % output_index_string)
+    license_out_links.append('        .short_name = (char*) _xprc_license__short_name_%s,' % output_index_string)
+    license_out_links.append('        .text       = (char*) _xprc_license__text_%s,' % output_index_string)
+    license_out_links.append('        .hash       = _xprc_license__hash_%s,' % output_index_string)
     license_out_links.append('    },')
 
     output_index += 1
@@ -183,10 +188,11 @@ for license_id in license_ids:
 license_out.append('static const xprc_license_t _xprc_licenses[] = {')
 license_out += license_out_links
 license_out.append('    {')
-license_out.append('        .id   = NULL,')
-license_out.append('        .name = NULL,')
-license_out.append('        .text = NULL,')
-license_out.append('        .hash = 0,')
+license_out.append('        .id         = NULL,')
+license_out.append('        .name       = NULL,')
+license_out.append('        .short_name = NULL,')
+license_out.append('        .text       = NULL,')
+license_out.append('        .hash       = 0,')
 license_out.append('    }')
 license_out.append('};')
 

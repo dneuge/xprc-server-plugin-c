@@ -10,6 +10,7 @@ typedef uint32_t xprc_license_hash_t;
 typedef struct {
     char *id;
     char *name;
+    char *short_name;
     char *text;
     xprc_license_hash_t hash;
 } xprc_license_t;

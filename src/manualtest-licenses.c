@@ -29,9 +29,10 @@ static int print_license(char *id) {
         return 1;
     }
 
-    printf("ID:   %s\n", license->id);
-    printf("Name: %s\n", license->name);
-    printf("Hash: %u\n", license->hash);
+    printf("ID:         %s\n", license->id);
+    printf("Full name:  %s\n", license->name);
+    printf("Short name: %s\n", license->short_name);
+    printf("Hash:       %u\n", license->hash);
     printf("\n");
     printf("%s\n", license->text);
 
