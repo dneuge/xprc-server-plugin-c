@@ -75,6 +75,9 @@ gui_t *gui = NULL;
 bool fatal_error = false;
 bool plugin_initialized = false;
 
+static bool handled_license_acceptance = false;
+static bool handled_license_rejection = false;
+
 int cycles_until_xpref_maintenance = XPREF_MAINTENANCE_INTERVAL;
 int cycles_until_gui_maintenance = GUI_MAINTENANCE_INTERVAL;
 
@@ -294,6 +297,19 @@ fatal_error:
 }
 
 static void on_plugin_licenses_accepted(void *ref) {
+    if (handled_license_rejection) {
+        RCLOG_ERROR("on_plugin_licenses_accepted: licenses had been rejected, acceptance cannot be handled - critical error in program flow, simulator restart required");
+        fatal_error = true;
+        return;
+    }
+
+    if (handled_license_acceptance) {
+        RCLOG_WARN("on_plugin_licenses_accepted: acceptance has already been handled (plugin has finished initialization), ignoring event");
+        return;
+    }
+
+    handled_license_acceptance = true;
+
     RCLOG_INFO("licenses accepted, continuing startup");
 
     if (!auto_start) {
@@ -332,6 +348,13 @@ static float on_plugin_licenses_rejected_flight_loop(float inElapsedSinceLastCal
 }
 
 static void on_plugin_licenses_rejected(void *ref) {
+    if (handled_license_rejection) {
+        RCLOG_WARN("on_plugin_licenses_rejected: rejection has already been handled, ignoring event");
+        return;
+    }
+
+    handled_license_rejection = true;
+
     RCLOG_ERROR("user rejected licenses, disabling plugin");
 
     license_rejection_flight_loop_t *flight_loop_data = zmalloc(sizeof(license_rejection_flight_loop_t));
@@ -483,6 +506,12 @@ PLUGIN_API int XPluginEnable() {
 
     if (license_manager) {
         RCLOG_ERROR("license manager already/still exist; did you install the plugin twice? simulator restart required");
+        fatal_error = true;
+        return 1;
+    }
+
+    if (handled_license_acceptance || handled_license_rejection) {
+        RCLOG_ERROR("license handling variables are already/still set; did you install the plugin twice? simulator restart required");
         fatal_error = true;
         return 1;
     }
@@ -763,6 +792,9 @@ PLUGIN_API void XPluginDisable() {
         destroy_license_manager(license_manager);
         license_manager = NULL;
     }
+
+    handled_license_acceptance = false;
+    handled_license_rejection = false;
 }
 
 PLUGIN_API void XPluginStop() {
