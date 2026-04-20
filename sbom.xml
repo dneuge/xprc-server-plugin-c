@@ -514,13 +514,13 @@
         </legalEntity>
     </legalEntities>
     <licenses>
-        <license id="Apache-2.0">
+        <license id="Apache-2.0" name="Apache License Version 2.0" shortName="Apache 2.0">
             <standard spdx="Apache-2.0" />
         </license>
-        <license id="BSD-3-Clause">
+        <license id="BSD-3-Clause" name="BSD License (3-Clause)" shortName="BSD (3-Clause)">
             <standard spdx="BSD-3-Clause"/>
         </license>
-        <license id="BSD-glew">
+        <license id="BSD-glew" name="BSD License (GLEW 3-Clause)" shortName="BSD (GLEW 3-Clause)">
             <standard spdx="BSD-3-Clause">
                 <!-- Strictly, this is not BSD-3-Clause since permission is granted in advance which the SPDX regex does
                      not match. However, having that permission already granted, extends instead of limits rights, so
@@ -530,39 +530,39 @@
             </standard>
             <copy file="lib/glew/doc/glew.txt" />
         </license>
-        <license id="BSL-1.0">
+        <license id="BSL-1.0" name="Boost Software License 1.0" shortName="Boost 1.0">
             <standard spdx="BSL-1.0"/>
         </license>
-        <license id="CDDL-1.0">
+        <license id="CDDL-1.0" name="Common Development and Distribution License 1.0" shortName="CDDL 1.0">
             <standard spdx="CDDL-1.0"/>
         </license>
-        <license id="MIT">
+        <license id="MIT" name="MIT License" shortName="MIT">
             <standard spdx="MIT"/>
         </license>
-        <license id="MIT-materials">
+        <license id="MIT-materials" name="MIT License (Materials)" shortName="MIT (Materials)">
             <standard spdx="MIT">
                 <variation>materials instead of software</variation>
             </standard>
             <copy file="licenses/MIT-materials.txt" />
         </license>
-        <license id="MIT-mesa7">
+        <license id="MIT-mesa7" name="MIT License (Mesa Version 7.0)" shortName="MIT (Mesa 7.0)">
             <standard spdx="MIT">
                 <variation>materials instead of software</variation>
                 <variation>"Mesa 3-D graphics library" "Version:  7.0"</variation>
             </standard>
             <copy file="lib/glew/doc/mesa.txt" />
         </license>
-        <license id="SGI-B-1.0">
+        <license id="SGI-B-1.0" name="SGI Free Software License B v1.0" shortName="SGI FSL B 1.0">
             <standard spdx="SGI-B-1.0" />
         </license>
-        <license id="SGI-B-no-version">
+        <license id="SGI-B-no-version" name="SGI Free Software License B (unmarked, assumed v1.0)" shortName="SGI FSL B (assumed 1.0)">
             <!-- "SGI Free Software B License", date and omission of version implies early license, i.e. version 1.0 -->
             <standard spdx="SGI-B-1.0" />
         </license>
-        <license id="SGI-B-2.0">
+        <license id="SGI-B-2.0" name="SGI Free Software License B v2.0" shortName="SGI FSL B 2.0">
             <standard spdx="SGI-B-2.0" />
         </license>
-        <license id="xpsdk">
+        <license id="xpsdk" name="X-Plane SDK License" shortName="X-Plane SDK">
             <!-- TODO: check if there is a matching standard license -->
             <copy file="lib/XPSDK/license.txt" />
         </license>
