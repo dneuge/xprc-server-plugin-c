@@ -1,6 +1,5 @@
-          XPRC BINARY DISTRIBUTION LICENSE AND DISCLAIMER
-                            Draft Version
-
+              XPRC BINARY DISTRIBUTION LICENSE AND DISCLAIMER
+                                Draft Version
 
 XPRC is being developed and published as Open Source under the MIT license
 but couldn't have been done without the help of other software dependencies,
