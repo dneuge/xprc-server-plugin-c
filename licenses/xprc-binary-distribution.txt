@@ -1,65 +1,133 @@
           XPRC BINARY DISTRIBUTION LICENSE AND DISCLAIMER
                             Draft Version
 
-The X-Plane Remote Control plugin (also referred to as XPRC) depends on
-and may incorporate various other software dependencies in order to
-function. XPRC itself is developed under the MIT license, its various
-dependencies however are subject to a multitude of additional licenses.
-Use in X-Plane requires compilation to a binary plugin which, together
-with supplemental files, forms a redistributable binary containing not
-only the original XPRC project but also all or most of its dependencies
-in a single package (referred to as the Product).
 
-The terms and conditions set by all licenses must be accepted and
-obeyed in order to legally use this Product. Information about all
-software dependencies and their licenses can be found in the "About"
-dialog of XPRC and accompanying documentation. The intention of this
-extra license and disclaimer, not modifying or restricting any other
-licenses/disclaimers, is to make the user aware of additional
-conditions introduced by compilation and distribution, and highlighting
-important key points commonly shared between the applicable software
-licenses. This extra license does not restrict original source licenses
-in any way.
+XPRC is being developed and published as Open Source under the MIT license
+but couldn't have been done without the help of other software dependencies,
+which are subject to several additional licenses. Source code needs to be
+compiled to a binary in order to be loaded into the simulator as a plugin.
+
+This "binary distribution license" aims to provide an initial high-level
+explanation and collective disclaimer and should mainly be seen as an
+additional preamble, applying to the binary end product but not restricting
+the availability or permissions associated with its MIT-licensed source code
+or the dependencies it has been linked with. This license does not substitute
+or restrict any of the original licenses of XPRC or its dependencies. Users
+should carefully read and must accept all applicable licenses and
+disclaimers.
+
+If you do not agree to or cannot fulfill any of the terms set by either
+license or disclaimer, then you are required to immediately discontinue use
+of XPRC and may be obliged to delete all copies you received or created.
+
+
+1. Disclaimer
+
+In addition to each license detailing how recipients are being granted
+permissions to use the software, they also generally contain warranty and
+liability disclaimers. While all original disclaimers remain in full effect,
+the following disclaimer, based on the plugin source's primary MIT license,
+and the provided examples shall act as a summary of what (not) to expect:
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+Put in simple words:
+
+- XPRC likely has bugs and you cannot legally demand to have them corrected
+  or receive compensation for anything (also remember that, at least if
+  obtained from official project locations, this plugin is provided to you
+  free of charge)
+
+- If you choose to connect machinery such as, for example, a force feedback
+  yoke, motorized thrust lever or even a moving platform to your sim and
+  influence it (directly or indirectly) through XPRC, then you or others may
+  actually get physically injured. No matter if that's due to a bug or
+  intended operation of XPRC, it's entirely on you (the user), not "us"
+  (the developers and authors) to deal with the consequences/damage.
+  "We" will also not compensate anyone for damage to property such as a
+  broken hardware part or a burnt-down house.
+
+- in short: use at your own risk
+
+
+2. Compliance
 
 It may be possible that you or your country are subject to additional
 regulations such as US export restrictions incl. special terms of use
-concerning the operating system you are using the Product on. You, the
-user, acknowledge that such restrictions are not always feasible to be
-checked for you when it comes to distribution of free and Open Source
-software such as this Product. Therefore, you accept that it is your
-own responsibility to remain in compliance with all additional terms
-and conditions concerning for example, but not limited to, your local
-jurisdiction, the place of import/use of this Product or the computer
-environment you install the Product to, incl. proper licensing of the
-operating system and its components.
+concerning the operating system you are using XPRC on. You, the user,
+acknowledge that such restrictions are not always feasible to be checked for
+you when it comes to distribution of free and Open Source software such as
+XPRC. Therefore, you accept that it is your own responsibility to remain in
+compliance with all additional terms and conditions concerning for example,
+but not limited to, your local jurisdiction, the place of import/use of XPRC
+or the computer environment you install XPRC to, incl. proper licensing of
+the operating system and its components.
 
-If you do not agree to or cannot fulfill any of the terms set by either
-license or the following disclaimer (written in all-caps), then you are
-required to immediately discontinue use of this Product and may be
-obliged to delete all copies you received or created.
 
-IN ADDITION TO ALL INDIVIDUAL LICENSES AND ASSOCIATED DISCLAIMERS
-(EXTENDING, NOT RESTRICTING) YOU ACCEPT THAT THIS PRODUCT IS PROVIDED
-"AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
-BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-PARTICULAR PURPOSE AND NONINFRINGEMENT.
+3. Linking, Combined Work
 
-IN NO EVENT SHALL THE AUTHORS, COPYRIGHT HOLDERS OR DISTRIBUTORS OF ANY
-PART OF THE PRODUCT, WHETHER IN BINARY OR SOURCE FORM, ORIGINAL OR
-REPACKAGED, BE HELD LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY
-ASSOCIATED WITH THE USE OR POSESSION OF A COPY OF THIS PRODUCT.
-THE USER IS SOLELY REPONSIBLE FOR ANY IMPLICATIONS OF ACQUIRING,
-INSTALLING AND USING THIS PRODUCT. ALL USE IS AT YOUR OWN RISK.
+When source code is being compiled to binaries, all dependencies are being
+linked to or into the resulting file(s). During that process, individual
+dependencies may become inseparable from the end product (static linking).
 
-XPRC offers other, external applications access to the X-Plane simulator
-over a network connection. This distribution license and additional
-disclaimer explicitly does not cover or restrict those applications.
+In general, the inclusion of dependencies may constitute a "combined work".
+
+These terms may be referred to by some dependencies' licenses.
+
+
+4. Connected Applications
+
+XPRC offers other, external applications access to the simulator over a
+network connection. This distribution license and additional disclaimer
+explicitly does not cover or restrict those applications.
+
 Each interfacing application is free to choose its own license(s) and
-disclaimer(s) as long as it does not interfere with any terms and
-conditions set by any of the individual licenses of this product.
+disclaimer(s) as long as it does not interfere with any terms and conditions
+set by the individual licenses of XPRC and its dependencies.
 
-In case any condition of this license may be invalid or conflict with
-an original license of the various dependencies of this Product incl.
-its source code's MIT license, the part that is in question shall be
-substituted while maintaining the original intent as closely as
-possible. Original licenses always take precedence, if in conflict.
+
+5. Redistribution & Forks
+
+XPRC only works properly if it is installed as a global plugin, not per
+aircraft or scenery addon.
+
+In case you decide to bundle XPRC with another product, please include the
+complete official distribution package or its unaltered contents. Please do
+not replace existing XPRC installations without confirmation.
+When building an installer, the recommended way would be to offer XPRC as an
+option, possibly checking for an existing XPRC plugin (see protocol
+specification) and disabling that option by default, if found.
+
+When forking or distributing your own builds of XPRC, please check if and how
+this "binary distribution license" still applies to you or your work and make
+the necessary changes. Also make sure to update copyright information, while
+retaining all original notes. In addition to conditions made by original
+licenses, it should be noted that some forms of distribution as well as
+anything published e.g. by commercial entities may in some jurisdictions not
+be entitled to disclaim warranty & liability. Please check the project's
+website(s) and source repositories for more information and seek legal advice
+(not provided by the project), if necessary.
+
+Note that even bundling the original package may in some cases require
+warranty and liability to be provided by the distributor. It may be
+preferable to just refer users to the original website(s) to obtain XPRC as a
+separate copy.
+
+If you make modifications to this "binary distribution license", please give
+it a new name to clearly distinguish it from the original and avoid
+confusion.
+
+
+6. Severability
+
+In case any condition of this license may be invalid or conflict with itself
+or an original license of XPRC or its various dependencies, the part that is
+in question shall be substituted while following the original intent as
+closely as possible. Original licenses always take precedence, if in
+conflict.
