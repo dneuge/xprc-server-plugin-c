@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include "gui_utils.h"
 #include "../logger.h"
 #include "../utils.h"

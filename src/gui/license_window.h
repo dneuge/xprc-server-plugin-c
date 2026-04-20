@@ -4,8 +4,6 @@
 #include "img_window.h"
 #include "../licenses.h"
 #include "../license_manager.h"
-#include "../server_manager.h"
-#include "../settings_manager.h"
 
 typedef struct {
     /// ImGui window instance
