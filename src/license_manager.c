@@ -209,6 +209,8 @@ license_manager_t* create_license_manager(char *directory, license_manager_callb
         goto error;
     }
 
+    out->_file_found = check_file_exists(out->license_acceptance_file_path);
+
     accepted_licenses = load_accepted_licenses(out->license_acceptance_file_path);
     if (!accepted_licenses) {
         // NOTE: If loading fails, we would still get an empty map as fallback.
@@ -361,6 +363,18 @@ bool all_licenses_accepted(license_manager_t *license_manager) {
     }
 
     return (license_manager->_pending_licenses->head == NULL);
+}
+
+bool no_licenses_accepted(license_manager_t *license_manager) {
+    if (!license_manager) {
+        RCLOG_ERROR("no_licenses_accepted: called with NULL");
+        return false;
+    }
+
+    // since we delete the license acceptance file when licenses are being rejected
+    // and that file does not exist initially, the answer is really equivalent to mere
+    // presence/absence of that file
+    return !license_manager->_file_found;
 }
 
 static void persist_all_licenses(char *path) {

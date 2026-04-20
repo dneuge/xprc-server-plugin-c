@@ -215,22 +215,24 @@ static license_window_license_t* create_license_window_license(license_manager_t
     out->license = license;
 
     pending_license_t *pending_license = NULL;
-    error_t err = get_pending_license(&pending_license, license_manager, license->id);
-    if (err != ERROR_NONE) {
-        RCLOG_WARN("[license window] create_license_window_license failed to check for pending license %s (%d)", license_id, err);
-        goto error;
+    if (!no_licenses_accepted(license_manager)) {
+        error_t err = get_pending_license(&pending_license, license_manager, license->id);
+        if (err != ERROR_NONE) {
+            RCLOG_WARN("[license window] create_license_window_license failed to check for pending license %s (%d)", license_id, err);
+            goto error;
+        }
     }
 
     if (!pending_license) {
         out->label = dynamic_sprintf("%s##%slist_item__%s", license->name, IMGUI_ID_PREFIX, license->id);
         if (!out->label) {
-            RCLOG_WARN("[license window] create_license_window_license failed to create label for accepted license");
+            RCLOG_WARN("[license window] create_license_window_license failed to create label for untagged license");
             goto error;
         }
     } else {
         out->label = dynamic_sprintf("%s [%s]##%slist_item__%s", license->name, (pending_license->previously_accepted ? "changed" : "new"), IMGUI_ID_PREFIX, license->id);
         if (!out->label) {
-            RCLOG_WARN("[license window] create_license_window_license failed to create label for pending license");
+            RCLOG_WARN("[license window] create_license_window_license failed to create label for tagged license");
             goto error;
         }
     }

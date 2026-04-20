@@ -22,6 +22,7 @@ typedef struct {
     license_manager_callback_f on_rejection;
     void *on_rejection_ref;
 
+    bool _file_found;
     list_t *_pending_licenses; // users should call getter instead of directly accessing this field
 } license_manager_t;
 
@@ -56,6 +57,13 @@ void destroy_license_manager(license_manager_t *license_manager);
 bool all_licenses_accepted(license_manager_t *license_manager);
 
 /**
+ * Indicates whether no (even gone) licenses have been previously accepted.
+ * @param license_manager license manager
+ * @return true if no license acceptance has been recorded, false if at least one license has been accepted in the past or on error
+ */
+bool no_licenses_accepted(license_manager_t *license_manager);
+
+/**
  * Lists all licenses which have not been accepted yet in their current revision.
  *
  * Returns a list of pending_license_t; empty if all licenses have been accepted, NULL on error.
@@ -66,7 +74,6 @@ bool all_licenses_accepted(license_manager_t *license_manager);
  * @return all licenses not accepted in current revision as list of pending_license_t; empty if all have been accepted, NULL on error
  */
 list_t* get_pending_licenses(license_manager_t *license_manager);
-
 
 /**
  * Checks if the specified license is pending to be accepted, providing details about previous acceptance.
