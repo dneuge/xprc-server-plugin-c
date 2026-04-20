@@ -67,6 +67,22 @@ bool all_licenses_accepted(license_manager_t *license_manager);
  */
 list_t* get_pending_licenses(license_manager_t *license_manager);
 
+
+/**
+ * Checks if the specified license is pending to be accepted, providing details about previous acceptance.
+ *
+ * pending_license will only be manipulated if successful and will be set to NULL in case the license is known but not
+ * pending.
+ *
+ * Any value set on pending_license is managed by the caller, use #destroy_pending_license for value destruction.
+ *
+ * @param pending_license if successful: will be set to a copy of the pending license or NULL if the license is not pending
+ * @param license_manager license manager
+ * @param license_id ID of license to check (case-sensitive)
+ * @return error code; #ERROR_NONE on success
+ */
+error_t get_pending_license(pending_license_t **pending_license, license_manager_t *license_manager, char *license_id);
+
 /**
  * Continues initialization of license manager.
  *

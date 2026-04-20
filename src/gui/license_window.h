@@ -6,6 +6,11 @@
 #include "../license_manager.h"
 
 typedef struct {
+    char *label;
+    xprc_license_t *license;
+} license_window_license_t;
+
+typedef struct {
     /// ImGui window instance
     img_window window;
 
@@ -25,7 +30,7 @@ typedef struct {
     bool should_disable;
     bool reset_scroll_position;
 
-    list_t *licenses;
+    list_t *licenses; // holding license_window_license_t
 
     // settings
     /// shared license manager instance

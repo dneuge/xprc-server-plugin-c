@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "fileio.h"
 #include "hashmap.h"
@@ -306,6 +307,46 @@ error:
     destroy_list(out, destroy_pending_license);
 
     return NULL;
+}
+
+static bool test_pending_license_id(void *value, void *ref) {
+    pending_license_t *pending_license = value;
+    char *wanted_license_id = ref;
+
+    if (!wanted_license_id || !pending_license || !pending_license->license_id) {
+        return false;
+    }
+
+    return strcmp(pending_license->license_id, wanted_license_id) == 0;
+}
+
+error_t get_pending_license(pending_license_t **pending_license, license_manager_t *license_manager, char *license_id) {
+    if (!pending_license || !license_manager || !license_id) {
+        RCLOG_WARN("get_pending_license: missing parameters, pending_license=%p, license_manager=%p, license_id=%p", pending_license, license_manager, license_id);
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (!license_manager->_pending_licenses) {
+        RCLOG_ERROR("get_pending_license: license manager at %p is missing pending license list", license_manager);
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (!xprc_get_license(license_id)) {
+        RCLOG_WARN("get_pending_license called for unknown license %s", license_id);
+        return ERROR_UNSPECIFIC;
+    }
+
+    pending_license_t *res = NULL;
+    list_item_t *item = list_find_test(license_manager->_pending_licenses, test_pending_license_id, license_id);
+    if (item) {
+        res = copy_pending_license(item->value);
+        if (!res) {
+            return ERROR_MEMORY_ALLOCATION;
+        }
+    }
+    *pending_license = res;
+
+    return ERROR_NONE;
 }
 
 bool all_licenses_accepted(license_manager_t *license_manager) {

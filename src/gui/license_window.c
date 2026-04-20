@@ -21,14 +21,13 @@
 #define LICENSE_WINDOW_WIDTH 1020
 #define LICENSE_WINDOW_HEIGHT 750
 
-#define LIST_WIDTH (200.0f)
+#define LIST_WIDTH (220.0f)
 #define LICENSE_PANE_SPACING (10.0f)
 #define BUTTON_SPACING (10.0f)
 #define CHECKBOX_LABEL_OFFSET (24.0f)
 #define SMALL_VERTICAL_SPACING (3.0f)
 #define SPACE_ADJUSTMENT_TOLERANCE (0.05f)
 
-// TODO: indicate to user which licenses changed/have been added since last accepted? (and the reason why the dialog is shown again)
 // TODO: add button to about dialog to decline later?
 
 static void update_view(license_window_t *license_window) {
@@ -53,10 +52,11 @@ static void update_view(license_window_t *license_window) {
 
     if (igBeginListBox("##" IMGUI_ID_PREFIX "list", IM_VEC2(LIST_WIDTH, middle_space_available))) {
         for (list_item_t *item = license_window->licenses->head; item; item = item->next) {
-            xprc_license_t *license = item->value;
+            license_window_license_t *window_license = item->value;
+            xprc_license_t *license = window_license->license;
             const bool selected = (license == selected_license);
 
-            if (igSelectable_Bool(license->name, selected, ImGuiSelectableFlags_None, IM_VEC2(0, 0))) {
+            if (igSelectable_Bool(window_license->label, selected, ImGuiSelectableFlags_None, IM_VEC2(0, 0))) {
                 RCLOG_DEBUG("[license window] user selected license in list: %s", license->id);
                 license_window->select_license = license;
             }
@@ -178,6 +178,139 @@ static bool imgui_show(img_window window, void *ref) {
     return true;
 }
 
+static void destroy_license_window_license(void *ref) {
+    license_window_license_t *window_license = ref;
+
+    if (!window_license) {
+        return;
+    }
+
+    if (window_license->label) {
+        free(window_license->label);
+        window_license->label = NULL;
+    }
+
+    window_license->license = NULL;
+
+    free(window_license);
+}
+
+static license_window_license_t* create_license_window_license(license_manager_t *license_manager, char *license_id) {
+    if (!license_manager || !license_id) {
+        RCLOG_WARN("[license window] create_license_window_license missing parameters: license_manager=%p, license_id=%p", license_manager, license_id);
+        return NULL;
+    }
+
+    xprc_license_t *license = xprc_get_license(license_id);
+    if (!license) {
+        RCLOG_ERROR("[license window] failed to get license %s", license_id);
+        return NULL;
+    }
+
+    license_window_license_t *out = zmalloc(sizeof(license_window_license_t));
+    if (!out) {
+        return NULL;
+    }
+
+    out->license = license;
+
+    pending_license_t *pending_license = NULL;
+    error_t err = get_pending_license(&pending_license, license_manager, license->id);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("[license window] create_license_window_license failed to check for pending license %s (%d)", license_id, err);
+        goto error;
+    }
+
+    if (!pending_license) {
+        out->label = dynamic_sprintf("%s##%slist_item__%s", license->name, IMGUI_ID_PREFIX, license->id);
+        if (!out->label) {
+            RCLOG_WARN("[license window] create_license_window_license failed to create label for accepted license");
+            goto error;
+        }
+    } else {
+        out->label = dynamic_sprintf("%s [%s]##%slist_item__%s", license->name, (pending_license->previously_accepted ? "changed" : "new"), IMGUI_ID_PREFIX, license->id);
+        if (!out->label) {
+            RCLOG_WARN("[license window] create_license_window_license failed to create label for pending license");
+            goto error;
+        }
+    }
+
+    goto end;
+
+error:
+    destroy_license_window_license(out);
+    out = NULL;
+
+end:
+    destroy_pending_license(pending_license);
+
+    return out;
+}
+
+static list_t* create_window_licenses(license_manager_t *license_manager) {
+    if (!license_manager) {
+        RCLOG_ERROR("[license window] create_window_licenses called with NULL");
+        return NULL;
+    }
+
+    list_t *out = create_list();
+    if (!out) {
+        RCLOG_ERROR("[license window] failed to create license list");
+        return NULL;
+    }
+
+    list_t *license_ids = xprc_get_license_ids();
+    if (!license_ids) {
+        RCLOG_ERROR("[license window] failed to get license IDs");
+        goto error;
+    }
+
+    for (list_item_t *item = license_ids->head; item; item = item->next) {
+        char *license_id = item->value;
+
+        license_window_license_t *window_license = create_license_window_license(license_manager, license_id);
+        if (!window_license) {
+            RCLOG_ERROR("[license window] failed to create window license for %s", license_id);
+            goto error;
+        }
+
+        if (!list_append(out, window_license)) {
+            RCLOG_ERROR("[license window] failed to record window license for %s in list", license_id);
+            destroy_license_window_license(window_license);
+            goto error;
+        }
+    }
+
+    goto end;
+
+error:
+    destroy_list(out, destroy_license_window_license);
+    out = NULL;
+
+end:
+    destroy_list(license_ids, NULL);
+
+    return out;
+}
+
+static bool update_licenses(license_window_t *license_window) {
+    if (!license_window) {
+        RCLOG_ERROR("[license window] update_licenses called with NULL");
+        return false;
+    }
+
+    list_t *new_list = create_window_licenses(license_window->license_manager);
+    if (!new_list) {
+        RCLOG_WARN("[license window] update failed, unable to list licenses");
+        return false;
+    }
+
+    destroy_list(license_window->licenses, destroy_license_window_license);
+    license_window->licenses = new_list;
+
+    return true;
+}
+
 license_window_t* create_license_window(license_manager_t *license_manager) {
     if (!license_manager) {
         RCLOG_ERROR("[license window] missing parameters to initialize; license_manager=%p", license_manager);
@@ -197,32 +330,10 @@ license_window_t* create_license_window(license_manager_t *license_manager) {
         goto error;
     }
 
-    license_window->licenses = create_list();
-    if (!license_window->licenses) {
-        RCLOG_ERROR("[license window] failed to create license list");
+    if (!update_licenses(license_window)) {
+        RCLOG_ERROR("[license window] failed initial retrieval of licenses");
         goto error;
     }
-    list_t *license_ids = xprc_get_license_ids();
-    if (!license_ids) {
-        RCLOG_ERROR("[license window] failed to get license IDs");
-        goto error;
-    }
-    for (list_item_t *item = license_ids->head; item; item = item->next) {
-        char *license_id = item->value;
-        xprc_license_t *license = xprc_get_license(license_id);
-        if (!license) {
-            RCLOG_ERROR("[license window] failed to get license %s", license_id);
-            destroy_list(license_ids, NULL);
-            goto error;
-        }
-
-        if (!list_append(license_window->licenses, license)) {
-            RCLOG_ERROR("[license window] failed to record license %s in list", license_id);
-            destroy_list(license_ids, NULL);
-            goto error;
-        }
-    }
-    destroy_list(license_ids, NULL);
 
     license_window->window = create_centered_window(LICENSE_WINDOW_WIDTH, LICENSE_WINDOW_HEIGHT,imgui_update, imgui_show, license_window);
     if (!license_window->window) {
@@ -251,7 +362,7 @@ void destroy_license_window(license_window_t* license_window) {
     license_window->default_license = NULL;
 
     if (license_window->licenses) {
-        destroy_list(license_window->licenses, NULL);
+        destroy_list(license_window->licenses, destroy_license_window_license);
         license_window->licenses = NULL;
     }
 
