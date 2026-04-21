@@ -6,9 +6,6 @@
 
 #include "license_window.h"
 
-// TODO: relocate to build info?
-#define XPRC_BINARY_LICENSE_ID "_xprc-binary"
-
 #define DEFAULT_LICENSE_ID XPRC_BINARY_LICENSE_ID
 
 // in case imgui is a shared instance (may be introduced to XP12) we select "random" or prefixed IDs
@@ -101,7 +98,7 @@ static void update_view(license_window_t *license_window) {
     // === bottom area ===
 
     offset_imgui_cursor(LIST_WIDTH + LICENSE_PANE_SPACING, SMALL_VERTICAL_SPACING);
-    igCheckbox("I have read and accept ALL licenses and associated disclaimers##" IMGUI_ID_PREFIX "accepted", &license_window->accepted);
+    igCheckbox(XPRC_LICENSE_ACCEPTANCE_TEXT "##" IMGUI_ID_PREFIX "accepted", &license_window->accepted);
 
     offset_imgui_cursor(LIST_WIDTH + LICENSE_PANE_SPACING + CHECKBOX_LABEL_OFFSET, SMALL_VERTICAL_SPACING);
     igBeginDisabled(license_window->accepted);

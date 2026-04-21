@@ -11,10 +11,6 @@
 
 #include "../trademarks.h"
 
-// TODO: relocate to build info?
-#define XPRC_BINARY_LICENSE_ID "_xprc-binary"
-#define XPRC_SOURCE_LICENSE_ID "MIT"
-
 #define MIN_PLUGIN_COPYRIGHT_YEAR (2026)
 #define MAX_PLUGIN_COPYRIGHT_YEAR (2099)
 

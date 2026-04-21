@@ -5,6 +5,11 @@
 
 #include "lists.h"
 
+#define XPRC_BINARY_LICENSE_ID "_xprc-binary"
+#define XPRC_SOURCE_LICENSE_ID "MIT"
+
+#define XPRC_LICENSE_ACCEPTANCE_TEXT "I have read and accept ALL licenses and associated disclaimers"
+
 typedef uint32_t xprc_license_hash_t;
 
 typedef struct {
