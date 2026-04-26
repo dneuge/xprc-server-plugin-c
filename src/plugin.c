@@ -312,6 +312,13 @@ static void on_plugin_licenses_accepted(void *ref) {
 
     RCLOG_INFO("licenses accepted, continuing startup");
 
+    error_t err = gui_complete_init(gui);
+    if (err != ERROR_NONE) {
+        RCLOG_ERROR("GUI failed to complete initialization (%d) - simulator restart required", err);
+        fatal_error = true;
+        return;
+    }
+
     if (!auto_start) {
         RCLOG_INFO("server is not being started automatically");
     } else {

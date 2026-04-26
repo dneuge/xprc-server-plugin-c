@@ -48,12 +48,24 @@ typedef struct _gui_t {
 
 /**
  * Creates a new GUI root instance.
+ *
+ * GUI is only half-functional as license acceptance may still be pending, #gui_complete_init must be called to fully
+ * enable the plugin.
+ *
  * @param license_manager shared license manager to connect with
  * @param settings_manager shared settings manager instance to connect with
  * @param server_manager shared server manager instance to connect with
  * @return GUI root instance; NULL on error
  */
 gui_t* gui_create(license_manager_t *license_manager, settings_manager_t *settings_manager, server_manager_t *server_manager);
+
+/**
+ * Completes GUI initialization; only to be called after licenses have been accepted by user.
+ *
+ * @param gui GUI root instance to complete initialization for
+ * @return error code; #ERROR_NONE on success
+ */
+error_t gui_complete_init(gui_t *gui);
 
 /**
  * Destroys the given GUI root instance.

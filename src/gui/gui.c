@@ -128,6 +128,19 @@ gui_t* gui_create(license_manager_t *license_manager, settings_manager_t *settin
         goto error;
     }
 
+    return gui;
+
+error:
+    gui_destroy(gui);
+    return NULL;
+}
+
+error_t gui_complete_init(gui_t *gui) {
+    if (!gui) {
+        RCLOG_ERROR("gui_complete_init: called without parameter");
+        return ERROR_UNSPECIFIC;
+    }
+
     gui->xp_plugins_menu_id = XPLMFindPluginsMenu();
     if (!gui->xp_plugins_menu_id) {
         RCLOG_ERROR("plugins menu not found");
@@ -167,15 +180,14 @@ gui_t* gui_create(license_manager_t *license_manager, settings_manager_t *settin
     }
 
     // start/stop menu item needs to be updated to reflect intended server state
-    on_managed_server_state_change(gui, get_managed_server_state(server_manager));
-    register_server_state_listener(server_manager, on_managed_server_state_change, gui);
+    on_managed_server_state_change(gui, get_managed_server_state(gui->server_manager));
+    register_server_state_listener(gui->server_manager, on_managed_server_state_change, gui);
     update_menu(gui);
 
-    return gui;
+    return ERROR_NONE;
 
 error:
-    gui_destroy(gui);
-    return NULL;
+    return ERROR_INCOMPLETE;
 }
 
 
