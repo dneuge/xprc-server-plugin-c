@@ -359,9 +359,18 @@ static void on_plugin_licenses_rejected(void *ref) {
 
     license_rejection_flight_loop_t *flight_loop_data = zmalloc(sizeof(license_rejection_flight_loop_t));
 
+    // NOTE: Flight loop mutex is kept locked between "before" & "after" phase callbacks but needs to be unlocked while
+    //       plugin will be disabled. Plugin will deadlock if XPluginDisable is called while the mutex is still locked.
+    //       X-Plane 12.4.0 runs later registrations first, so if we were to register an "after flight model" callback
+    //       for shutdown it will get called after our regular "before" callback has completed and locked the mutex but
+    //       before the "after" callback could be called to release it again. We have to register a callback for the
+    //       "before" phase instead to be called (and able to unschedule the regular flight loop callback) before that
+    //       shared lock is being acquired.
+    //       THIS BEHAVIOUR DEPENDS ON X-PLANE INTERNALS AND MAY CHANGE TO THE OPPOSITE OR TURN RANDOM IN THE FUTURE!
+    // TODO: find a better way than sharing mutexes or detect scheduling order on plugin startup
     XPLMCreateFlightLoop_t params = {
         .structSize = sizeof(XPLMCreateFlightLoop_t),
-        .phase = xplm_FlightLoop_Phase_AfterFlightModel,
+        .phase = xplm_FlightLoop_Phase_BeforeFlightModel,
         .callbackFunc = on_plugin_licenses_rejected_flight_loop,
         .refcon = flight_loop_data,
     };
@@ -669,14 +678,26 @@ PLUGIN_API void XPluginDisable() {
 
     bool can_join_post_processing_thread = true;
     if (has_post_processing_thread) {
+        bool flight_loop_locked = false;
         bool schedule_locked = false;
-        if (task_schedule && lock_schedule(task_schedule) == ERROR_NONE) {
-            schedule_locked = true;
-        } else {
-            RCLOG_ERROR("failed to lock task schedule to signal shutdown to post-processing thread");
+
+        // post-processing thread waits on conditional linked to flight loop mutex, then also locks the schedule
+        // afterwards, we may fail to trigger the condition variable unless we do the same (both mutexes, same order)
+        err = lock_flight_loop();
+        if (err != ERROR_NONE) {
+            RCLOG_ERROR("failed to lock post-processing thread to signal shutdown");
             can_join_post_processing_thread = false;
+        } else {
+            flight_loop_locked = true;
+
+            if (task_schedule && lock_schedule(task_schedule) == ERROR_NONE) {
+                schedule_locked = true;
+            } else {
+                RCLOG_ERROR("failed to lock task schedule to signal shutdown to post-processing thread");
+                can_join_post_processing_thread = false;
+            }
         }
-    
+
         shutdown_post_processing = true;
         if (cnd_broadcast(&post_processing_wait) != thrd_success) {
             RCLOG_ERROR("post processing thread cannot be notified");
@@ -686,6 +707,11 @@ PLUGIN_API void XPluginDisable() {
         if (schedule_locked) {
             unlock_schedule(task_schedule);
             schedule_locked = false;
+        }
+
+        if (flight_loop_locked) {
+            unlock_flight_loop();
+            flight_loop_locked = false;
         }
     }
     
