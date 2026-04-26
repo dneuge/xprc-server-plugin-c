@@ -25,8 +25,6 @@
 #define SMALL_VERTICAL_SPACING (3.0f)
 #define SPACE_ADJUSTMENT_TOLERANCE (0.05f)
 
-// TODO: add button to about dialog to decline later?
-
 static void update_view(license_window_t *license_window) {
     // === top area ===
 

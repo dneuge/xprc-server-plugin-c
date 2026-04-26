@@ -113,7 +113,7 @@ gui_t* gui_create(license_manager_t *license_manager, settings_manager_t *settin
 
     img_window_init_globals();
 
-    gui->about_window = create_about_window(settings_manager, server_manager);
+    gui->about_window = create_about_window(license_manager);
     if (!gui->about_window) {
         goto error;
     }

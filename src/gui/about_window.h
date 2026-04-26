@@ -34,11 +34,14 @@ typedef struct {
 
     // current state
     xprc_license_t *selected_license;
+    bool all_licenses_accepted;
+    float bottom_space_needed;
 
     // requested state changes (will be reset once processed)
     uint8_t select_tab;
     xprc_license_t *select_license;
     bool reset_scroll_position;
+    bool reject_licenses;
 
     // more efficient data structures and cached values need to be prepared ahead of time
     list_t *licenses;
@@ -53,19 +56,16 @@ typedef struct {
     int plugin_copyright_year;
 
     // settings
-    /// shared settings manager instance
-    settings_manager_t *settings_manager;
-    /// shared server manager instance
-    server_manager_t *server_manager;
+    /// shared license manager instance
+    license_manager_t *license_manager;
 } about_window_t;
 
 /**
  * Creates a new "about" window instance.
- * @param settings_manager shared settings manager instance to connect with
- * @param server_manager server manager to connect with
+ * @param license_manager shared license manager to connect with
  * @return "about" window instance; NULL on error
  */
-about_window_t* create_about_window(settings_manager_t *settings_manager, server_manager_t *server_manager);
+about_window_t* create_about_window(license_manager_t *license_manager);
 
 /**
  * Destroy an "about" window instance.

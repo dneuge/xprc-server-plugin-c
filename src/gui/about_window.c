@@ -24,8 +24,12 @@
 #define IMGUI_ID_LICENSE_SCROLLPANE (IMGUI_ID_BASE + 2)
 #define IMGUI_ID_TRADEMARK_ACKNOWLEDGMENT_SCROLLPANE (IMGUI_ID_BASE + 3)
 
+#define IMGUI_ID_LICENSE_REVOCATION_POPUP IMGUI_ID_PREFIX "license_revocation_popup"
+
 #define ABOUT_WINDOW_WIDTH 1045
 #define ABOUT_WINDOW_HEIGHT 700
+
+#define SPACE_ADJUSTMENT_TOLERANCE (0.05f)
 
 #define BANNER_LINE_1 "#   # ####  ####   ####"
 #define BANNER_LINE_2 " # #  #   # #   # #    "
@@ -164,6 +168,7 @@ static void render_tab_content_licenses(about_window_t *about_window) {
 
     xprc_license_t *selected_license = about_window->selected_license;
 
+    // top area
     igText("License: ");
     igSameLine(0, 0);
 
@@ -187,11 +192,18 @@ static void render_tab_content_licenses(about_window_t *about_window) {
 
     igSeparatorEx(ImGuiSeparatorFlags_Horizontal, separator_windows_section_thickness);
 
+    // === middle area ===
+
     ImVec2 available_space = IM_VEC2(0, 0);
     igGetContentRegionAvail(&available_space);
 
+    float middle_space_available = available_space.y - about_window->bottom_space_needed;
+    if (middle_space_available < 0.0f) {
+        middle_space_available = 1.0f;
+    }
+
     ImGuiID id_license_scrollpane = igGetID_Int(IMGUI_ID_LICENSE_SCROLLPANE);
-    bool license_scrollpane_visible = igBeginChild_ID(id_license_scrollpane, IM_VEC2(available_space.x, available_space.y), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+    bool license_scrollpane_visible = igBeginChild_ID(id_license_scrollpane, IM_VEC2(available_space.x, middle_space_available), ImGuiChildFlags_None, ImGuiWindowFlags_None);
     if (license_scrollpane_visible) {
         if (about_window->reset_scroll_position) {
             igSetScrollY_Float(0.0f);
@@ -201,6 +213,39 @@ static void render_tab_content_licenses(about_window_t *about_window) {
         igTextWrapped("%s", selected_license->text);
     }
     igEndChild();
+
+    // === bottom area ===
+
+    igSeparatorEx(ImGuiSeparatorFlags_Horizontal, separator_windows_section_thickness);
+
+    bool chk = about_window->all_licenses_accepted;
+    if (igCheckbox(XPRC_LICENSE_ACCEPTANCE_TEXT "##" IMGUI_ID_PREFIX "license_acceptance", &chk) && about_window->all_licenses_accepted) {
+        igOpenPopup_Str(IMGUI_ID_LICENSE_REVOCATION_POPUP, ImGuiPopupFlags_None);
+    }
+
+    // adjust the space we have to reserve to fully render the area below the license display for next iteration
+    igGetContentRegionAvail(&available_space);
+    if (available_space.y > SPACE_ADJUSTMENT_TOLERANCE || available_space.y < -SPACE_ADJUSTMENT_TOLERANCE) {
+        // FIXME: limit to specific range?
+        RCLOG_DEBUG("[about window] bottom area reserved y=%.2f which yields y=%.2f size difference, adjusting", about_window->bottom_space_needed, available_space.y);
+        about_window->bottom_space_needed -= available_space.y;
+    }
+
+    // === popup ===
+
+    if (igBeginPopup(IMGUI_ID_LICENSE_REVOCATION_POPUP, ImGuiWindowFlags_None)) {
+        igText("XPRC requires all licenses to have been");
+        igText("accepted, declining them will disable XPRC.");
+
+        igPushStyleColor_Vec4(ImGuiCol_Button, IM_VEC4(0.5f, 0.0f, 0.0f, 1.0f));
+        igPushStyleColor_Vec4(ImGuiCol_ButtonActive, IM_VEC4(1.0f, 0.0f, 0.0f, 1.0f));
+        igPushStyleColor_Vec4(ImGuiCol_ButtonHovered, IM_VEC4(1.0f, 0.2f, 0.2f, 1.0f));
+
+        about_window->reject_licenses = igButton("Decline & disable XPRC##" IMGUI_ID_PREFIX "btn_revoke_licenses", IMGUI_ZERO_SIZE);
+
+        igPopStyleColor(3);
+        igEndPopup();
+    }
 }
 
 static void render_tab_content_acknowledgments(about_window_t *about_window) {
@@ -284,6 +329,18 @@ static void handle_view_state(about_window_t *about_window) {
         about_window->selected_license = about_window->select_license;
         about_window->select_license = NULL;
     }
+
+    if (about_window->reject_licenses) {
+        RCLOG_ERROR("[about window] user revokes license acceptance");
+        error_t err = reject_licenses(about_window->license_manager);
+        if (err != ERROR_NONE) {
+            RCLOG_ERROR("[about window] failed to revoke licenses (%d)", err);
+        } else {
+            about_window->all_licenses_accepted = false;
+        }
+
+        about_window->reject_licenses = false;
+    }
 }
 
 static void imgui_update(img_window window, void *ref) {
@@ -301,7 +358,13 @@ static bool imgui_show(img_window window, void *ref) {
         return false;
     }
 
+    about_window->bottom_space_needed = 0.0f;
     about_window->reset_scroll_position = true;
+
+    about_window->all_licenses_accepted = all_licenses_accepted(about_window->license_manager);
+    if (!about_window->all_licenses_accepted) {
+        RCLOG_WARN("inconsistent flow: licenses have not been accepted, yet somehow the about dialog is being (re)opened; previous error on rejection?");
+    }
 
     if (!about_window->select_license) {
         about_window->selected_license = about_window->default_license;
@@ -315,13 +378,6 @@ static bool imgui_show(img_window window, void *ref) {
     if (about_window->select_tab == ABOUT_WINDOW_TAB_NO_CHANGE) {
         about_window->select_tab = ABOUT_WINDOW_TAB_FIRST;
     }
-
-    /*
-    // window was not on screen before; take that chance to update/reset
-    // to actual current settings (discarding any previous changes)
-    RCLOG_DEBUG("about window will be shown, reading settings");
-    copy_from_settings(about_window);
-    */
 
     return true;
 }
@@ -461,9 +517,9 @@ static void destroy_about_window_dependency(void *ref) {
     free(dependency);
 }
 
-about_window_t* create_about_window(settings_manager_t *settings_manager, server_manager_t *server_manager) {
-    if (!settings_manager || !server_manager) {
-        RCLOG_ERROR("[about window] missing parameters to initialize; settings_manager=%p, server_manager=%p", settings_manager, server_manager);
+about_window_t* create_about_window(license_manager_t *license_manager) {
+    if (!license_manager) {
+        RCLOG_ERROR("[about window] missing parameters to initialize; license_manager=%p", license_manager);
         return NULL;
     }
 
@@ -472,8 +528,7 @@ about_window_t* create_about_window(settings_manager_t *settings_manager, server
         return NULL;
     }
 
-    about_window->settings_manager = settings_manager;
-    about_window->server_manager = server_manager;
+    about_window->license_manager = license_manager;
 
     if (strcmp("", XPRC_SERVER_WEBSITE) != 0) {
         about_window->xprc_website_label = dynamic_sprintf("%s##%s_component_website_link", XPRC_SERVER_WEBSITE, IMGUI_ID_PREFIX);
@@ -659,8 +714,7 @@ void destroy_about_window(about_window_t* about_window) {
     about_window->select_tab = ABOUT_WINDOW_TAB_NO_CHANGE;
     about_window->selected_license = NULL;
 
-    about_window->settings_manager = NULL;
-    about_window->server_manager = NULL;
+    about_window->license_manager = NULL;
 
     img_window_destroy(about_window->window);
 
