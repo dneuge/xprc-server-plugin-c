@@ -18,6 +18,7 @@
 #define REFERENCE_COARSE_TIMESTAMP_BUFFER_SIZE 30
 #define HANDSHAKE_COMPLETION_BUFFER_SIZE 50
 
+__attribute__((__format__ (__printf__, 2, 3)))
 static void send_or_close(network_connection_t *connection, char *format, ...) {
     va_list args;
     va_start(args, format);

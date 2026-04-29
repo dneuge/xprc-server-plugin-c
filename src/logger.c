@@ -106,6 +106,7 @@ static const char* log_level_name_message_part(xprc_log_level_t level) {
     }
 }
 
+__attribute__((__format__ (__printf__, 3, 0)))
 static bool format_message(char *buffer, xprc_log_level_t level, char *format, va_list args) {
     // buffer needs to have RCLOG_MESSAGE_BUFFER_SIZE
     

@@ -76,6 +76,7 @@ char* copy_partial_unescaped_string(char *s, int max_length);
  * @param ... parameters to be formatted
  * @return the formatted string; NULL on error
  */
+__attribute__((__format__ (__printf__, 1, 2)))
 char* dynamic_sprintf(char *format, ...);
 
 /**
@@ -84,6 +85,7 @@ char* dynamic_sprintf(char *format, ...);
  * @param args parameters to be formatted, provided as a vararg list
  * @return the formatted string; NULL on error
  */
+__attribute__((__format__ (__printf__, 1, 0)))
 char* dynamic_vsprintf(char *format, va_list args);
 
 /**
@@ -199,6 +201,7 @@ bool is_valid_date(xprc_date_t *date);
  * @param format formatting string; see vsnprintf for available syntax
  * @param ... parameters to be formatted
  */
+__attribute__((__format__ (__printf__, 1, 2)))
 void set_current_thread_name(char *format, ...);
 
 #endif
