@@ -157,10 +157,10 @@ static list_t* serialize_settings(settings_t *settings) {
         return NULL;
     }
 
-    RCLOG_TRACE("[settings] serializing fields from %p (size %lu)", settings_fields, sizeof(settings_field_t));
+    RCLOG_TRACE("[settings] serializing fields from %p (size %zu)", settings_fields, sizeof(settings_field_t));
     settings_field_t *field = (settings_field_t*) &settings_fields;
     while (field->type != SETTINGS_FIELD_TYPE_END_OF_FIELDS) {
-        RCLOG_TRACE("[settings] serialization processes field: field=%p (type=%d, key=%s, offset=%lu)", field, field->type, field->key, field->offset);
+        RCLOG_TRACE("[settings] serialization processes field: field=%p (type=%d, key=%s, offset=%zu)", field, field->type, field->key, field->offset);
 
         char *line = serialize_setting(settings, field);
         if (!line) {

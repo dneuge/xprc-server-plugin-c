@@ -248,24 +248,24 @@ static char* get_xp_preferences_directory() {
     XPLMGetPrefsPath(buffer);
     size_t dummy_filepath_length = strlen(buffer);
     if (dummy_filepath_length >= XP_PATH_BUFFER_SIZE) {
-        RCLOG_ERROR("buffer overrun detected via XPLMGetPrefsPath in get_xp_preferences_directory; fatal_error (%ld >= %d)", dummy_filepath_length, XP_PATH_BUFFER_SIZE);
+        RCLOG_ERROR("buffer overrun detected via XPLMGetPrefsPath in get_xp_preferences_directory; fatal_error (%zu >= %d)", dummy_filepath_length, XP_PATH_BUFFER_SIZE);
         goto fatal_error;
     }
 
     XPLMExtractFileAndPath(buffer); // turns last directory separator into null-termination
     size_t directory_length = strlen(buffer);
     if (directory_length >= XP_PATH_BUFFER_SIZE) {
-        RCLOG_ERROR("buffer overrun detected via XPLMExtractFileAndPath in get_xp_preferences_directory; fatal_error (%ld >= %d)", directory_length, XP_PATH_BUFFER_SIZE);
+        RCLOG_ERROR("buffer overrun detected via XPLMExtractFileAndPath in get_xp_preferences_directory; fatal_error (%zu >= %d)", directory_length, XP_PATH_BUFFER_SIZE);
         goto fatal_error;
     }
 
     if (directory_length >= dummy_filepath_length) {
-        RCLOG_ERROR("expected path after XPLMExtractFileAndPath (%ld) to be shorter than XPLMGetPrefsPath (%ld); fatal_error", directory_length, dummy_filepath_length);
+        RCLOG_ERROR("expected path after XPLMExtractFileAndPath (%zu) to be shorter than XPLMGetPrefsPath (%zu); fatal_error", directory_length, dummy_filepath_length);
         goto fatal_error;
     }
 
     if (directory_length < MIN_EXPECTED_XP_PREFERENCES_DIRECTORY_LENGTH) {
-        RCLOG_ERROR("X-Plane preference path is implausible (got %ld characters, expected at least %d); fatal_error", directory_length, MIN_EXPECTED_XP_PREFERENCES_DIRECTORY_LENGTH);
+        RCLOG_ERROR("X-Plane preference path is implausible (got %zu characters, expected at least %d); fatal_error", directory_length, MIN_EXPECTED_XP_PREFERENCES_DIRECTORY_LENGTH);
         goto fatal_error;
     }
 
@@ -440,7 +440,7 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
     if (!xp_directory_separator) {
         RCLOG_WARN("X-Plane did not return any directory separator, consistency cannot be checked");
     } else if (strlen(xp_directory_separator) != 1) {
-        RCLOG_WARN("X-Plane directory separator has an unexpected length: got %ld, expected 1", strlen(xp_directory_separator));
+        RCLOG_WARN("X-Plane directory separator has an unexpected length: got %zu, expected 1", strlen(xp_directory_separator));
     } else if (DIRECTORY_SEPARATOR != xp_directory_separator[0]) {
         RCLOG_ERROR("X-Plane directory separator is different from plugin platform code! Plugin is incompatible and will refuse to start; please report to XPRC developers. XP: \"%s\", XPRC: '%c'", xp_directory_separator, DIRECTORY_SEPARATOR);
         fatal_error = 1;

@@ -221,7 +221,7 @@ static const XPLMDataTypeID array_types = xplmType_IntArray | xplmType_FloatArra
 static const XPLMDataTypeID supported_types = simple_types | array_types;
 
 bool xprc_parse_value(char *s, int count, XPLMDataTypeID type, void *value, size_t value_size) {
-    RCLOG_TRACE("xprc_parse_value s=\"%s\", count=%d, type=%d, value=%p, value_size=%ld", s, count, type, value, value_size);
+    RCLOG_TRACE("xprc_parse_value s=\"%s\", count=%d, type=%d, value=%p, value_size=%zu", s, count, type, value, value_size);
         
     if (!s || !value || (count < 1)) {
         RCLOG_TRACE("xprc_parse_value pre-condition failed");
@@ -315,7 +315,7 @@ dynamic_array_t* xprc_parse_array(char *s, int count, XPLMDataTypeID type) {
 
     size_t item_size = (type == xplmType_Data) ? 1 : SIZE_XPLM_INT_FLOAT;
     int num_separators = count_chars(s, XPRC_ARRAY_ITEM_SEPARATOR[0], count);
-    RCLOG_TRACE("xprc_parse_array item_size=%ld, num_separators=%d", item_size, num_separators);
+    RCLOG_TRACE("xprc_parse_array item_size=%zu, num_separators=%d", item_size, num_separators);
     if (num_separators < 0) {
         return NULL;
     }

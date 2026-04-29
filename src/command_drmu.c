@@ -245,7 +245,7 @@ static bool read_dataref(drmu_dataref_t *dataref, dynamic_array_t *dest_arr) {
         return false;
     }
     
-    RCLOG_TRACE("[DRMU] read_dataref dest_arr[length=%d, capacity=%d, item_size=%ld]", dest_arr->length, dest_arr->capacity, dest_arr->item_size);
+    RCLOG_TRACE("[DRMU] read_dataref dest_arr[length=%d, capacity=%d, item_size=%zu]", dest_arr->length, dest_arr->capacity, dest_arr->item_size);
 
     // retrieve internally if available
     if (dataref->proxy) {

@@ -248,7 +248,7 @@ end:
 
 error_t write_file(char *data, size_t length, char *path) {
     if (!data || !path) {
-        RCLOG_WARN("[fileio] write_file misses input: data=%p, length=%lu, path=%s", data, length, path);
+        RCLOG_WARN("[fileio] write_file misses input: data=%p, length=%zu, path=%s", data, length, path);
         return ERROR_UNSPECIFIC;
     }
 
@@ -265,7 +265,7 @@ error_t write_file(char *data, size_t length, char *path) {
     if (num_written == length) {
         return ERROR_NONE;
     } else {
-        RCLOG_WARN("[fileio] invalid number of bytes written to %s, expected %lu, wrote %lu", path, length, num_written);
+        RCLOG_WARN("[fileio] invalid number of bytes written to %s, expected %zu, wrote %lu", path, length, num_written);
         return ERROR_UNSPECIFIC;
     }
 }
@@ -397,7 +397,7 @@ bool check_file_exists(char *path) {
 
     WCHAR *mb_long_path = zmalloc(buffer_size);
     if (!mb_long_path) {
-        RCLOG_WARN("failed to allocate %lu bytes for path string conversion", buffer_size);
+        RCLOG_WARN("failed to allocate %zu bytes for path string conversion", buffer_size);
         free(long_path);
         return false;
     }

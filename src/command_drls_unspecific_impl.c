@@ -157,7 +157,7 @@ static void process_submit(command_drls_t *command) {
         }
 
         if (xp_info->structSize != sizeof(XPLMDataRefInfo_t)) {
-            RCLOG_WARN("[DRLS unspecific] mismatch in XPLMDataRefInfo_t.structSize: expected %lu, got %d", sizeof(XPLMDataRefInfo_t), xp_info->structSize);
+            RCLOG_WARN("[DRLS unspecific] mismatch in XPLMDataRefInfo_t.structSize: expected %zu, got %d", sizeof(XPLMDataRefInfo_t), xp_info->structSize);
             error_channel(command->session, command->channel_id, CURRENT_TIME_REFERENCE, "X-Plane API corrupted datarefs array");
             command->failed = true;
             return;
