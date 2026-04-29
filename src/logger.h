@@ -45,12 +45,12 @@
 #endif
 
 // FIXME: detect in CMake and provide a define specific for size/type of timestamps instead
-#ifdef TARGET_MACOS
-#define INT64_FORMAT "%lld"
-#define UINT64_FORMAT "%llu"
-#else
+#ifdef TARGET_LINUX
 #define INT64_FORMAT "%ld"
 #define UINT64_FORMAT "%lu"
+#else
+#define INT64_FORMAT "%lld"
+#define UINT64_FORMAT "%llu"
 #endif
 
 #ifdef __cplusplus
