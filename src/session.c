@@ -14,13 +14,6 @@
 #define CHANNEL_ACTION_CONTINUE 3
 #define CHANNEL_ACTION_CLOSE 4
 
-#ifdef TARGET_MACOS
-// FIXME: detect in CMake and provide a define specific for size/type of timestamps instead
-#define TIMESTAMP_FORMAT "%lld"
-#else
-#define TIMESTAMP_FORMAT "%ld"
-#endif
-
 typedef uint8_t channel_action_t;
 
 error_t create_session(session_t **session, network_connection_t *connection, server_t *server) {
@@ -154,7 +147,7 @@ static error_t send_channel(session_t *session, channel_t *channel, channel_acti
     }
 
     if (timestamp < 0) {
-        RCLOG_DEBUG("send_channel: invalid timestamp " TIMESTAMP_FORMAT, timestamp);
+        RCLOG_DEBUG("send_channel: invalid timestamp " INT64_FORMAT, timestamp);
         return ERROR_UNSPECIFIC;
     }
 
@@ -216,7 +209,7 @@ static error_t send_channel(session_t *session, channel_t *channel, channel_acti
     
     *(dest++) = ' ';
 
-    snprintf(dest, timestamp_length + 1, TIMESTAMP_FORMAT, timestamp);
+    snprintf(dest, timestamp_length + 1, INT64_FORMAT, timestamp);
     dest += timestamp_length;
 
     if (message_length > 0) {

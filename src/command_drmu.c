@@ -483,7 +483,10 @@ static void drmu_process_flightloop(command_drmu_t *command) {
     int64_t millis_since_base = now - command->base_time_millis;
     if (millis_since_base < 0) {
         // TODO: we may want to skip this iteration?
-        RCLOG_WARN("[DRMU] time has moved backwards? base_time_millis=%ld, now=%ld, diff=%ld", command->base_time_millis, now, millis_since_base);
+        RCLOG_WARN(
+            "[DRMU] time has moved backwards? base_time_millis=" INT64_FORMAT ", now=" INT64_FORMAT ", diff=" INT64_FORMAT,
+            command->base_time_millis, now, millis_since_base
+        );
         millis_since_base = 0;
     }
 
@@ -521,7 +524,10 @@ static void drmu_process_flightloop(command_drmu_t *command) {
         millis_since_base = now - command->base_time_millis;
         if (millis_since_base < 0) {
             // this *really* should not happen
-            RCLOG_ERROR("[DRMU] negative millis_since_base while resetting: interval=%d, base_time_millis=%ld, now=%ld, millis_since_base=%ld", command->interval, command->base_time_millis, now, millis_since_base);
+            RCLOG_ERROR(
+                "[DRMU] negative millis_since_base while resetting: interval=%d, base_time_millis=" INT64_FORMAT ", now=" INT64_FORMAT ", millis_since_base=" INT64_FORMAT,
+                command->interval, command->base_time_millis, now, millis_since_base
+            );
             millis_since_base = 0;
         }
     }

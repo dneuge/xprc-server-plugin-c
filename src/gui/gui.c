@@ -55,7 +55,7 @@ static void xp_menu_callback(void *inMenuRef, void *inItemRef) {
             break;
 
         default:
-            RCLOG_WARN("menu handler called for unhandled item %lu", menu_item);
+            RCLOG_WARN("menu handler called for unhandled item " UINT64_FORMAT, menu_item);
             return;
     }
 }
