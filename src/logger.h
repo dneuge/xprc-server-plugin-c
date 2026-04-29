@@ -53,6 +53,7 @@ typedef uint8_t xprc_log_level_t;
 void xprc_log_init();
 void xprc_log_destroy();
 
+__attribute__((__format__ (__printf__, 2, 3)))
 void xprc_log(xprc_log_level_t level, const char *format, ...);
 
 void xprc_set_min_log_level_console(xprc_log_level_t level);
