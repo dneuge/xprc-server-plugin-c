@@ -100,7 +100,6 @@ list_t* get_network_interfaces(bool include_ipv6) {
             if ((result_buffer_size <= original_result_buffer_size) || (result_buffer_size > MAX_ADDRESS_RESULT_BUFFER_SIZE)) {
                 RCLOG_WARN(
                     "GetAdaptersAddresses unreasonable ERROR_BUFFER_OVERFLOW; result_buffer_size=%lu, original_result_buffer_size=%lu",
-                    res,
                     result_buffer_size,
                     original_result_buffer_size
                 );

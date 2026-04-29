@@ -146,7 +146,7 @@ error_t read_file(char **data, size_t *length, char *path) {
     list_t *list = NULL;
 
     if (!data || !length || !path) {
-        RCLOG_WARN("[fileio] read_file misses input: data=%p, length=$lu, path=%s", data, length, path);
+        RCLOG_WARN("[fileio] read_file misses input: data=%p, length=%p, path=%s", data, length, path);
         return ERROR_UNSPECIFIC;
     }
 
@@ -248,7 +248,7 @@ end:
 
 error_t write_file(char *data, size_t length, char *path) {
     if (!data || !path) {
-        RCLOG_WARN("[fileio] write_file misses input: data=%p, length=$lu, path=%s", data, length, path);
+        RCLOG_WARN("[fileio] write_file misses input: data=%p, length=%lu, path=%s", data, length, path);
         return ERROR_UNSPECIFIC;
     }
 

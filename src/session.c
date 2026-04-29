@@ -154,7 +154,7 @@ static error_t send_channel(session_t *session, channel_t *channel, channel_acti
     }
 
     if (timestamp < 0) {
-        RCLOG_DEBUG("send_channel: invalid timestamp %d", timestamp);
+        RCLOG_DEBUG("send_channel: invalid timestamp " TIMESTAMP_FORMAT, timestamp);
         return ERROR_UNSPECIFIC;
     }
 
