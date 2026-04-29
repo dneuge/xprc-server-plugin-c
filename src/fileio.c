@@ -265,7 +265,7 @@ error_t write_file(char *data, size_t length, char *path) {
     if (num_written == length) {
         return ERROR_NONE;
     } else {
-        RCLOG_WARN("[fileio] invalid number of bytes written to %s, expected %zu, wrote %lu", path, length, num_written);
+        RCLOG_WARN("[fileio] invalid number of bytes written to %s, expected %zu, wrote %zu", path, length, num_written);
         return ERROR_UNSPECIFIC;
     }
 }

@@ -45,20 +45,20 @@ static void handle_command_request(session_t *session, request_t *request) {
     channel_id_to_string(request->channel_id, channel_name);
 
     if (has_channel(session->channels, request->channel_id)) {
-        send_or_close(session->connection, "-ERR %s %ld channel busy\n", channel_name, millis_since_reference(session));
+        send_or_close(session->connection, "-ERR %s " INT64_FORMAT " channel busy\n", channel_name, millis_since_reference(session));
         return;
     }
 
     channel_t *channel = zmalloc(sizeof(channel_t));
     if (!channel) {
-        send_or_close(session->connection, "-ERR %s %ld channel creation failed\n", channel_name, millis_since_reference(session));
+        send_or_close(session->connection, "-ERR %s " INT64_FORMAT " channel creation failed\n", channel_name, millis_since_reference(session));
         return;
     }
 
     channel->id = request->channel_id;
     channel->state = CHANNEL_STATE_INITIAL;
     if (!put_channel(session->channels, channel)) {
-        send_or_close(session->connection, "-ERR %s %ld channel registration failed\n", channel_name, millis_since_reference(session));
+        send_or_close(session->connection, "-ERR %s " INT64_FORMAT " channel registration failed\n", channel_name, millis_since_reference(session));
         return;
     }
     
@@ -104,7 +104,7 @@ static void handle_termination_request(session_t *session, request_t *request) {
         // mandatory error string; do not change (see Special Considerations section in protocol specification)
         // since the channel does not exist/is no longer open we should not send any channel-message but instead need
         // to use an "out-of-band" server message (like a syntax error, except neither server nor client should panic)
-        send_or_close(session->connection, "*ERR %ld termination request ignored, channel does not exist: %s\n", millis_since_reference(session), channel_name);
+        send_or_close(session->connection, "*ERR " INT64_FORMAT " termination request ignored, channel does not exist: %s\n", millis_since_reference(session), channel_name);
         return;
     }
 
@@ -180,7 +180,7 @@ static void on_line_received(void *handler_reference, char *line, int length) {
         request_t *request = NULL;
         error_t err = parse_request(&request, line, length);
         if (err != ERROR_NONE) {
-            send_or_close(session->connection, "*ERR %ld invalid syntax\n", millis_since_reference(session));
+            send_or_close(session->connection, "*ERR " INT64_FORMAT " invalid syntax\n", millis_since_reference(session));
             return;
         }
 
