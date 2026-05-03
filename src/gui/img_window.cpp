@@ -99,6 +99,24 @@ void img_window_set_visible(img_window window, bool visible) {
     }
 }
 
+bool img_window_get_visible(img_window window) {
+    RCLOG_TRACE("img_window_get_visible(%p)", window);
+
+    if (!window) {
+        return false;
+    }
+
+    bool res = false;
+
+    try {
+        res = window->GetVisible();
+    } catch (...) {
+        // do nothing
+    }
+
+    return res;
+}
+
 void img_window_safe_destroy(img_window window) {
     RCLOG_TRACE("img_window_safe_destroy(%p)", window);
 

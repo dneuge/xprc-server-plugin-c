@@ -6,6 +6,8 @@
 
 #include "license_window.h"
 
+#include "../task_schedule.h"
+
 #define DEFAULT_LICENSE_ID XPRC_BINARY_LICENSE_ID
 
 // in case imgui is a shared instance (may be introduced to XP12) we select "random" or prefixed IDs
@@ -24,6 +26,9 @@
 #define CHECKBOX_LABEL_OFFSET (24.0f)
 #define SMALL_VERTICAL_SPACING (3.0f)
 #define SPACE_ADJUSTMENT_TOLERANCE (0.05f)
+
+#define CALL_ON_NEXT_FRAME -1.0f
+#define STOP_CALLBACKS 0.0f
 
 static void update_view(license_window_t *license_window) {
     // === top area ===
@@ -120,6 +125,62 @@ static void update_view(license_window_t *license_window) {
     }
 }
 
+static void unschedule_window_state_monitor(license_window_t *license_window) {
+    if (!license_window->window_state_monitor_scheduled) {
+        RCLOG_DEBUG("[license window] window state monitor has already been unscheduled");
+        return;
+    }
+
+    RCLOG_DEBUG("[license window] unscheduling window state monitor");
+    XPLMDestroyFlightLoop(license_window->window_state_monitor_flight_loop_id);
+    license_window->window_state_monitor_scheduled = false;
+}
+
+static float handle_window_state(float inElapsedSinceLastCall, float inElapsedTimeSinceLastFlightLoop, int inCounter, void *inRefcon) {
+    license_window_t *license_window = inRefcon;
+
+    bool is_visible = img_window_get_visible(license_window->window);
+    if (is_visible) {
+        return CALL_ON_NEXT_FRAME;
+    }
+
+    RCLOG_INFO("[license window] window has been closed through XP");
+
+    if (license_window->should_reject_on_close && license_window->was_visible) {
+        RCLOG_ERROR("[license window] window has been closed without license acceptance, rejecting licenses and disabling XPRC");
+
+        error_t err = reject_licenses(license_window->license_manager);
+        if (err != ERROR_NONE) {
+            RCLOG_WARN("[license window] window state monitor failed to reject licenses after window had been closed (%d)", err);
+        }
+    }
+
+    // monitor must be unscheduled in addition to stopping callbacks (stopping just "pauses" it)
+    unschedule_window_state_monitor(license_window);
+
+    return STOP_CALLBACKS;
+}
+
+static void schedule_window_state_monitor(license_window_t *license_window) {
+    if (license_window->window_state_monitor_scheduled) {
+        RCLOG_WARN("[license window] window state monitor has already been scheduled");
+        return;
+    }
+
+    RCLOG_DEBUG("[license window] scheduling window state monitor");
+
+    XPLMCreateFlightLoop_t params = {
+        .structSize = sizeof(XPLMCreateFlightLoop_t),
+        .phase = xplm_FlightLoop_Phase_BeforeFlightModel,
+        .callbackFunc = handle_window_state,
+        .refcon = license_window,
+    };
+
+    license_window->window_state_monitor_flight_loop_id = XPLMCreateFlightLoop(&params);
+    XPLMScheduleFlightLoop(license_window->window_state_monitor_flight_loop_id, CALL_ON_NEXT_FRAME, 1);
+    license_window->window_state_monitor_scheduled = true;
+}
+
 static void handle_view_state(license_window_t *license_window) {
     if (!license_window) {
         return;
@@ -137,6 +198,9 @@ static void handle_view_state(license_window_t *license_window) {
     if (license_window->should_disable) {
         RCLOG_ERROR("[license window] user declines licenses and wants to disable XPRC");
 
+        license_window->should_reject_on_close = false;
+        unschedule_window_state_monitor(license_window);
+
         license_window->should_disable = false;
         img_window_set_visible(license_window->window, false);
 
@@ -146,6 +210,9 @@ static void handle_view_state(license_window_t *license_window) {
         }
     } else if (license_window->should_save && license_window->accepted) {
         RCLOG_INFO("[license window] user accepts licenses and wants to enable XPRC");
+
+        license_window->should_reject_on_close = false;
+        unschedule_window_state_monitor(license_window);
 
         license_window->should_save = false;
         img_window_set_visible(license_window->window, false);
@@ -180,6 +247,12 @@ static bool imgui_show(img_window window, void *ref) {
     } else {
         license_window->selected_license = license_window->select_license;
         license_window->select_license = NULL;
+    }
+
+    license_window->was_visible = true;
+    license_window->should_reject_on_close = !all_licenses_accepted(license_window->license_manager);
+    if (license_window->should_reject_on_close) {
+        schedule_window_state_monitor(license_window);
     }
 
     return true;
@@ -363,6 +436,8 @@ void destroy_license_window(license_window_t* license_window) {
     if (!license_window) {
         return;
     }
+
+    unschedule_window_state_monitor(license_window);
 
     img_window_destroy(license_window->window);
 

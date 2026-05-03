@@ -1,6 +1,8 @@
 #ifndef XPRC_LICENSE_WINDOW_H
 #define XPRC_LICENSE_WINDOW_H
 
+#include <XPLMProcessing.h>
+
 #include "img_window.h"
 #include "../licenses.h"
 #include "../license_manager.h"
@@ -13,6 +15,13 @@ typedef struct {
 typedef struct {
     /// ImGui window instance
     img_window window;
+
+    // window state must be actively monitored to detect when it has been closed through title bar
+    // (XP has no callback to get notified about windows closing or having been closed)
+    bool should_reject_on_close;
+    bool was_visible;
+    bool window_state_monitor_scheduled;
+    XPLMFlightLoopID window_state_monitor_flight_loop_id;
 
     // defaults
     xprc_license_t *default_license;

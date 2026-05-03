@@ -164,6 +164,13 @@ extern "C" {
     void img_window_set_visible(img_window window, bool visible);
 
     /**
+     * Checks if the given window is currently visible.
+     * @param window window instance to check
+     * @return true if the window is visible, false if not visible or on invalid reference
+     */
+    bool img_window_get_visible(img_window window);
+
+    /**
      * Sets the title of the window both in the ImGui layer and at the XPLM layer.
      * Must be called at least once before setting the window visible.
      *
