@@ -93,23 +93,23 @@ bool check_file_exists(char *path) {
     }
 
     // prepend \\?\ to enable long path handling
-    char *long_path = dynamic_sprintf("\\\\?\\%s", path);
-    if (!long_path) {
+    char *utf8_long_path = dynamic_sprintf("\\\\?\\%s", path);
+    if (!utf8_long_path) {
         RCLOG_WARN("failed to construct long path from: \"%s\"", path);
         return false;
     }
 
-    WCHAR *mb_long_path = convert_utf8_to_wchar(long_path);
-    if (!mb_long_path) {
-        RCLOG_WARN("failed to convert from UTF-8 to wide char: %s", long_path);
-        free(long_path);
+    WCHAR *wide_long_path = convert_utf8_to_wchar(utf8_long_path);
+    if (!wide_long_path) {
+        RCLOG_WARN("failed to convert from UTF-8 to wide char: %s", utf8_long_path);
+        free(utf8_long_path);
         return false;
     }
 
-    long attributes = GetFileAttributesW(mb_long_path);
+    long attributes = GetFileAttributesW(wide_long_path);
 
-    free(mb_long_path);
-    free(long_path);
+    free(wide_long_path);
+    free(utf8_long_path);
 
     return attributes != INVALID_FILE_ATTRIBUTES;
 }
