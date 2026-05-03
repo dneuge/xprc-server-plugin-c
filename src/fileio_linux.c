@@ -1,5 +1,10 @@
-#include <unistd.h>
 #include <errno.h>
+#include <stdbool.h>
+#include <unistd.h>
+
+#include "logger.h"
+
+#include "fileio.h"
 
 bool check_file_exists(char *path) {
     if (!path) {

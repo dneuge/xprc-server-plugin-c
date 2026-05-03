@@ -86,5 +86,28 @@ HGLOBAL SetClipboardData(unsigned int format, HGLOBAL memory_handle);
 // AI rationale: name is also seen in other sources
 #define CF_TEXT 0
 
+// codepage identifier for UTF-8, no idea what this actually and we don't care; only here to avoid parsing errors
+#define CP_UTF8 0
+
+// no idea what a code page looks like but we need a definition for it
+typedef int dummy_codepage_t;
+
+// some constant we use for multibyte encoding
+#define MB_ERR_INVALID_CHARS 0
+
+// also no clue; assume some number
+typedef int dummy_multibyte_flags_t;
+
+// no idea what a wide-char actually looks like but it must be wider than a byte
+#define WCHAR long int
+
+// some constant apparently indicating some issue with file attributes
+#define INVALID_FILE_ATTRIBUTES 12345
+
+// we assign the result to a long so it probably is; we also need a wide-char path name
+long GetFileAttributesW(WCHAR *path);
+
+int MultiByteToWideChar(dummy_codepage_t codepage, dummy_multibyte_flags_t conversion_flags, char *in, int other_option, WCHAR *out, unsigned int out_length);
+
 #endif //!TARGET_WINDOWS
 #endif //XPRC_WINDOWS_STUB_H

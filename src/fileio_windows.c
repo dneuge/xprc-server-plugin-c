@@ -1,5 +1,15 @@
+#ifdef TARGET_WINDOWS
 #include <windows.h>
 #include <winnls.h>
+#else
+#include "windows_stub.h"
+#endif
+
+#include <stdlib.h>
+
+#include "logger.h"
+
+#include "fileio.h"
 
 #define USE_NULL_TERMINATION (-1)
 
