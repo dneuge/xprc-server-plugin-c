@@ -13,6 +13,49 @@
 
 #define USE_NULL_TERMINATION (-1)
 
+static WCHAR* convert_utf8_to_wchar(char *utf8) {
+    int buffer_length = MultiByteToWideChar(
+        /* CodePage       */ CP_UTF8,
+        /* dwFlags        */ MB_ERR_INVALID_CHARS,
+        /* lpMultiByteStr */ utf8,
+        /* cbMultiByte    */ USE_NULL_TERMINATION,
+        /* lpWideCharStr  */ NULL,
+        /* cchWideChar    */ 0 // calculate required buffer size only
+    );
+
+    if (buffer_length <= 0) {
+        unsigned long err = GetLastError();
+        RCLOG_WARN("string conversion failed early with error %lu: \"%s\"", err, utf8);
+        return NULL;
+    }
+
+    size_t buffer_size = buffer_length * sizeof(WCHAR);
+
+    WCHAR *out = zmalloc(buffer_size);
+    if (!out) {
+        RCLOG_WARN("failed to allocate %zu bytes for string conversion", buffer_size);
+        return NULL;
+    }
+
+    int res = MultiByteToWideChar(
+        /* CodePage       */ CP_UTF8,
+        /* dwFlags        */ MB_ERR_INVALID_CHARS,
+        /* lpMultiByteStr */ utf8,
+        /* cbMultiByte    */ USE_NULL_TERMINATION,
+        /* lpWideCharStr  */ out,
+        /* cchWideChar    */ buffer_length
+    );
+
+    if (res <= 0) {
+        unsigned long err = GetLastError();
+        RCLOG_WARN("string conversion failed late with error %lu: \"%s\"", err, utf8);
+        free(out);
+        return NULL;
+    }
+
+    return out;
+}
+
 bool check_file_exists(char *path) {
     /* The goal of this function is to establish compatibility with Windows operating systems.
      *
@@ -56,44 +99,9 @@ bool check_file_exists(char *path) {
         return false;
     }
 
-    int buffer_length = MultiByteToWideChar(
-        /* CodePage       */ CP_UTF8,
-        /* dwFlags        */ MB_ERR_INVALID_CHARS,
-        /* lpMultiByteStr */ long_path,
-        /* cbMultiByte    */ USE_NULL_TERMINATION,
-        /* lpWideCharStr  */ NULL,
-        /* cchWideChar    */ 0 // calculate required buffer size only
-    );
-
-    if (buffer_length <= 0) {
-        unsigned long err = GetLastError();
-        RCLOG_WARN("string conversion failed early with error %lu: \"%s\"", err, long_path);
-        free(long_path);
-        return false;
-    }
-
-    size_t buffer_size = buffer_length * sizeof(WCHAR);
-
-    WCHAR *mb_long_path = zmalloc(buffer_size);
+    WCHAR *mb_long_path = convert_utf8_to_wchar(long_path);
     if (!mb_long_path) {
-        RCLOG_WARN("failed to allocate %zu bytes for path string conversion", buffer_size);
-        free(long_path);
-        return false;
-    }
-
-    int res = MultiByteToWideChar(
-        /* CodePage       */ CP_UTF8,
-        /* dwFlags        */ MB_ERR_INVALID_CHARS,
-        /* lpMultiByteStr */ long_path,
-        /* cbMultiByte    */ USE_NULL_TERMINATION,
-        /* lpWideCharStr  */ mb_long_path,
-        /* cchWideChar    */ buffer_length
-    );
-
-    if (res <= 0) {
-        unsigned long err = GetLastError();
-        RCLOG_WARN("string conversion failed late with error %lu: \"%s\"", err, long_path);
-        free(mb_long_path);
+        RCLOG_WARN("failed to convert from UTF-8 to wide char: %s", long_path);
         free(long_path);
         return false;
     }
