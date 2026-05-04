@@ -33,12 +33,11 @@
 /// default line end sequence of the operating system (depends on compilation target)
 #ifdef TARGET_WINDOWS
 #define LINE_END_SEQUENCE "\r\n"
+#define LINE_END_SEQUENCE_LENGTH (2)
 #else
 #define LINE_END_SEQUENCE "\n"
+#define LINE_END_SEQUENCE_LENGTH (1)
 #endif
-
-/// string length of #LINE_END_SEQUENCE (depends on compilation target)
-#define LINE_END_SEQUENCE_LENGTH (sizeof(LINE_END_SEQUENCE)-1)
 
 /**
  * Splits the given string on all line end sequences.
