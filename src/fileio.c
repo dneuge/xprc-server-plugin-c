@@ -252,7 +252,7 @@ error_t write_file(char *data, size_t length, char *path) {
         return ERROR_UNSPECIFIC;
     }
 
-    FILE *fh = fopen(path, "w");
+    FILE *fh = fopen(path, "wb");
     if (!fh) {
         RCLOG_WARN("[fileio] write_file failed to open file for write access: %s", path);
         return ERROR_UNSPECIFIC;
