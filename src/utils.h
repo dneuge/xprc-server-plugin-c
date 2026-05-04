@@ -10,6 +10,8 @@
 #include <stdint.h>
 #include <time.h>
 
+#include "target.h"
+
 /**
  * Compiler macro to determine maximum of two values.
  * @param x first value

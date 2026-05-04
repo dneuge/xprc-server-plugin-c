@@ -44,15 +44,6 @@
 #define RCLOG_TRACE(format, ...)
 #endif
 
-// FIXME: detect in CMake and provide a define specific for size/type of timestamps instead
-#ifdef TARGET_LINUX
-#define INT64_FORMAT "%ld"
-#define UINT64_FORMAT "%lu"
-#else
-#define INT64_FORMAT "%lld"
-#define UINT64_FORMAT "%llu"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
