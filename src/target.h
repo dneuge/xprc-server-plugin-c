@@ -9,9 +9,13 @@
 #endif
 
 #if INT_SIZE==4
+#define INT32_FORMAT "%d"
+#define UINT32_FORMAT "%u"
 #define INT64_FORMAT "%ld"
 #define UINT64_FORMAT "%lu"
 #elif INT_SIZE==2
+#define INT32_FORMAT "%ld"
+#define UINT32_FORMAT "%lu"
 #define INT64_FORMAT "%lld"
 #define UINT64_FORMAT "%llu"
 #else

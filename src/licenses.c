@@ -7,25 +7,11 @@
 static const xprc_license_t _xprc_licenses[];
 
 bool xprc_parse_license_hash(xprc_license_hash_t *out, char *s) {
-    if (!out || !s) {
-        return false;
-    }
-
-    long res = 0;
-    if (!parse_long(&res, s)) {
-        return false;
-    }
-
-    if (res < 0 || res > UINT32_MAX) {
-        return false;
-    }
-
-    *out = (uint32_t) res;
-    return true;
+    return parse_uint32(out, s);
 }
 
 char* xprc_format_license_hash(xprc_license_hash_t hash) {
-    return dynamic_sprintf("%u", hash);
+    return dynamic_sprintf(UINT32_FORMAT, hash);
 }
 
 list_t* xprc_get_license_ids() {

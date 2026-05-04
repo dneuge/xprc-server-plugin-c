@@ -368,6 +368,50 @@ bool parse_long(long *dest, char *s) {
     return success;
 }
 
+bool parse_longlong(long long *dest, char *s) {
+    bool success = false;
+
+    if (!dest || !s) {
+        return false;
+    }
+
+    long long parsed = atoll(s);
+
+    char *verification = dynamic_sprintf("%lld", parsed);
+    if (!verification) {
+        return false;
+    }
+
+    if (!strcmp(s, verification)) {
+        // value matches; parsing successful
+        *dest = parsed;
+        success = true;
+    }
+
+    free(verification);
+
+    return success;
+}
+
+bool parse_uint32(uint32_t *dest, char *s) {
+    if (!dest) {
+        return false;
+    }
+
+    long long parsed = -1;
+    if (!parse_longlong(&parsed, s)) {
+        return false;
+    }
+
+    if (parsed < 0 || parsed > UINT32_MAX) {
+        return false;
+    }
+
+    *dest = (uint32_t) parsed;
+
+    return true;
+}
+
 static const xprc_date_t invalid_date = {
     .year = -1,
     .month = -1,

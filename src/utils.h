@@ -157,6 +157,7 @@ int count_chars(char *s, char needle, int length);
  */
 void* zmalloc(size_t size);
 
+// FIXME: int/long/longlong are target-specific; replace/wrap by functions like parse_uint32
 /**
  * Attempts to parse the given string to an integer; destination will only be manipulated if successful.
  * @param dest where to write the parsed value to; will not be modified in case of error
@@ -172,6 +173,22 @@ bool parse_int(int *dest, char *s);
  * @return true if successfully parsed, false on error
  */
 bool parse_long(long *dest, char *s);
+
+/**
+ * Attempts to parse the given string to a long long integer; destination will only be manipulated if successful.
+ * @param dest where to write the parsed value to; will not be modified in case of error
+ * @param s null-terminated string to parse
+ * @return true if successfully parsed, false on error
+ */
+bool parse_longlong(long long *dest, char *s);
+
+/**
+ * Attempts to parse the given string to an unsigned 32-bit integer; destination will only be manipulated if successful.
+ * @param dest where to write the parsed value to; will not be modified in case of error
+ * @param s null-terminated string to parse
+ * @return true if successfully parsed, false on error
+ */
+bool parse_uint32(uint32_t *dest, char *s);
 
 typedef struct {
     int year;
