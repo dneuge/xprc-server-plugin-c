@@ -286,6 +286,18 @@ static char* get_xp_preferences_directory() {
         RCLOG_WARN("failed to allocate preference path output string");
     }
 
+#ifdef TARGET_WINDOWS
+    // X-Plane "native paths" on Windows use (inconsistent) forward instead of backslashes but we
+    // need backslashes to communicate paths to actually native Windows APIs. Fix what we got...
+    if (out) {
+        for (size_t i=0; i<directory_length; i++) {
+            if (out[i] == '/') {
+                out[i] = DIRECTORY_SEPARATOR;
+            }
+        }
+    }
+#endif
+
     free(buffer);
 
     return out;
@@ -417,32 +429,30 @@ PLUGIN_API int XPluginStart(char *name, char *sig, char *desc) {
     XPLMHostApplicationID xplm_host_application_id = {0};
     XPLMGetVersions(&server_base_config.xpinfo.xplane_version, &server_base_config.xpinfo.xplm_version, &xplm_host_application_id);
 
-#ifdef TARGET_MACOS
-    // We get old-style colon-separated paths on MacOS unless we enable the "native paths" feature.
-    // see https://developer.x-plane.com/sdk/XPLMPlugin/
-    if (XPLMHasFeature(XP_PLUGIN_FEATURE_NATIVE_PATHS) == 1) {
-        XPLMEnableFeature(XP_PLUGIN_FEATURE_NATIVE_PATHS, 1);
-        if (XPLMIsFeatureEnabled(XP_PLUGIN_FEATURE_NATIVE_PATHS) != 1) {
-            RCLOG_ERROR("Failed to enable native paths. XPRC is stuck - simulator restart required (which is unlikely to fix this issue, please report to XPRC developers)");
-            fatal_error = 1;
-            return 1;
-        }
-    } else {
+    // We want to get UTF-8 encoded paths from X-Plane, so we have to enable "native paths".
+    // "Native" is misleading, as UTF-8 may only be used by X-Plane, not the actual OS.
+    // This is also needed to get Unix-like directory separators on macOS but it messes up
+    // Windows paths (using forward instead of backslashes).
+    // see https://developer.x-plane.com/sdk/XPLMUtilities/ and https://developer.x-plane.com/sdk/XPLMPlugin/
+    if (XPLMHasFeature(XP_PLUGIN_FEATURE_NATIVE_PATHS) != 1) {
         RCLOG_ERROR("X-Plane does not appear to support native paths for plugins. XPRC is stuck - simulator restart required (which is unlikely to fix this issue, please report to XPRC developers)");
         fatal_error = 1;
         return 1;
     }
-#endif
 
-    // check that plugin and X-Plane use the same directory separator
-    // TODO: Macs will probably need XPLM_USE_NATIVE_PATHS to be set for UNIX-style paths (or XPRC needs to use pre-10 colons), see X-Plane documentation, check low-level stdio.h behaviour; must not be set on Windows
+    XPLMEnableFeature(XP_PLUGIN_FEATURE_NATIVE_PATHS, 1);
+    if (XPLMIsFeatureEnabled(XP_PLUGIN_FEATURE_NATIVE_PATHS) != 1) {
+        RCLOG_ERROR("Failed to enable native paths. XPRC is stuck - simulator restart required (which is unlikely to fix this issue, please report to XPRC developers)");
+        fatal_error = 1;
+        return 1;
+    }
+
+    // check that X-Plane uses the expected forward slash directory separator
     const char *xp_directory_separator = XPLMGetDirectorySeparator();
     if (!xp_directory_separator) {
         RCLOG_WARN("X-Plane did not return any directory separator, consistency cannot be checked");
-    } else if (strlen(xp_directory_separator) != 1) {
-        RCLOG_WARN("X-Plane directory separator has an unexpected length: got %zu, expected 1", strlen(xp_directory_separator));
-    } else if (DIRECTORY_SEPARATOR != xp_directory_separator[0]) {
-        RCLOG_ERROR("X-Plane directory separator is different from plugin platform code! Plugin is incompatible and will refuse to start; please report to XPRC developers. XP: \"%s\", XPRC: '%c'", xp_directory_separator, DIRECTORY_SEPARATOR);
+    } else if (strcmp("/", xp_directory_separator) != 0) {
+        RCLOG_ERROR("X-Plane uses invalid directory separator; \"native paths\" are expected to be use \"/\" but X-Plane indicates \"%s\" - plugin is incompatible and will refuse to start; please report to XPRC developers.", xp_directory_separator);
         fatal_error = 1;
         return 1;
     }
@@ -533,6 +543,7 @@ PLUGIN_API int XPluginEnable() {
     }
 
     char *preferences_directory = get_xp_preferences_directory();
+    RCLOG_DEBUG("X-Plane preferences directory: %s", preferences_directory);
     if (!preferences_directory) {
         RCLOG_ERROR("failed to get preferences directory from X-Plane; simulator restart required");
         fatal_error = true;
