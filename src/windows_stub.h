@@ -40,11 +40,14 @@
  * the original API docs on your own instead.
  */
 
+// "double word" - long long is just a guess
+#define DWORD long long int
+
 // constant expected to be returned by GetLastError - we don't actually care what it is, it just has to be defined
 #define NO_ERROR 0
 
 // returns last error, check for NO_ERROR - no idea what the actual return value is but it's probably some number
-int GetLastError();
+DWORD GetLastError();
 
 // memory marked as relocatable/reusable - we don't know and don't care about the exact value, this is probably wrong
 #define GMEM_MOVEABLE 0
@@ -108,6 +111,60 @@ typedef int dummy_multibyte_flags_t;
 long GetFileAttributesW(WCHAR *path);
 
 int MultiByteToWideChar(dummy_codepage_t codepage, dummy_multibyte_flags_t conversion_flags, char *in, int other_option, WCHAR *out, unsigned int out_length);
+
+// used e.g. for file handles - probably not the actual type
+#define HANDLE void*
+
+// constant used to indicate that a handle is not valid - probably wrong
+#define INVALID_HANDLE_VALUE (HANDLE)(123456)
+
+// constant used to indicate read access  - probably not the actual value
+#define GENERIC_READ (1<<10)
+
+// constant used to indicate write access - probably not the actual value
+#define GENERIC_WRITE (1<<5)
+
+// constant used to allow a file being opened to still be simultaneously read by other handles/processes - probably not the actual value
+#define FILE_SHARE_READ (1<<8)
+
+// constant indicating a file should be created if it does not exist yet but the operation should open existing files without truncation - probably not the actual value
+#define OPEN_ALWAYS (1<<23)
+
+// constant indicating a file must be created or truncated, otherwise the operation should fail - probably not the actual value
+#define CREATE_ALWAYS (1<<9)
+
+// constant indicating a file must already exist - probably not the actual value
+#define OPEN_EXISTING (1<<14)
+
+// constant used to indicate no special file attributes - probably not the actual value
+#define FILE_ATTRIBUTE_NORMAL (98765)
+
+// creates a new or opens an existing file using a wide-char path
+HANDLE CreateFileW(WCHAR *path, DWORD access, DWORD share_mode, void *security_attributes, DWORD creation_mode, DWORD file_attributes, HANDLE template);
+
+// closes a handle
+long CloseHandle(HANDLE handle);
+
+// sets the code returned by GetLastError
+void SetLastError(DWORD code);
+
+// constant used to indicate EOF was encountered - probably not the actual value
+#define ERROR_HANDLE_EOF (123123)
+
+// moves a file handle's cursor, returns non-zero if successful
+long SetFilePointer(HANDLE handle, long distance, void *new_file_pointer, DWORD relative_to);
+
+// constant used to indicate SetFilePointerEx should move the cursor relative to current position - probably not the actual value
+#define FILE_CURRENT (987)
+
+// reads at most the given number of bytes to the provided buffer, returns non-zero if successful
+long ReadFile(HANDLE handle, char *buffer, int num_bytes, DWORD *num_read, void *overlapped);
+
+// writes at most the given number of bytes to the given file handle, returns non-zero if successful
+long WriteFile(HANDLE handle, char *buffer, int num_bytes, DWORD *num_written, void *overlapped);
+
+// constant used to indicate asynchronous IO operations - probably not the actual value
+#define ERROR_IO_PENDING (999)
 
 #endif //!TARGET_WINDOWS
 #endif //XPRC_WINDOWS_STUB_H

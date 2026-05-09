@@ -6,6 +6,15 @@
 #include "utils.h"
 
 #include "fileio.h"
+#include "fileio_internal.h"
+
+#if defined(TARGET_LINUX) || defined(TARGET_MACOS)
+#include "fileio_standard.c"
+#elif TARGET_WINDOWS
+#include "fileio_windows.c"
+#else
+#error "File I/O is target-specific but has not been implemented for the requested platform."
+#endif
 
 #define BUFFER_SIZE (64 * 1024)
 
@@ -140,14 +149,21 @@ char* join_lines(list_t *lines) {
 }
 
 error_t read_file(char **data, size_t *length, char *path) {
-    FILE* fh = NULL;
+    file_handle_t fh = {0,};
     char *buffer = NULL;
+    error_t err = ERROR_NONE;
     error_t out_err = ERROR_NONE;
     list_t *list = NULL;
 
     if (!data || !length || !path) {
         RCLOG_WARN("[fileio] read_file misses input: data=%p, length=%p, path=%s", data, length, path);
         return ERROR_UNSPECIFIC;
+    }
+
+    err = init_file_handle(&fh);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("[fileio] read_file failed to initialize file handle");
+        return err;
     }
 
     *data = NULL;
@@ -165,9 +181,9 @@ error_t read_file(char **data, size_t *length, char *path) {
         goto end;
     }
 
-    fh = fopen(path, "rb");
-    if (!fh) {
-        out_err = ERROR_UNSPECIFIC;
+    err = open_file(&fh, FILE_MODE_READ, path);
+    if (err != ERROR_NONE) {
+        out_err = err;
         goto end;
     }
 
@@ -176,8 +192,8 @@ error_t read_file(char **data, size_t *length, char *path) {
 
     while (true) {
         // try to read as many characters as possible
-        num_read = fread(buffer, 1, BUFFER_SIZE, fh);
-        if (num_read == 0) {
+        out_err = read_bytes(&num_read, &fh, buffer, BUFFER_SIZE);
+        if (num_read == 0 || out_err != ERROR_NONE) {
             break;
         }
 
@@ -204,7 +220,10 @@ error_t read_file(char **data, size_t *length, char *path) {
     }
 
     // we expect to have read until EOF; if we didn't make it there we have encountered a problem
-    if (!feof(fh)) {
+    if (out_err != ERROR_NONE) {
+        goto end;
+    } else if (!check_eof(&fh)) {
+        RCLOG_WARN("[fileio] read_file did not read until EOF (got total_length=%zu): %s", total_length, path);
         out_err = ERROR_UNSPECIFIC;
         goto end;
     }
@@ -231,8 +250,11 @@ error_t read_file(char **data, size_t *length, char *path) {
     *length = total_length;
 
 end:
-    if (fh) {
-        fclose(fh);
+    if (is_open_file(&fh)) {
+        err = close_file(&fh);
+        if (err != ERROR_NONE && out_err == ERROR_NONE) {
+            out_err = err;
+        }
     }
 
     if (list) {
@@ -243,31 +265,55 @@ end:
         free(buffer);
     }
 
+    if (out_err != ERROR_NONE) {
+        RCLOG_WARN("[fileio] failed reading from file %s (%d)", path, out_err);
+    }
+
     return out_err;
 }
 
 error_t write_file(char *data, size_t length, char *path) {
+    file_handle_t fh = {0,};
+    error_t err = ERROR_NONE;
+    error_t out_err = ERROR_NONE;
+
     if (!data || !path) {
         RCLOG_WARN("[fileio] write_file misses input: data=%p, length=%zu, path=%s", data, length, path);
         return ERROR_UNSPECIFIC;
     }
 
-    FILE *fh = fopen(path, "wb");
-    if (!fh) {
+    err = init_file_handle(&fh);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("[fileio] write_file failed to initialize file handle");
+        return err;
+    }
+
+    err = open_file(&fh, FILE_MODE_WRITE, path);
+    if (err != ERROR_NONE) {
         RCLOG_WARN("[fileio] write_file failed to open file for write access: %s", path);
-        return ERROR_UNSPECIFIC;
+        return err;
     }
 
-    size_t num_written = fwrite(data, 1, length, fh);
+    size_t num_written = 0;
+    out_err = write_bytes(&num_written, &fh, data, length);
 
-    fclose(fh);
+    err = close_file(&fh);
+    if (err != ERROR_NONE && out_err == ERROR_NONE) {
+        out_err = err;
+    }
 
-    if (num_written == length) {
-        return ERROR_NONE;
-    } else {
+    if (num_written != length) {
         RCLOG_WARN("[fileio] invalid number of bytes written to %s, expected %zu, wrote %zu", path, length, num_written);
-        return ERROR_UNSPECIFIC;
+        if (out_err == ERROR_NONE) {
+            out_err = ERROR_UNSPECIFIC;
+        }
     }
+
+    if (out_err != ERROR_NONE) {
+        RCLOG_WARN("[fileio] failed writing to file %s (%d)", path, out_err);
+    }
+
+    return out_err;
 }
 
 error_t read_lines_from_file(list_t **lines, char *path) {
@@ -312,11 +358,3 @@ error_t write_lines_to_file(list_t *lines, char *path) {
     free(s);
     return err;
 }
-
-#if defined(TARGET_LINUX) || defined(TARGET_MACOS)
-#include "fileio_linux.c"
-#elif TARGET_WINDOWS
-#include "fileio_windows.c"
-#else
-#error "Check for file existence is target-specific but has not been implemented for the requested platform."
-#endif

@@ -14,10 +14,19 @@
 
 /**
  * Estimated maximum length for a file path on Windows. Documentation specifies 32k plus whatever is needed to
- * expand the UNS prefix, *blindly* estimated here to 512 + 5 characters extra (no documentation found).
+ * expand the UNS prefix, *blindly* estimated here to 512 + 5 characters extra. Some documentation just mentions 32767
+ * *wide* characters, however. Ideally, we should reserve too much memory when importing paths and stay under the lowest
+ * limit when exporting them.
+ *
+ * Note that this may *only* apply to access conducted directly through the file system, requiring a \\?\ prefix
+ * and possibly being incompatible with some APIs, otherwise users are required to change registry settings to get past
+ * the legacy 260 character limit. Some documentation also mentions that we need to use Unicode/wide-character variants
+ * to be able to use that.
  *
  * Source: Documentation licensed under CC-BY 4.0, Copyright Microsoft Corporation, see:
  * https://github.com/MicrosoftDocs/win32/blob/docs/desktop-src/FileIO/maximum-file-path-limitation.md
+ * https://github.com/MicrosoftDocs/win32/blob/ff14af8b326deef58ec2500cd3fee5d6dcd1a3dd/desktop-src/FileIO/naming-a-file.md
+ * https://github.com/MicrosoftDocs/sdk-api/blob/07512580a99bac226f8730c8f85344270f1beeff/sdk-api-src/content/fileapi/nf-fileapi-createfilew.md
  */
 #define WINDOWS_PATH_MAX_LENGTH (32767 + 512 + 5)
 
