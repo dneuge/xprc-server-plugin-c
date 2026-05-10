@@ -108,10 +108,18 @@ error_t read_lines_from_file(list_t **lines, char *path);
 error_t write_lines_to_file(list_t *lines, char *path);
 
 /**
- * Checks if the given file exists.
- * @param path path to file to check for existence
- * @return true if the file exists, false if not
+ * Checks if the given file or directory exists.
+ * @param path path to check for existence
+ * @return true if the file/directory exists, false if not
  */
 bool check_file_exists(char *path);
+
+/**
+ * Ensures that the given directory exists. The directory will be created if it does not exist yet.
+ *
+ * @param path directory path
+ * @return error code; #ERROR_NONE on success
+ */
+error_t ensure_directory_exists(char *path);
 
 #endif //XPRC_FILEIO_H

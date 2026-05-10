@@ -10,7 +10,7 @@
 
 #include "license_manager.h"
 
-#define ACCEPTED_LICENSES_FILENAME "xprc_accepted_licenses.cfg"
+#define ACCEPTED_LICENSES_FILENAME "accepted_licenses.cfg"
 #define LICENSE_ID_SEPARATOR "\t"
 
 static pending_license_t* create_pending_license(char *license_id, xprc_license_hash_t *previously_accepted_hash) {
@@ -184,7 +184,7 @@ end:
     return out;
 }
 
-license_manager_t* create_license_manager(char *directory, license_manager_callback_f on_acceptance, void *on_acceptance_ref, license_manager_callback_f on_rejection, void *on_rejection_ref) {
+license_manager_t* create_license_manager(char *xprc_directory, char *server_directory, license_manager_callback_f on_acceptance, void *on_acceptance_ref, license_manager_callback_f on_rejection, void *on_rejection_ref) {
     hashmap_t *accepted_licenses = NULL;
 
     if (!on_acceptance || !on_rejection) {
@@ -203,7 +203,19 @@ license_manager_t* create_license_manager(char *directory, license_manager_callb
     out->on_rejection = on_rejection;
     out->on_rejection_ref = on_rejection_ref;
 
-    out->license_acceptance_file_path = dynamic_sprintf("%s%c%s", directory, DIRECTORY_SEPARATOR, ACCEPTED_LICENSES_FILENAME);
+    out->xprc_directory = copy_string(xprc_directory);
+    if (!out->xprc_directory) {
+        RCLOG_ERROR("failed to copy XPRC directory path");
+        goto error;
+    }
+
+    out->server_directory = copy_string(server_directory);
+    if (!out->server_directory) {
+        RCLOG_ERROR("failed to copy server directory path");
+        goto error;
+    }
+
+    out->license_acceptance_file_path = dynamic_sprintf("%s%c%s", server_directory, DIRECTORY_SEPARATOR, ACCEPTED_LICENSES_FILENAME);
     if (!out->license_acceptance_file_path) {
         RCLOG_ERROR("failed to construct license acceptance path");
         goto error;
@@ -262,6 +274,16 @@ void destroy_license_manager(license_manager_t *license_manager) {
     if (license_manager->license_acceptance_file_path) {
         free(license_manager->license_acceptance_file_path);
         license_manager->license_acceptance_file_path = NULL;
+    }
+
+    if (license_manager->server_directory) {
+        free(license_manager->server_directory);
+        license_manager->server_directory = NULL;
+    }
+
+    if (license_manager->xprc_directory) {
+        free(license_manager->xprc_directory);
+        license_manager->xprc_directory = NULL;
     }
 
     license_manager->on_acceptance = NULL;
@@ -377,8 +399,10 @@ bool no_licenses_accepted(license_manager_t *license_manager) {
     return !license_manager->_file_found;
 }
 
-static void persist_all_licenses(char *path) {
-    if (!path) {
+static void persist_all_licenses(license_manager_t *license_manager) {
+    error_t err = ERROR_NONE;
+
+    if (!license_manager) {
         RCLOG_ERROR("persist_all_licenses: called with NULL");
         return;
     }
@@ -423,11 +447,23 @@ static void persist_all_licenses(char *path) {
             goto error;
         }
     }
-    
-    RCLOG_DEBUG("persist_all_licenses: writing to %s", path);
-    error_t err = write_lines_to_file(lines, path);
+
+    err = ensure_directory_exists(license_manager->xprc_directory);
     if (err != ERROR_NONE) {
-        RCLOG_WARN("persist_all_licenses: failed writing to %s (%d)", path, err);
+        RCLOG_WARN("persist_all_licenses: failed to ensure XPRC directory, unable to save");
+        goto error;
+    }
+
+    err = ensure_directory_exists(license_manager->server_directory);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("persist_all_licenses: failed to ensure server directory, unable to save");
+        goto error;
+    }
+
+    RCLOG_DEBUG("persist_all_licenses: writing to %s", license_manager->license_acceptance_file_path);
+    err = write_lines_to_file(lines, license_manager->license_acceptance_file_path);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("persist_all_licenses: failed writing to %s (%d)", license_manager->license_acceptance_file_path, err);
         goto error;
     }
 
@@ -444,7 +480,7 @@ error_t accept_all_licenses(license_manager_t *license_manager) {
         return ERROR_UNSPECIFIC;
     }
 
-    persist_all_licenses(license_manager->license_acceptance_file_path);
+    persist_all_licenses(license_manager);
 
     destroy_list(license_manager->_pending_licenses, destroy_pending_license);
     license_manager->_pending_licenses = create_list();

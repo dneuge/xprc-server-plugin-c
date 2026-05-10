@@ -504,9 +504,76 @@ bool check_file_exists(char *path) {
         return false;
     }
 
-    long attributes = GetFileAttributesW(wide_long_path);
+    ULONG attributes = GetFileAttributesW(wide_long_path);
 
     free(wide_long_path);
 
     return attributes != INVALID_FILE_ATTRIBUTES;
+}
+
+error_t ensure_directory_exists(char *path) {
+    /* The goal of this function is to establish compatibility with Windows operating systems.
+     *
+     * This function is based on API information published by Microsoft under CC-BY 4.0 and MIT licenses at:
+     *
+     * https://github.com/MicrosoftDocs/sdk-api/blob/12ea658d1d81468de8b2c521ed1e667942767c51/sdk-api-src/content/fileapi/nf-fileapi-createdirectoryw.md
+     * https://github.com/MicrosoftDocs/win32/blob/2ec0df659644a793ed4f6160f238a95c9d9a9dcf/desktop-src/FileIO/file-attribute-constants.md
+     *
+     * This file itself remains published under MIT license. If one of the API reference sources requires a more
+     * restrictive license to be put into effect, the respective license shall take precedence with closely limited effect
+     * in accordance to the right to sublicense MIT-licensed works. This will mainly affect binary distributions and
+     * other code that might be based upon this file. To avoid licensing issues and to avoid taking over a potentially
+     * wrong implementation, it is strongly recommended not to use this file for reference in other projects; follow
+     * the original API docs on your own instead.
+     */
+
+    error_t out_err = ERROR_NONE;
+
+    if (!path) {
+        RCLOG_ERROR("[fileio windows] ensure_directory_exists called without path");
+        return ERROR_UNSPECIFIC;
+    }
+
+    WCHAR *wide_long_path = convert_utf8_to_wide_long_path(path);
+    if (!wide_long_path) {
+        RCLOG_ERROR("[fileio windows] ensure_directory_exists failed to convert path \"%s\"", path);
+        return ERROR_UNSPECIFIC;
+    }
+
+    // do not attempt creation if the directory already exists
+    // we check for *any* existence; we also continue if the path is actually a file or symlink
+    ULONG attributes = GetFileAttributesW(wide_long_path);
+    if (attributes != INVALID_FILE_ATTRIBUTES) {
+        RCLOG_DEBUG("[fileio windows] directory already exist, not creating: %s", path);
+        goto end;
+    }
+
+    // try creating the directory
+    RCLOG_DEBUG("[fileio windows] directory does not exist, creating: %s", path);
+    bool success = 0 != CreateDirectoryW(
+        /* lpPathName           */ wide_long_path,
+        /* lpSecurityAttributes */ NULL
+    );
+    if (!success) {
+        DWORD err = GetLastError();
+        RCLOG_WARN("[fileio windows] CreateDirectoryW failed with platform error %lld", err);
+        out_err = ERROR_UNSPECIFIC;
+        goto end;
+    }
+
+    // verify that it really exists now
+    // note that this time we check can that what we just created ourselves is an actual directory because we know what
+    // it should be
+    attributes = GetFileAttributesW(wide_long_path);
+    if (attributes & FILE_ATTRIBUTE_DIRECTORY) {
+        goto end;
+    }
+
+    RCLOG_WARN("[fileio windows] created path is not a directory, attributes=0x%lx: %s", attributes, path);
+    out_err = ERROR_INCOMPLETE;
+
+end:
+    free(wide_long_path);
+
+    return out_err;
 }

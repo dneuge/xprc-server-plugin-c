@@ -107,8 +107,11 @@ typedef int dummy_multibyte_flags_t;
 // some constant apparently indicating some issue with file attributes
 #define INVALID_FILE_ATTRIBUTES 12345
 
-// we assign the result to a long so it probably is; we also need a wide-char path name
-long GetFileAttributesW(WCHAR *path);
+// just guessing ULONG stands for "Unsigned LONG" without actually knowing it - could be wrong
+#define ULONG unsigned long
+
+// we assign the result to a long so it probably is; we also need a wide-char path name - attributes are documented as ULONG so I guess that's what the function probably returns
+ULONG GetFileAttributesW(WCHAR *path);
 
 int MultiByteToWideChar(dummy_codepage_t codepage, dummy_multibyte_flags_t conversion_flags, char *in, int other_option, WCHAR *out, unsigned int out_length);
 
@@ -165,6 +168,12 @@ long WriteFile(HANDLE handle, char *buffer, int num_bytes, DWORD *num_written, v
 
 // constant used to indicate asynchronous IO operations - probably not the actual value
 #define ERROR_IO_PENDING (999)
+
+// constant used to flag a file as directory - probably not the actual value
+#define FILE_ATTRIBUTE_DIRECTORY (1<<30)
+
+// creates a directory, returning non-zero on success
+long CreateDirectoryW(WCHAR *path, void *security_attributes);
 
 #endif //!TARGET_WINDOWS
 #endif //XPRC_WINDOWS_STUB_H

@@ -5,11 +5,11 @@
 
 #include "settings_manager.h"
 
-#define PASSWORD_FILENAME "xprc_password.cfg"
-#define SETTINGS_FILENAME "xprc_settings.cfg"
+#define PASSWORD_FILENAME "password.cfg"
+#define SETTINGS_FILENAME "settings.cfg"
 
-settings_manager_t* create_settings_manager(char *directory) {
-    if (!directory) {
+settings_manager_t* create_settings_manager(char *xprc_directory, char *server_directory) {
+    if (!xprc_directory) {
         RCLOG_WARN("[settings manager] create_settings_manager called with NULL");
         return NULL;
     }
@@ -24,12 +24,22 @@ settings_manager_t* create_settings_manager(char *directory) {
         goto error;
     }
 
-    settings_manager->password_filepath = dynamic_sprintf("%s%c%s", directory, DIRECTORY_SEPARATOR, PASSWORD_FILENAME);
+    settings_manager->xprc_directory = copy_string(xprc_directory);
+    if (!settings_manager->xprc_directory) {
+        goto error;
+    }
+
+    settings_manager->server_directory = copy_string(server_directory);
+    if (!settings_manager->server_directory) {
+        goto error;
+    }
+
+    settings_manager->password_filepath = dynamic_sprintf("%s%c%s", settings_manager->xprc_directory, DIRECTORY_SEPARATOR, PASSWORD_FILENAME);
     if (!settings_manager->password_filepath) {
         goto error;
     }
 
-    settings_manager->settings_filepath = dynamic_sprintf("%s%c%s", directory, DIRECTORY_SEPARATOR, SETTINGS_FILENAME);
+    settings_manager->settings_filepath = dynamic_sprintf("%s%c%s", settings_manager->server_directory, DIRECTORY_SEPARATOR, SETTINGS_FILENAME);
     if (!settings_manager->settings_filepath) {
         goto error;
     }
@@ -44,6 +54,12 @@ settings_manager_t* create_settings_manager(char *directory) {
     }
     if (settings_manager->password_filepath) {
         free(settings_manager->password_filepath);
+    }
+    if (settings_manager->server_directory) {
+        free(settings_manager->server_directory);
+    }
+    if (settings_manager->xprc_directory) {
+        free(settings_manager->xprc_directory);
     }
     if (settings_manager->settings) {
         destroy_settings(settings_manager->settings);
@@ -85,6 +101,16 @@ error_t destroy_settings_manager(settings_manager_t *settings_manager) {
     if (settings_manager->settings_filepath) {
         free(settings_manager->settings_filepath);
         settings_manager->settings_filepath = NULL;
+    }
+
+    if (settings_manager->server_directory) {
+        free(settings_manager->server_directory);
+        settings_manager->server_directory = NULL;
+    }
+
+    if (settings_manager->xprc_directory) {
+        free(settings_manager->xprc_directory);
+        settings_manager->xprc_directory = NULL;
     }
 
     mtx_destroy(&settings_manager->mutex);
@@ -154,17 +180,33 @@ error_t configure_settings_manager_from_storage(settings_manager_t *settings_man
     bool is_first_initialization = (!settings_file_exists && !password_file_exists);
     RCLOG_TRACE("[settings manager] configure_settings_manager_from_storage: is_first_initialization=%d", is_first_initialization);
     if (is_first_initialization) {
-        RCLOG_TRACE("[settings manager] configure_settings_manager_from_storage: saving settings");
-        err = save_settings_without_password(settings_manager->settings, settings_manager->settings_filepath);
+        err = ensure_directory_exists(settings_manager->xprc_directory);
         if (err != ERROR_NONE) {
-            RCLOG_WARN("settings manager failed to save settings to %s: %d", settings_manager->settings_filepath, err);
+            RCLOG_WARN("[settings manager] configure_settings_manager_from_storage: failed to ensure existence of XPRC directory (%d) before saving settings on first initialization: %s", err, settings_manager->xprc_directory);
             failed_settings_save = true;
+        }
+
+        if (!failed_settings_save) {
+            err = ensure_directory_exists(settings_manager->server_directory);
+            if (err != ERROR_NONE) {
+                RCLOG_WARN("[settings manager] configure_settings_manager_from_storage: failed to ensure existence of server-specific directory (%d) before saving settings on first initialization: %s", err, settings_manager->server_directory);
+                failed_settings_save = true;
+            }
+        }
+
+        if (!failed_settings_save) {
+            RCLOG_TRACE("[settings manager] configure_settings_manager_from_storage: saving settings");
+            err = save_settings_without_password(settings_manager->settings, settings_manager->settings_filepath);
+            if (err != ERROR_NONE) {
+                RCLOG_WARN("[settings manager] failed to save settings to %s: %d", settings_manager->settings_filepath, err);
+                failed_settings_save = true;
+            }
         }
     } else {
         RCLOG_TRACE("[settings manager] configure_settings_manager_from_storage: loading settings");
         err = load_settings_without_password(settings_manager->settings, settings_manager->settings_filepath);
         if (err != ERROR_NONE) {
-            RCLOG_WARN("settings manager failed to load settings from %s: %d", settings_manager->settings_filepath, err);
+            RCLOG_WARN("[settings manager] failed to load settings from %s: %d", settings_manager->settings_filepath, err);
             failed_settings_load = true;
         }
     }
@@ -173,17 +215,23 @@ error_t configure_settings_manager_from_storage(settings_manager_t *settings_man
     RCLOG_TRACE("[settings manager] configure_settings_manager_from_storage: should_regenerate_password=%d", should_regenerate_password);
     if (should_regenerate_password) {
         // password has already been generated by default initialization but still needs to be saved
-        RCLOG_TRACE("[settings manager] configure_settings_manager_from_storage: saving password");
-        err = save_password(settings_manager->settings, settings_manager->password_filepath);
+        err = ensure_directory_exists(settings_manager->xprc_directory);
         if (err != ERROR_NONE) {
-            RCLOG_WARN("settings manager failed to save password to %s: %d", settings_manager->password_filepath, err);
+            RCLOG_WARN("[settings manager] configure_settings_manager_from_storage: failed to ensure existence of XPRC directory (%d) before saving regenerated password: %s", err, settings_manager->xprc_directory);
             failed_password_save = true;
+        } else {
+            RCLOG_TRACE("[settings manager] configure_settings_manager_from_storage: saving password");
+            err = save_password(settings_manager->settings, settings_manager->password_filepath);
+            if (err != ERROR_NONE) {
+                RCLOG_WARN("[settings manager] failed to save password to %s: %d", settings_manager->password_filepath, err);
+                failed_password_save = true;
+            }
         }
     } else {
         RCLOG_TRACE("[settings manager] configure_settings_manager_from_storage: loading password");
         err = load_password(settings_manager->settings, settings_manager->password_filepath);
         if (err != ERROR_NONE) {
-            RCLOG_WARN("settings manager failed to load password from %s: %d", settings_manager->password_filepath, err);
+            RCLOG_WARN("[settings manager] failed to load password from %s: %d", settings_manager->password_filepath, err);
             failed_password_load = true;
         }
     }
@@ -232,18 +280,33 @@ error_t persist_settings_from_manager(settings_manager_t *settings_manager) {
         return err;
     }
 
+    err = ensure_directory_exists(settings_manager->xprc_directory);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("[settings manager] failed to ensure existence of XPRC directory (%d): %s", err, settings_manager->xprc_directory);
+        out_err = ERROR_UNSPECIFIC;
+        goto end;
+    }
+
+    err = ensure_directory_exists(settings_manager->server_directory);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("[settings manager] failed to ensure existence of server-specific directory (%d): %s", err, settings_manager->server_directory);
+        out_err = ERROR_UNSPECIFIC;
+        goto end;
+    }
+
     err = save_password(settings_manager->settings, settings_manager->password_filepath);
     if (err != ERROR_NONE) {
-        RCLOG_WARN("settings manager failed to save password to %s: %d", settings_manager->password_filepath, err);
+        RCLOG_WARN("[settings manager] failed to save password to %s: %d", settings_manager->password_filepath, err);
         out_err = err;
     }
 
     err = save_settings_without_password(settings_manager->settings, settings_manager->settings_filepath);
     if (err != ERROR_NONE) {
-        RCLOG_WARN("settings manager failed to save settings to %s: %d", settings_manager->settings_filepath, err);
+        RCLOG_WARN("[settings manager] failed to save settings to %s: %d", settings_manager->settings_filepath, err);
         out_err = err;
     }
 
+end:
     unlock_settings_manager(settings_manager);
 
     return out_err;

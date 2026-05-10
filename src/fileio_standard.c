@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include "logger.h"
 
@@ -181,4 +182,37 @@ bool check_file_exists(char *path) {
     }
 
     return (errno != ENOENT);
+}
+
+error_t ensure_directory_exists(char *path) {
+    if (!path) {
+        RCLOG_ERROR("[fileio standard] ensure_directory_exists called without path");
+        return ERROR_UNSPECIFIC;
+    }
+
+    // do not attempt creation if the directory already exists
+    if (check_file_exists(path)) {
+        RCLOG_DEBUG("[fileio standard] directory already exist, not creating: %s", path);
+        return ERROR_NONE;
+    }
+
+    // try creating the directory
+    RCLOG_DEBUG("[fileio standard] directory does not exist, creating: %s", path);
+    int res = mkdir(path, 0700);
+    if (res == -1) {
+        RCLOG_WARN("[fileio standard] mkdir failed, errno=%d", errno);
+        return ERROR_UNSPECIFIC;
+    } else if (res != 0) {
+        RCLOG_WARN("[fileio standard] mkdir failed with unknown result code %d", res);
+        return ERROR_UNSPECIFIC;
+    }
+
+    // verify that it really exists now
+    if (check_file_exists(path)) {
+        return ERROR_NONE;
+    }
+
+    RCLOG_WARN("[fileio standard] directory does not exist after error-free attempt to create it: %s", path);
+
+    return ERROR_UNSPECIFIC;
 }

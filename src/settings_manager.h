@@ -37,10 +37,15 @@ typedef struct {
     /// only clean-up is permitted if destruction is pending (true)
     bool destruction_pending;
 
-    /// path to settings file (excluding password)
-    char *settings_filepath;
+    /// path to directory holding XPRC files (shared and server-specific directories)
+    char *xprc_directory;
     /// path to password file
     char *password_filepath;
+
+    /// path to directory holding server-specific files (e.g. settings file)
+    char *server_directory;
+    /// path to settings file
+    char *settings_filepath;
 
     /// settings meant to be protected by the mutex; use #lock_settings_manager() and #unlock_settings_manager() to
     /// access this field
@@ -49,10 +54,11 @@ typedef struct {
 
 /**
  * Creates a new settings manager starting in default configuration.
- * @param directory path where settings files are to be stored, without trailing separator (string will be copied; original to be managed by caller)
+ * @param xprc_directory path to standardized XPRC settings directory, without trailing separator (string will be copied; original to be managed by caller)
+ * @param server_directory path to server-specific settings directory, without trailing separator (string will be copied; original to be managed by caller)
  * @return settings manager with default configuration; NULL on error
  */
-settings_manager_t* create_settings_manager(char *directory);
+settings_manager_t* create_settings_manager(char *xprc_directory, char *server_directory);
 
 /**
  * Destroys the given settings manager including the settings instance inside.

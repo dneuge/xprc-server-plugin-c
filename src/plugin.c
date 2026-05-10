@@ -42,6 +42,8 @@
 
 #define XP_PLUGIN_FEATURE_NATIVE_PATHS "XPLM_USE_NATIVE_PATHS"
 
+#define XPRC_DIRECTORY_NAME "xprc"
+
 XPLMFlightLoopID flight_loop_before_flight_model_id = {0};
 XPLMFlightLoopID flight_loop_after_flight_model_id = {0};
 bool flight_loop_registered = false;
@@ -550,22 +552,57 @@ PLUGIN_API int XPluginEnable() {
         return 1;
     }
 
+    if (!check_file_exists(preferences_directory)) {
+        RCLOG_ERROR("X-Plane preferences directory does not exist? simulator restart required: %s", preferences_directory);
+        free(preferences_directory);
+        fatal_error = true;
+        return 1;
+    }
+
+    char *xprc_directory = dynamic_sprintf("%s%c%s", preferences_directory, DIRECTORY_SEPARATOR, XPRC_DIRECTORY_NAME);
+    if (!xprc_directory) {
+        RCLOG_ERROR("failed to construct XPRC directory path; simulator restart required");
+        free(preferences_directory);
+        fatal_error = true;
+        return 1;
+    }
+
+    char *server_directory = dynamic_sprintf("%s%c%s", xprc_directory, DIRECTORY_SEPARATOR, XPRC_SERVER_ID);
+    if (!server_directory) {
+        RCLOG_ERROR("failed to construct server-specific directory path; simulator restart required");
+        free(xprc_directory);
+        free(preferences_directory);
+        fatal_error = true;
+        return 1;
+    }
+
     license_manager = create_license_manager(
-        preferences_directory,
+        xprc_directory,
+        server_directory,
         on_plugin_licenses_accepted, NULL,
         on_plugin_licenses_rejected, NULL
     );
     if (!license_manager) {
         RCLOG_ERROR("failed to create license manager; plugin cannot run");
+        free(server_directory);
+        free(xprc_directory);
+        free(preferences_directory);
         return 1;
     }
 
-    settings_manager = create_settings_manager(preferences_directory);
+    settings_manager = create_settings_manager(xprc_directory, server_directory);
     if (!settings_manager) {
         RCLOG_ERROR("failed to create settings manager; plugin cannot run without configuration");
+        free(server_directory);
+        free(xprc_directory);
+        free(preferences_directory);
         return 1;
     }
 
+    free(server_directory);
+    server_directory = NULL;
+    free(xprc_directory);
+    xprc_directory = NULL;
     free(preferences_directory);
     preferences_directory = NULL;
 

@@ -14,6 +14,8 @@ typedef struct {
 } pending_license_t;
 
 typedef struct {
+    char *xprc_directory;
+    char *server_directory;
     char *license_acceptance_file_path;
 
     license_manager_callback_f on_acceptance;
@@ -34,7 +36,8 @@ void destroy_pending_license(void *ref);
  * #perform_initial_license_check must be called once at an appropriate time after construction while holding
  * XP context.
  *
- * @param directory path where the file tracking license acceptance is to be stored, without trailing separator (string will be copied; original to be managed by caller)
+ * @param xprc_directory path to standardized XPRC settings directory, without trailing separator (string will be copied; original to be managed by caller)
+ * @param server_directory path to server-specific settings directory, without trailing separator (string will be copied; original to be managed by caller)
  * @param on_acceptance will be called holding XP context when user has accepted all licenses
  * @param on_acceptance_ref optional argument to be passed to acceptance callback for reference
  * @param on_rejection will be called holding XP context when user has rejected at least one license
@@ -42,7 +45,8 @@ void destroy_pending_license(void *ref);
  * @return license manager; NULL on error
  */
 license_manager_t* create_license_manager(
-    char *directory,
+    char *xprc_directory,
+    char *server_directory,
     license_manager_callback_f on_acceptance, void *on_acceptance_ref,
     license_manager_callback_f on_rejection, void *on_rejection_ref
 );
