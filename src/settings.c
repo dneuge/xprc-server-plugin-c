@@ -44,55 +44,69 @@ typedef struct {
     char *key;
     settings_field_type_t type;
     size_t offset;
+
+    /**
+     * standardized fields need to be written to separate files as per protocol specification and
+     * can thus be excluded from server-specific settings
+     */
+    bool standardized;
 } settings_field_t;
 
 static const settings_field_t settings_fields[] = {
     {
         .key = "auto_startup",
         .type = SETTINGS_FIELD_TYPE_BOOLEAN,
-        .offset = offsetof(settings_t, auto_startup)
+        .offset = offsetof(settings_t, auto_startup),
+        .standardized = false,
     },
 
     {
         .key = "auto_regen_password",
         .type = SETTINGS_FIELD_TYPE_BOOLEAN,
-        .offset = offsetof(settings_t, auto_regen_password)
+        .offset = offsetof(settings_t, auto_regen_password),
+        .standardized = false,
     },
 
     {
         .key = "log_level_console",
         .type = SETTINGS_FIELD_TYPE_INTEGER,
-        .offset = offsetof(settings_t, log_level_console)
+        .offset = offsetof(settings_t, log_level_console),
+        .standardized = false,
     },
 
     {
         .key = "log_level_xplane",
         .type = SETTINGS_FIELD_TYPE_INTEGER,
-        .offset = offsetof(settings_t, log_level_xplane)
+        .offset = offsetof(settings_t, log_level_xplane),
+        .standardized = false,
     },
 
     {
         .key = "network_interface",
         .type = SETTINGS_FIELD_TYPE_STRING,
-        .offset = offsetof(settings_t, network_interface)
+        .offset = offsetof(settings_t, network_interface),
+        .standardized = false,
     },
 
     {
         .key = "network_port",
         .type = SETTINGS_FIELD_TYPE_INTEGER,
-        .offset = offsetof(settings_t, network_port)
+        .offset = offsetof(settings_t, network_port),
+        .standardized = true,
     },
 
     {
         .key = "network_enable_ipv6",
         .type = SETTINGS_FIELD_TYPE_BOOLEAN,
-        .offset = offsetof(settings_t, network_enable_ipv6)
+        .offset = offsetof(settings_t, network_enable_ipv6),
+        .standardized = false,
     },
 
     {
         .key = NULL,
         .type = SETTINGS_FIELD_TYPE_END_OF_FIELDS,
-        .offset = 0
+        .offset = 0,
+        .standardized = false,
     }
 };
 
@@ -150,7 +164,7 @@ static char* serialize_setting(settings_t *settings, settings_field_t *field) {
     }
 }
 
-static list_t* serialize_settings(settings_t *settings) {
+static list_t* serialize_server_settings(settings_t *settings) {
     list_t *lines = create_list();
     if (!lines) {
         RCLOG_WARN("[settings] failed to create list for serialization");
@@ -158,9 +172,13 @@ static list_t* serialize_settings(settings_t *settings) {
     }
 
     RCLOG_TRACE("[settings] serializing fields from %p (size %zu)", settings_fields, sizeof(settings_field_t));
-    settings_field_t *field = (settings_field_t*) &settings_fields;
-    while (field->type != SETTINGS_FIELD_TYPE_END_OF_FIELDS) {
+    for (settings_field_t *field = (settings_field_t*) &settings_fields; field->type != SETTINGS_FIELD_TYPE_END_OF_FIELDS; field++) {
         RCLOG_TRACE("[settings] serialization processes field: field=%p (type=%d, key=%s, offset=%zu)", field, field->type, field->key, field->offset);
+
+        if (field->standardized) {
+            RCLOG_TRACE("[settings] field \"%s\" is standardized; excluding from serialization of server-specific settings", field->key);
+            continue;
+        }
 
         char *line = serialize_setting(settings, field);
         if (!line) {
@@ -174,8 +192,6 @@ static list_t* serialize_settings(settings_t *settings) {
             free(line);
             goto error;
         }
-
-        field++; // this already increments by sizeof(settings_field_t) due to type
     }
 
     return lines;
@@ -258,7 +274,7 @@ static error_t deserialize_setting(settings_t *settings, settings_field_t *field
     }
 }
 
-static error_t deserialize_settings(settings_t *settings, list_t *lines) {
+static error_t deserialize_server_settings(settings_t *settings, list_t *lines) {
     error_t out_err = ERROR_NONE;
     error_t err = ERROR_NONE;
 
@@ -420,7 +436,7 @@ error_t load_server_settings(settings_t *dest, char *filepath) {
         goto end;
     }
 
-    err = deserialize_settings(settings, lines);
+    err = deserialize_server_settings(settings, lines);
     if (err == ERROR_INCOMPLETE) {
         RCLOG_WARN("[settings] some settings failed to deserialize; will still apply what could be read");
         out_err = ERROR_INCOMPLETE;
@@ -458,7 +474,7 @@ error_t save_server_settings(settings_t *settings, char *filepath) {
         return ERROR_UNSPECIFIC;
     }
 
-    lines = serialize_settings(settings);
+    lines = serialize_server_settings(settings);
     if (!lines) {
         RCLOG_WARN("[settings] serialization failed");
         out_err = ERROR_UNSPECIFIC;
