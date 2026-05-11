@@ -98,12 +98,12 @@ bool constrain_settings(settings_t *settings);
 error_t reset_network_settings(settings_t *settings);
 
 /**
- * Loads all settings except the password from given file (password is persisted in a separate file).
+ * Loads all server-specific settings. Standardized settings such as password and port are not loaded.
  * @param dest will be updated with loaded settings; strings will be reallocated (values are copied), existing strings will be freed
  * @param filepath path to the settings file to load
  * @return error code; #ERROR_NONE on success
  */
-error_t load_settings_without_password(settings_t *dest, char *filepath);
+error_t load_server_settings(settings_t *dest, char *filepath);
 
 /**
  * Loads only the password from given file (persisted separate from other settings); the password will not be validated.
@@ -114,12 +114,12 @@ error_t load_settings_without_password(settings_t *dest, char *filepath);
 error_t load_password(settings_t *dest, char *filepath);
 
 /**
- * Saves all settings except the password to the given file (password needs to be persisted to a separate file).
- * @param settings will be persisted to the file (except password)
+ * Saves all server-specific settings. Standardized settings such as password and port are not saved.
+ * @param settings will be persisted to the file
  * @param filepath path to the settings file to save (will be overwritten if it exists)
  * @return error code; #ERROR_NONE on success
  */
-error_t save_settings_without_password(settings_t *settings, char *filepath);
+error_t save_server_settings(settings_t *settings, char *filepath);
 
 /**
  * Saves only the password to the given file (persisted separate from other settings).

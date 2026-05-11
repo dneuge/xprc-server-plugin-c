@@ -195,18 +195,18 @@ error_t configure_settings_manager_from_storage(settings_manager_t *settings_man
         }
 
         if (!failed_settings_save) {
-            RCLOG_TRACE("[settings manager] configure_settings_manager_from_storage: saving settings");
-            err = save_settings_without_password(settings_manager->settings, settings_manager->settings_filepath);
+            RCLOG_TRACE("[settings manager] configure_settings_manager_from_storage: saving server-specific settings");
+            err = save_server_settings(settings_manager->settings, settings_manager->settings_filepath);
             if (err != ERROR_NONE) {
-                RCLOG_WARN("[settings manager] failed to save settings to %s: %d", settings_manager->settings_filepath, err);
+                RCLOG_WARN("[settings manager] failed to save server-specific settings to %s: %d", settings_manager->settings_filepath, err);
                 failed_settings_save = true;
             }
         }
     } else {
-        RCLOG_TRACE("[settings manager] configure_settings_manager_from_storage: loading settings");
-        err = load_settings_without_password(settings_manager->settings, settings_manager->settings_filepath);
+        RCLOG_TRACE("[settings manager] configure_settings_manager_from_storage: loading server-specific settings");
+        err = load_server_settings(settings_manager->settings, settings_manager->settings_filepath);
         if (err != ERROR_NONE) {
-            RCLOG_WARN("[settings manager] failed to load settings from %s: %d", settings_manager->settings_filepath, err);
+            RCLOG_WARN("[settings manager] failed to load server-specific settings from %s: %d", settings_manager->settings_filepath, err);
             failed_settings_load = true;
         }
     }
@@ -300,7 +300,7 @@ error_t persist_settings_from_manager(settings_manager_t *settings_manager) {
         out_err = err;
     }
 
-    err = save_settings_without_password(settings_manager->settings, settings_manager->settings_filepath);
+    err = save_server_settings(settings_manager->settings, settings_manager->settings_filepath);
     if (err != ERROR_NONE) {
         RCLOG_WARN("[settings manager] failed to save settings to %s: %d", settings_manager->settings_filepath, err);
         out_err = err;

@@ -391,7 +391,7 @@ error_t copy_settings(settings_t *dest, settings_t *src, bool copy_password) {
     return ERROR_NONE;
 }
 
-error_t load_settings_without_password(settings_t *dest, char *filepath) {
+error_t load_server_settings(settings_t *dest, char *filepath) {
     /* Settings are first deserialized onto a temporary instance as loading may be aborted mid-way in case of
      * deserialization errors in which case the destination settings should remain unmodified but the settings
      * used for deserialization have already been modified.
@@ -449,7 +449,7 @@ end:
     return out_err;
 }
 
-error_t save_settings_without_password(settings_t *settings, char *filepath) {
+error_t save_server_settings(settings_t *settings, char *filepath) {
     list_t *lines = NULL;
     error_t err = ERROR_NONE;
     error_t out_err = ERROR_NONE;
