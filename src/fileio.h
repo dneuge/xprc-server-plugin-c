@@ -108,6 +108,15 @@ error_t read_lines_from_file(list_t **lines, char *path);
 error_t write_lines_to_file(list_t *lines, char *path);
 
 /**
+ * Reads the first line from the given file.
+ *
+ * @param line will be set to the resulting line (never NULL) without line end sequence if successful; must initially point to NULL, will remain NULL on error
+ * @param path path to file as null-terminated string
+ * @return error code; #ERROR_NONE on success
+ */
+error_t read_first_line_from_file(char **line, char *path);
+
+/**
  * Checks if the given file or directory exists.
  * @param path path to check for existence
  * @return true if the file/directory exists, false if not

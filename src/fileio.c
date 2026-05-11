@@ -358,3 +358,46 @@ error_t write_lines_to_file(list_t *lines, char *path) {
     free(s);
     return err;
 }
+
+error_t read_first_line_from_file(char **line, char *path) {
+    error_t out_err = ERROR_NONE;
+
+    if (!line || !path) {
+        RCLOG_WARN("[fileio] read_first_line_from_file missing parameters: line=%p, path=%p", line, path);
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (*line) {
+        RCLOG_WARN("[fileio] read_first_line_from_file called with output variable still pointing to %p - refusing to produce potential memleak", *line);
+        return ERROR_UNSPECIFIC;
+    }
+
+    list_t *lines = NULL;
+    error_t err = read_lines_from_file(&lines, path);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("[fileio] read_first_line_from_file failed to read %s", path);
+        return err;
+    }
+
+    if (!lines || lines->size < 1) {
+        out_err = ERROR_UNSPECIFIC;
+        goto end;
+    }
+
+    // extract the line from the result list; must remain available after destroying the list, so we have to clear the
+    // reference (all other lines will be freed)
+    *line = lines->head->value;
+    lines->head->value = NULL;
+
+    if (!*line) {
+        RCLOG_WARN("[fileio] read_first_line_from_file read NULL line from %s", path);
+        out_err = ERROR_UNSPECIFIC;
+    }
+
+end:
+    if (lines) {
+        destroy_list(lines, free);
+    }
+
+    return out_err;
+}

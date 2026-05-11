@@ -479,41 +479,24 @@ error_t save_server_settings(settings_t *settings, char *filepath) {
 }
 
 error_t load_password(settings_t *dest, char *filepath) {
-    error_t out_err = ERROR_NONE;
-
     if (!dest || !filepath) {
+        RCLOG_WARN("[settings] load_password missing parameters: dest=%p, filepath=%p", dest, filepath);
         return ERROR_UNSPECIFIC;
     }
 
-    list_t *lines = NULL;
-    error_t err = read_lines_from_file(&lines, filepath);
+    char *loaded_password = NULL;
+    error_t err = read_first_line_from_file(&loaded_password, filepath);
     if (err != ERROR_NONE) {
+        RCLOG_WARN("[settings] load_password failed to read %s", filepath);
         return err;
-    }
-
-    if (!lines || lines->size < 1) {
-        out_err = ERROR_UNSPECIFIC;
-        goto end;
-    }
-
-    char *password_copy = copy_string(lines->head->value);
-    if (!password_copy) {
-        out_err = ERROR_MEMORY_ALLOCATION;
-        goto end;
     }
 
     if (dest->password) {
         free(dest->password);
     }
-    dest->password = password_copy;
+    dest->password = loaded_password;
 
-end:
-    if (lines) {
-        destroy_list(lines, free);
-        lines = NULL;
-    }
-
-    return out_err;
+    return ERROR_NONE;
 }
 
 error_t save_password(settings_t *settings, char *filepath) {
