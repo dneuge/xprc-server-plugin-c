@@ -6,6 +6,7 @@
 #include "settings_manager.h"
 
 #define PASSWORD_FILENAME "password.cfg"
+#define PORT_FILENAME     "port.cfg"
 #define SETTINGS_FILENAME "settings.cfg"
 
 settings_manager_t* create_settings_manager(char *xprc_directory, char *server_directory) {
@@ -39,6 +40,11 @@ settings_manager_t* create_settings_manager(char *xprc_directory, char *server_d
         goto error;
     }
 
+    settings_manager->port_filepath = dynamic_sprintf("%s%c%s", settings_manager->xprc_directory, DIRECTORY_SEPARATOR, PORT_FILENAME);
+    if (!settings_manager->port_filepath) {
+        goto error;
+    }
+
     settings_manager->settings_filepath = dynamic_sprintf("%s%c%s", settings_manager->server_directory, DIRECTORY_SEPARATOR, SETTINGS_FILENAME);
     if (!settings_manager->settings_filepath) {
         goto error;
@@ -54,6 +60,9 @@ settings_manager_t* create_settings_manager(char *xprc_directory, char *server_d
     }
     if (settings_manager->password_filepath) {
         free(settings_manager->password_filepath);
+    }
+    if (settings_manager->port_filepath) {
+        free(settings_manager->port_filepath);
     }
     if (settings_manager->server_directory) {
         free(settings_manager->server_directory);
@@ -96,6 +105,11 @@ error_t destroy_settings_manager(settings_manager_t *settings_manager) {
     if (settings_manager->password_filepath) {
         free(settings_manager->password_filepath);
         settings_manager->password_filepath = NULL;
+    }
+
+    if (settings_manager->port_filepath) {
+        free(settings_manager->port_filepath);
+        settings_manager->port_filepath = NULL;
     }
 
     if (settings_manager->settings_filepath) {
@@ -170,14 +184,19 @@ error_t configure_settings_manager_from_storage(settings_manager_t *settings_man
     bool settings_file_exists = check_file_exists(settings_manager->settings_filepath);
     RCLOG_TRACE("[settings manager] configure_settings_manager_from_storage: check if password file exists");
     bool password_file_exists = check_file_exists(settings_manager->password_filepath);
+    RCLOG_TRACE("[settings manager] configure_settings_manager_from_storage: check if port file exists");
+    bool port_file_exists = check_file_exists(settings_manager->port_filepath);
 
     bool failed_settings_load = false;
     bool failed_settings_save = false;
     bool failed_password_load = false;
     bool failed_password_save = false;
+    bool failed_port_load = false;
+    bool failed_port_save = false;
     bool is_password_valid = false;
+    bool is_port_valid = false;
 
-    bool is_first_initialization = (!settings_file_exists && !password_file_exists);
+    bool is_first_initialization = (!settings_file_exists && !password_file_exists && !port_file_exists);
     RCLOG_TRACE("[settings manager] configure_settings_manager_from_storage: is_first_initialization=%d", is_first_initialization);
     if (is_first_initialization) {
         err = ensure_directory_exists(settings_manager->xprc_directory);
@@ -240,6 +259,28 @@ error_t configure_settings_manager_from_storage(settings_manager_t *settings_man
     is_password_valid = validate_password(settings_manager->settings->password); // FIXME: why do we take it over if it is invalid?!
     RCLOG_TRACE("[settings manager] configure_settings_manager_from_storage: is_password_valid=%d", is_password_valid);
 
+    if (port_file_exists) {
+        err = load_port(settings_manager->settings, settings_manager->port_filepath);
+        if (err != ERROR_NONE) {
+            RCLOG_WARN("[settings manager] failed to load port from %s: %d", settings_manager->port_filepath, err);
+            failed_port_load = true;
+        }
+    }
+
+    if (!port_file_exists || failed_port_load) {
+        err = ensure_directory_exists(settings_manager->xprc_directory);
+        if (err != ERROR_NONE) {
+            RCLOG_WARN("[settings manager] configure_settings_manager_from_storage: failed to ensure existence of XPRC directory (%d) before saving port: %s", err, settings_manager->xprc_directory);
+        } else {
+            RCLOG_TRACE("[settings manager] configure_settings_manager_from_storage: saving port");
+            err = save_port(settings_manager->settings, settings_manager->port_filepath);
+            if (err != ERROR_NONE) {
+                RCLOG_WARN("[settings manager] failed to save port to %s: %d", settings_manager->port_filepath, err);
+                failed_port_save = true;
+            }
+        }
+    }
+
     unlock_settings_manager(settings_manager);
 
     if (failed_settings_load) {
@@ -257,6 +298,9 @@ error_t configure_settings_manager_from_storage(settings_manager_t *settings_man
     } else if (failed_password_save) {
         RCLOG_WARN("[settings manager] failed to save password");
         return SETTINGS_MANAGER_ERROR_PASSWORD_NOT_SAVED;
+    } else if (failed_port_save) {
+        RCLOG_WARN("[settings manager] failed to save port");
+        return SETTINGS_MANAGER_ERROR_PORT_NOT_SAVED;
     } else if (is_first_initialization) {
         RCLOG_WARN("[settings manager] no previous settings found; initialized with defaults");
         return SETTINGS_MANAGER_ERROR_NO_PREVIOUS_SETTINGS;
@@ -297,6 +341,12 @@ error_t persist_settings_from_manager(settings_manager_t *settings_manager) {
     err = save_password(settings_manager->settings, settings_manager->password_filepath);
     if (err != ERROR_NONE) {
         RCLOG_WARN("[settings manager] failed to save password to %s: %d", settings_manager->password_filepath, err);
+        out_err = err;
+    }
+
+    err = save_port(settings_manager->settings, settings_manager->port_filepath);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("[settings manager] failed to save port to %s: %d", settings_manager->port_filepath, err);
         out_err = err;
     }
 

@@ -507,6 +507,78 @@ error_t save_password(settings_t *settings, char *filepath) {
     return write_file(settings->password, strlen(settings->password), filepath);
 }
 
+error_t load_port(settings_t *dest, char *filepath) {
+    error_t err = ERROR_NONE;
+    error_t out_err = ERROR_NONE;
+
+    if (!dest || !filepath) {
+        RCLOG_WARN("[settings] load_port missing parameters: dest=%p, filepath=%p", dest, filepath);
+        return ERROR_UNSPECIFIC;
+    }
+
+    char *port_string = NULL;
+    err = read_first_line_from_file(&port_string, filepath);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("[settings] load_port failed to read %s", filepath);
+        return err;
+    }
+
+    int port = -1;
+    if (!parse_int(&port, port_string)) {
+        RCLOG_WARN("[settings] load_port failed to parse string \"%s\"", port_string);
+        goto error;
+    }
+
+    if (port < NETWORK_MINIMUM_PORT || port > NETWORK_MAXIMUM_PORT) {
+        RCLOG_WARN("[settings] load_port read invalid port %d, ignoring", port);
+        goto error;
+    }
+
+    RCLOG_DEBUG("[settings] load_port read %d", port);
+    dest->network_port = port;
+
+    goto end;
+
+error:
+    if (out_err == ERROR_NONE) {
+        out_err = ERROR_UNSPECIFIC;
+    }
+
+end:
+    if (port_string) {
+        free(port_string);
+    }
+
+    return out_err;
+}
+
+error_t save_port(settings_t *settings, char *filepath) {
+    if (!settings || !filepath) {
+        return ERROR_UNSPECIFIC;
+    }
+
+    if (settings->network_port < NETWORK_MINIMUM_PORT || settings->network_port > NETWORK_MAXIMUM_PORT) {
+        RCLOG_WARN("[settings] refusing to save invalid network port %d", settings->network_port);
+        return ERROR_UNSPECIFIC;
+    }
+
+    char *s = dynamic_sprintf("%d", settings->network_port);
+    if (!s) {
+        RCLOG_WARN("[settings] failed to format network port for saving");
+        return ERROR_MEMORY_ALLOCATION;
+    }
+
+    RCLOG_DEBUG("[settings] saving network port %s to %s", s, filepath);
+    error_t err = write_file(s, strlen(s), filepath);
+    if (err != ERROR_NONE) {
+        RCLOG_WARN("[settings] failed to save network port to %s", filepath);
+    }
+
+    free(s);
+
+    return err;
+}
+
 static bool validate_log_level(int settings_log_level) {
     switch (settings_log_level) {
         case SETTINGS_LOG_LEVEL_ERROR:

@@ -23,6 +23,9 @@
 /// returned in case the previous password does not fulfill password policy (server will refuse to start)
 #define SETTINGS_MANAGER_ERROR_PASSWORD_INVALID (SETTINGS_MANAGER_ERROR_BASE + 5)
 
+/// returned in case the current port could not be stored, meaning clients need manual input
+#define SETTINGS_MANAGER_ERROR_PORT_NOT_SAVED (SETTINGS_MANAGER_ERROR_BASE + 6)
+
 /**
  * @file settings_manager.h central instance for managing XPRC settings
  */
@@ -41,6 +44,8 @@ typedef struct {
     char *xprc_directory;
     /// path to password file
     char *password_filepath;
+    /// path to port file
+    char *port_filepath;
 
     /// path to directory holding server-specific files (e.g. settings file)
     char *server_directory;

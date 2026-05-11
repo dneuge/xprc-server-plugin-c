@@ -114,6 +114,14 @@ error_t load_server_settings(settings_t *dest, char *filepath);
 error_t load_password(settings_t *dest, char *filepath);
 
 /**
+ * Loads only the port from given file (persisted separate from other settings).
+ * @param dest will be updated to loaded port
+ * @param filepath path to the port file to load
+ * @return error code; #ERROR_NONE on success
+ */
+error_t load_port(settings_t *dest, char *filepath);
+
+/**
  * Saves all server-specific settings. Standardized settings such as password and port are not saved.
  * @param settings will be persisted to the file
  * @param filepath path to the settings file to save (will be overwritten if it exists)
@@ -128,6 +136,14 @@ error_t save_server_settings(settings_t *settings, char *filepath);
  * @return error code; #ERROR_NONE on success
  */
 error_t save_password(settings_t *settings, char *filepath);
+
+/**
+ * Saves only the port to the given file (persisted separate from other settings).
+ * @param settings port will be persisted to the file
+ * @param filepath path to the port file to save (will be overwritten if it exists)
+ * @return error code; #ERROR_NONE on success
+ */
+error_t save_port(settings_t *settings, char *filepath);
 
 /**
  * Applies log levels from settings to log system.
