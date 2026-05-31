@@ -347,7 +347,7 @@ static error_t cmrg_merge_config(command_config_t **new_config, char **err_msg, 
         return ERROR_UNSPECIFIC;
     }
 
-    if (has_command_feature_flags(requested_changes)) {
+    if (has_mandatory_command_feature_request(requested_changes)) {
         *err_msg = dynamic_sprintf("current command implementation does not support any feature flags");
         return ERROR_UNSPECIFIC;
     }
