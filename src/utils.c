@@ -111,6 +111,7 @@ static int _strpos(char *haystack, char *needle, int start, bool skip_escapes) {
         return -1;
     }
 
+    // FIXME: shouldn't max_offset be + start ?
     int max_offset = haystack_len - needle_len;
     for (int i=start; i<=max_offset; i++) {
         if (!strncmp(&haystack[i], needle, needle_len)) {
