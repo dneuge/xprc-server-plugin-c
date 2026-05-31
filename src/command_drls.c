@@ -1,6 +1,6 @@
 #include "command_drls.h"
 
-#include <XPLMDataAccess.h>
+#include <string.h>
 
 #include "arrays.h"
 #include "logger.h"
@@ -8,6 +8,7 @@
 #include "utils.h"
 
 #define DRLS_COMMAND_VERSION 1
+#define DRLS_FEATURE_NAME_UNSPECIFIC "unspecific"
 
 #define DRLS_SCHEDULE_PHASE TASK_SCHEDULE_BEFORE_FLIGHT_MODEL
 
@@ -234,7 +235,7 @@ static command_config_t* drls_create_default_config() {
 
     err = add_command_feature_flag(
         config,
-        "unspecific",
+        DRLS_FEATURE_NAME_UNSPECIFIC,
         COMMAND_DRLS_UNSPECIFIC_SUPPORTED ? COMMAND_FEATURE_STATE_ENABLED_ALWAYS : COMMAND_FEATURE_STATE_UNAVAILABLE
     );
     if (err != ERROR_NONE) {
@@ -246,17 +247,55 @@ static command_config_t* drls_create_default_config() {
 }
 
 static error_t drls_merge_config(command_config_t **new_config, char **err_msg, command_config_t *previous_config, command_config_t *requested_changes) {
+    error_t out_err = ERROR_NONE;
+
     if (requested_changes->version != DRLS_COMMAND_VERSION) {
         *err_msg = dynamic_sprintf("only supported version is %u, requested %u", DRLS_COMMAND_VERSION, requested_changes->version);
         return ERROR_UNSPECIFIC;
     }
 
-    if (has_command_feature_flags(requested_changes)) {
-        *err_msg = dynamic_sprintf("current command implementation does not support changing any feature flags");
+    list_t *feature_names = reference_feature_flag_names(requested_changes);
+    if (!feature_names) {
+        RCLOG_WARN("drls_merge_config failed to list requested feature names");
         return ERROR_UNSPECIFIC;
     }
 
-    return ERROR_NONE;
+    for (list_item_t *feature_name_item = feature_names->head; feature_name_item; feature_name_item = feature_name_item->next) {
+        char *feature_name = feature_name_item->value;
+        feature_state_t requested_change = get_command_feature_state(requested_changes, feature_name);
+
+        if (strcmp(feature_name, DRLS_FEATURE_NAME_UNSPECIFIC) != 0) {
+            // client requested some feature flag other than "unspecific", which we don't know
+            if (is_command_feature_requested_optionally(requested_change)) {
+                // feature was requested conditionally, so we can ignore the request
+                continue;
+            }
+
+            // request was mandatory, so we need to fail configuration
+            *err_msg = dynamic_sprintf("unknown feature flag \"%s\"", feature_name);
+            out_err = ERROR_UNSPECIFIC;
+            break;
+        }
+
+        // if we got here, the requested change is for the "unspecific" feature flag
+
+        // We do not support enabling/disabling that feature, so the request either must have already been fulfilled
+        // or it must have been optional. If the request was for a mandatory change, the command must fail.
+
+        feature_state_t previous_state = get_command_feature_state(previous_config, DRLS_FEATURE_NAME_UNSPECIFIC);
+        bool already_set = (is_command_feature_requested_enabled(requested_change)  && is_command_feature_actually_enabled(previous_state))
+                        || (is_command_feature_requested_disabled(requested_change) && is_command_feature_actually_disabled(previous_state));
+
+        if (!already_set && is_command_feature_requested_mandatory(requested_change)) {
+            *err_msg = dynamic_sprintf("unable to change feature flag \"%s\"", feature_name);
+            out_err = ERROR_UNSPECIFIC;
+            break;
+        }
+    }
+
+    destroy_list(feature_names, NULL);
+
+    return out_err;
 }
 
 command_t command_drls = {
