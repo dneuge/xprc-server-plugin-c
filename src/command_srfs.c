@@ -111,9 +111,14 @@ static error_t srfs_create(void **command_ref, session_t *session, request_t *re
 
         int start_offset = 0;
         while (start_offset < parameter_length) {
-            int end_offset_excl = strpos(parameter->parameter, ",", start_offset);
+            // we need to let strpos start its search from a shifted pointer instead of using the "start" parameter
+            // because we null terminators are added after each match, causing strpos to see only see the shorter string
+            // (previous match) after the first iteration
+            int end_offset_excl = strpos(&parameter->parameter[start_offset], ",", 0);
             if (end_offset_excl < 0) {
                 end_offset_excl = (int)parameter_length;
+            } else {
+                end_offset_excl += start_offset;
             }
 
             int selection_length = end_offset_excl - start_offset;
