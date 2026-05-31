@@ -161,7 +161,7 @@ bool has_command_feature_flags(command_config_t *config) {
 
 static bool parameter_has_mandatory_feature_request(const hashmap_item_t *item) {
     // item value is the flag itself, not a pointer
-    return is_command_feature_requested_mandatory((feature_state_t) item->value);
+    return is_command_feature_requested_mandatory((feature_state_t) (size_t) item->value);
 }
 
 bool has_mandatory_command_feature_request(command_config_t *config) {
