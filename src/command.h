@@ -51,10 +51,14 @@ typedef char feature_state_t;
 /// placeholder returned by helper functions, not to be used on setter calls
 #define COMMAND_FEATURE_STATE_NONE 0
 
-/// feature has been requested to be enabled through SRFS
+/// feature has been requested to be enabled through SRFS (mandatory)
 #define COMMAND_FEATURE_STATE_ENABLE COMMAND_FEATURE_STATE_ENABLED_CLIENT
-/// feature has been requested to be disabled through SRFS
+/// feature has been requested to be disabled through SRFS (mandatory)
 #define COMMAND_FEATURE_STATE_DISABLE COMMAND_FEATURE_STATE_DISABLED_CLIENT
+/// feature has been requested to be enabled through SRFS (optional)
+#define COMMAND_FEATURE_STATE_ENABLE_ONLY_IF_POSSIBLE '*'
+/// feature has been requested to be disabled through SRFS (optional)
+#define COMMAND_FEATURE_STATE_DISABLE_ONLY_IF_POSSIBLE '/'
 
 /**
  * Describes a command feature flag.
@@ -78,6 +82,32 @@ bool is_command_feature_actually_enabled(feature_state_t state);
  * @return true if disabled, false if enabled or invalid/unknown
  */
 bool is_command_feature_actually_disabled(feature_state_t state);
+/**
+ * Checks if the given state indicates that a feature should be enabled. Applies only to requests.
+ * @param state feature state to check
+ * @return true if request is to enable the feature, false if not
+ */
+bool is_command_feature_requested_enabled(feature_state_t state);
+/**
+ * Checks if the given state indicates that a feature should be disabled. Applies only to requests.
+ * @param state feature state to check
+ * @return true if request is to disable the feature, false if not
+ */
+bool is_command_feature_requested_disabled(feature_state_t state);
+/**
+ * Checks if the given state indicates that the feature should only be changed if possible. The command must ignore this
+ * requested change if unable. Applies only to requests.
+ * @param state feature state to check
+ * @return true if request should be ignored if unable, false may indicate that it is mandatory
+ */
+bool is_command_feature_requested_optionally(feature_state_t state);
+/**
+ * Checks if the given state indicates that the feature must be changed. The command must fail if unable to make the
+ * requested change. Applies only to requests.
+ * @param state feature state to check
+ * @return true if request must be fulfilled, false may indicate that it is optional
+ */
+bool is_command_feature_requested_mandatory(feature_state_t state);
 
 /**
  * Describes a command configuration.
@@ -147,6 +177,12 @@ feature_state_t get_command_feature_state(command_config_t *config, char *name);
  * @return true if at least one feature flag has been configured, false if none are set
  */
 bool has_command_feature_flags(command_config_t *config);
+/**
+ * Checks whether the given command configuration holds any mandatory requests for feature flag changes.
+ * @param config command configuration to check
+ * @return true if at least one mandatory feature flag has been configured, false if none are set or all are optional
+ */
+bool has_mandatory_command_feature_flag_requests(command_config_t *config);
 /**
  * Returns references to all names currently present on given configuration.
  *

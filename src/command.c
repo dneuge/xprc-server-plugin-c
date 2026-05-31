@@ -15,6 +15,26 @@ bool is_command_feature_actually_disabled(feature_state_t state) {
         || state == COMMAND_FEATURE_STATE_UNAVAILABLE;
 }
 
+bool is_command_feature_requested_enabled(feature_state_t state) {
+    return state == COMMAND_FEATURE_STATE_ENABLE
+        || state == COMMAND_FEATURE_STATE_ENABLE_ONLY_IF_POSSIBLE;
+}
+
+bool is_command_feature_requested_disabled(feature_state_t state) {
+    return state == COMMAND_FEATURE_STATE_DISABLE
+        || state == COMMAND_FEATURE_STATE_DISABLE_ONLY_IF_POSSIBLE;
+}
+
+bool is_command_feature_requested_optionally(feature_state_t state) {
+    return state == COMMAND_FEATURE_STATE_ENABLE_ONLY_IF_POSSIBLE
+        || state == COMMAND_FEATURE_STATE_DISABLE_ONLY_IF_POSSIBLE;
+}
+
+bool is_command_feature_requested_mandatory(feature_state_t state) {
+    return state == COMMAND_FEATURE_STATE_ENABLE
+        || state == COMMAND_FEATURE_STATE_DISABLE;
+}
+
 command_config_t* create_command_config(uint16_t version) {
     if (version < 1) {
         RCLOG_WARN("create_command_config called with invalid version %u", version);
@@ -49,6 +69,8 @@ void destroy_command_config(command_config_t *config) {
 static bool is_valid_feature_state(feature_state_t state) {
     return state == COMMAND_FEATURE_STATE_ENABLE
         || state == COMMAND_FEATURE_STATE_DISABLE
+        || state == COMMAND_FEATURE_STATE_ENABLE_ONLY_IF_POSSIBLE
+        || state == COMMAND_FEATURE_STATE_DISABLE_ONLY_IF_POSSIBLE
         || state == COMMAND_FEATURE_STATE_ENABLED_DEFAULT
         || state == COMMAND_FEATURE_STATE_DISABLED_DEFAULT
         || state == COMMAND_FEATURE_STATE_ENABLED_CLIENT
@@ -135,6 +157,24 @@ bool has_command_feature_flags(command_config_t *config) {
     }
 
     return !is_hashmap_empty(config->_features);
+}
+
+static bool parameter_has_mandatory_feature_flag(const hashmap_item_t *item) {
+    const feature_state_t *request = item->value;
+    if (!request) {
+        return false;
+    }
+
+    return is_command_feature_requested_mandatory(*request);
+}
+
+bool has_mandatory_command_feature_flags(command_config_t *config) {
+    if (!config) {
+        RCLOG_WARN("has_mandatory_command_feature_flags called without config");
+        return false;
+    }
+
+    return hashmap_find_first(config->_features, parameter_has_mandatory_feature_flag) != NULL;
 }
 
 list_t* reference_feature_flag_names(command_config_t *config) {

@@ -130,6 +130,10 @@ static error_t srfs_create(void **command_ref, session_t *session, request_t *re
                 state = COMMAND_FEATURE_STATE_ENABLE;
             } else if (state_ch == '-') {
                 state = COMMAND_FEATURE_STATE_DISABLE;
+            } else if (state_ch == '*') {
+                state = COMMAND_FEATURE_STATE_ENABLE_ONLY_IF_POSSIBLE;
+            } else if (state_ch == '/') {
+                state = COMMAND_FEATURE_STATE_DISABLE_ONLY_IF_POSSIBLE;
             } else {
                 error_channel(session, channel_id, CURRENT_TIME_REFERENCE, "invalid or missing feature flag state");
                 goto error;
