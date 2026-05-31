@@ -3,13 +3,13 @@
 #include "logger.h"
 #include "utils.h"
 
-bool is_command_feature_state_enabled(feature_state_t state) {
+bool is_command_feature_actually_enabled(feature_state_t state) {
     return state == COMMAND_FEATURE_STATE_ENABLED_ALWAYS
         || state == COMMAND_FEATURE_STATE_ENABLED_CLIENT
         || state == COMMAND_FEATURE_STATE_ENABLED_DEFAULT;
 }
 
-bool is_command_feature_state_disabled(feature_state_t state) {
+bool is_command_feature_actually_disabled(feature_state_t state) {
     return state == COMMAND_FEATURE_STATE_DISABLED_CLIENT
         || state == COMMAND_FEATURE_STATE_DISABLED_DEFAULT
         || state == COMMAND_FEATURE_STATE_UNAVAILABLE;

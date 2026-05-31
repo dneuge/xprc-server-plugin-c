@@ -67,17 +67,17 @@ typedef struct {
 } command_feature_t;
 
 /**
- * Checks if the given state indicates that a feature should be enabled.
+ * Checks if the given state indicates that a feature is enabled. Applies only to actual configuration, not requests.
  * @param state feature state to check
  * @return true if enabled, false if disabled or invalid/unknown
  */
-bool is_command_feature_state_enabled(feature_state_t state);
+bool is_command_feature_actually_enabled(feature_state_t state);
 /**
- * Checks if the given state indicates that a feature should be disabled.
+ * Checks if the given state indicates that a feature is disabled. Applies only to actual configuration, not requests.
  * @param state feature state to check
  * @return true if disabled, false if enabled or invalid/unknown
  */
-bool is_command_feature_state_disabled(feature_state_t state);
+bool is_command_feature_actually_disabled(feature_state_t state);
 
 /**
  * Describes a command configuration.
