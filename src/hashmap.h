@@ -58,6 +58,16 @@ typedef struct {
 } hashmap_t;
 
 /**
+ * Callback used to test a hashmap item.
+ *
+ * The item and its contents are only valid for each call and must not be modified.
+ *
+ * @param item map item; must not be modified or persisted
+ * @return true if matched, false if not matched; actual action depends on the function accepting this callback
+ */
+typedef bool hashmap_item_predicate_f (const hashmap_item_t *item);
+
+/**
  * Creates a new hash map.
  * @return hash map instance; NULL on erorr
  */
@@ -124,6 +134,23 @@ list_t* hashmap_reference_keys(hashmap_t *map);
  * @return copies of all keys currently present in map (must be freed when no longer needed); NULL on error
  */
 list_t* hashmap_copy_keys(hashmap_t *map);
+
+/**
+ * Iterates over the given hash map until the provided predicate matches, then returns that item.
+ *
+ * Memory management:
+ * - The returned item is a reference to the item currently recorded on the map and must not be modified or freed.
+ *
+ * Concurrency:
+ * - Map must not be modified concurrently while this function is being executed.
+ * - The returned reference is only valid as long as the map is not being modified.
+ *
+ * @param map hashmap to iterate
+ * @param predicate predicate used to search for a match; returning true concludes the search, false continues
+ * @return matched item; NULL if not found or on error
+ */
+hashmap_item_t* hashmap_find_first(hashmap_t *map, hashmap_item_predicate_f predicate);
+
 /// @}
 
 #endif

@@ -221,3 +221,19 @@ list_t* hashmap_copy_keys(hashmap_t *map) {
 
     return out;
 }
+
+hashmap_item_t* hashmap_find_first(hashmap_t *map, hashmap_item_predicate_f predicate) {
+    if (!map || !predicate) {
+        return NULL;
+    }
+
+    for (int i=0; i<HASH_COMBINATIONS; i++) {
+        for (hashmap_item_t *map_item = map->items[i]; map_item && map_item->key; map_item = map_item->next) {
+            if (predicate(map_item)) {
+                return map_item;
+            }
+        }
+    }
+
+    return NULL;
+}
