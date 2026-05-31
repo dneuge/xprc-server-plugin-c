@@ -182,7 +182,7 @@ bool has_command_feature_flags(command_config_t *config);
  * @param config command configuration to check
  * @return true if at least one mandatory feature flag has been configured, false if none are set or all are optional
  */
-bool has_mandatory_command_feature_flag_requests(command_config_t *config);
+bool has_mandatory_command_feature_request(command_config_t *config);
 /**
  * Returns references to all names currently present on given configuration.
  *

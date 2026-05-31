@@ -159,22 +159,18 @@ bool has_command_feature_flags(command_config_t *config) {
     return !is_hashmap_empty(config->_features);
 }
 
-static bool parameter_has_mandatory_feature_flag(const hashmap_item_t *item) {
-    const feature_state_t *request = item->value;
-    if (!request) {
-        return false;
-    }
-
-    return is_command_feature_requested_mandatory(*request);
+static bool parameter_has_mandatory_feature_request(const hashmap_item_t *item) {
+    // item value is the flag itself, not a pointer
+    return is_command_feature_requested_mandatory((feature_state_t) item->value);
 }
 
-bool has_mandatory_command_feature_flags(command_config_t *config) {
+bool has_mandatory_command_feature_request(command_config_t *config) {
     if (!config) {
-        RCLOG_WARN("has_mandatory_command_feature_flags called without config");
+        RCLOG_WARN("has_mandatory_command_feature_request called without config");
         return false;
     }
 
-    return hashmap_find_first(config->_features, parameter_has_mandatory_feature_flag) != NULL;
+    return hashmap_find_first(config->_features, parameter_has_mandatory_feature_request) != NULL;
 }
 
 list_t* reference_feature_flag_names(command_config_t *config) {
